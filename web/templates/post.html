@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ post.title or post.post_id }} - Extracted Content</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+            max-width: 700px;
+            margin: 30px auto;
+            padding: 20px;
+            background: #fafafa;
+            color: #2b2b2b;
+            line-height: 1.6;
+        }
+
+        .post-header {
+            background: #1a1a1a;
+            padding: 1.5rem 2rem;
+            margin-bottom: 0;
+            border-bottom: 4px solid #000000;
+        }
+
+        .header-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .header-nav a {
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding-bottom: 4px;
+            border-bottom: 1px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .header-nav a:hover {
+            border-bottom-color: #ffffff;
+        }
+
+        @media (max-width: 768px) {
+            .post-header {
+                padding: 1rem;
+            }
+
+            .header-nav {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+        }
+
+        .post-content {
+            background: white;
+            padding: 3rem;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        .content-block { margin: 25px 0; }
+
+        /* Images */
+        .content-block.image img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 4px;
+        }
+
+        /* Audio player - Dark professional style */
+        .content-block.audio {
+            background: #2d3748;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 25px 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .audio-player-container {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .audio-player-container .audio-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+            flex-shrink: 0;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .audio-player-main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .audio-player-main audio {
+            flex: 1;
+            height: 40px;
+            outline: none;
+        }
+        .audio-speed-control {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .audio-speed-control:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: scale(1.05);
+        }
+        .audio-speed-control:active {
+            transform: scale(0.95);
+        }
+
+        /* Headings */
+        .content-block h1 { font-size: 32px; margin: 40px 0 20px 0; font-weight: 700; }
+        .content-block h2 { font-size: 24px; margin: 30px 0 15px 0; font-weight: 600; }
+        .content-block h3 { font-size: 20px; margin: 25px 0 12px 0; font-weight: 600; }
+
+        /* Paragraphs */
+        .content-block.paragraph p { line-height: 1.7; margin: 15px 0; }
+
+        /* Comments */
+        .comments-section {
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .comments-toggle {
+            background: #1a1a1a;
+            color: #ffffff;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .comments-toggle:hover {
+            background: #2a2a2a;
+        }
+
+        .comments-toggle .arrow {
+            transition: transform 0.3s ease;
+            font-size: 1.2rem;
+        }
+
+        .comments-toggle.active .arrow {
+            transform: rotate(180deg);
+        }
+
+        .comments-list {
+            display: none;
+            padding-top: 2rem;
+        }
+
+        .comments-list.show {
+            display: block;
+        }
+
+        .comment {
+            background: #fafafa;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border: 1px solid #e0e0e0;
+            border-left: 3px solid #1a1a1a;
+            transition: all 0.2s ease;
+        }
+
+        .comment:hover {
+            background: #ffffff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .comment-author {
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 0.75rem;
+            font-size: 0.9375rem;
+            letter-spacing: 0.5px;
+        }
+
+        .comment-text {
+            color: #2b2b2b;
+            line-height: 1.7;
+            font-size: 0.9375rem;
+        }
+
+        .comment-reply {
+            margin-left: 3rem;
+            border-left-color: #666666;
+        }
+
+        /* YouTube */
+        .youtube-embed iframe {
+            width: 100%;
+            height: 450px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        /* Tags */
+        .tags-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+        .tags-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2b2b2b;
+            margin: 0 0 12px 0;
+        }
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .tag {
+            display: inline-block;
+            background: #f5f5f5;
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #555;
+            border: 1px solid #e0e0e0;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .tag:hover {
+            background: #1a1a1a;
+            color: #ffffff;
+            border-color: #1a1a1a;
+        }
+    </style>
+</head>
+<body>
+    <div class="post-header">
+        <div class="header-nav">
+            <a href="/">← Back to Library</a>
+            <a href="{{ post.post_url }}" target="_blank">View Original →</a>
+        </div>
+    </div>
+
+            <!-- Content blocks -->
+            <div class="post-content">
+                {% if post.content_blocks %}
+                    {# First pass: show everything except comments #}
+                    {% for block in post.content_blocks | sort(attribute='order') %}
+                        {% if block.type == 'comments_header' or block.type == 'comment' %}
+                            {# Skip comments for now, will show them later #}
+                        {% elif block.type == 'heading_1' %}
+                            <div class="content-block heading-1">
+                                <h1>{{ block.text }}</h1>
+                            </div>
+
+                        {% elif block.type == 'heading_2' %}
+                            <div class="content-block heading-2">
+                                <h2>{{ block.text }}</h2>
+                            </div>
+
+                        {% elif block.type == 'heading_3' %}
+                            <div class="content-block heading-3">
+                                <h3>{{ block.text }}</h3>
+                            </div>
+
+                        {% elif block.type == 'paragraph' %}
+                            <div class="content-block paragraph">
+                                <p>{{ block.text }}</p>
+                            </div>
+
+                        {% elif block.type == 'image' %}
+                            <div class="content-block image">
+                                <img src="{{ block.url }}" alt="{{ block.caption or '' }}" loading="lazy">
+                                {% if block.caption %}
+                                <div class="caption">{{ block.caption }}</div>
+                                {% endif %}
+                            </div>
+
+                        {% elif block.type == 'video' %}
+                            <div class="content-block video">
+                                <video controls {% if block.poster %}poster="{{ block.poster }}"{% endif %}>
+                                    <source src="{{ block.url }}">
+                                    Your browser does not support the video tag.
+                                </video>
+                            </div>
+
+                        {% elif block.type == 'audio' %}
+                            <div class="content-block audio">
+                                <div class="audio-player-container">
+                                    {% if block.get('thumbnail') %}
+                                    <img src="{{ block.thumbnail }}" alt="Audio thumbnail" class="audio-avatar">
+                                    {% endif %}
+                                    <div class="audio-player-main">
+                                        <audio controls src="{{ block.url }}" id="audio-{{ loop.index }}"></audio>
+                                        <button class="audio-speed-control" onclick="changeSpeed({{ loop.index }})">1x</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                        {% elif block.type == 'bulleted_list' %}
+                            <div class="content-block bulleted-list">
+                                <ul>
+                                    {% for item in block.items %}
+                                    <li>{{ item }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+
+                        {% elif block.type == 'numbered_list' %}
+                            <div class="content-block numbered-list">
+                                <ol>
+                                    {% for item in block.items %}
+                                    <li>{{ item }}</li>
+                                    {% endfor %}
+                                </ol>
+                            </div>
+
+                        {% elif block.type == 'quote' %}
+                            <div class="content-block quote">
+                                <blockquote>{{ block.text }}</blockquote>
+                            </div>
+
+                        {% elif block.type == 'youtube_embed' %}
+                            <div class="content-block youtube-embed">
+                                {% set video_id = block.url.split('v=')[1].split('&')[0] if 'v=' in block.url else block.url.split('/')[-1] %}
+                                <iframe
+                                    src="https://www.youtube.com/embed/{{ video_id }}"
+                                    frameborder="0"
+                                    allowfullscreen>
+                                </iframe>
+                            </div>
+
+                        {% elif block.type == 'iframe' %}
+                            <div class="content-block iframe-embed">
+                                <iframe src="{{ block.url }}" frameborder="0" allowfullscreen></iframe>
+                            </div>
+
+                        {% endif %}
+                    {% endfor %}
+
+                {% else %}
+                    <!-- Fallback for old format without blocks -->
+                    {% if post.full_content %}
+                    <div class="content-block paragraph">
+                        <p>{{ post.full_content }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if post.images %}
+                        {% for img_url in post.images %}
+                        <div class="content-block image">
+                            <img src="{{ img_url }}" alt="Post image" loading="lazy">
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    {% if post.videos %}
+                        {% for video_url in post.videos %}
+                        <div class="content-block video">
+                            <video controls>
+                                <source src="{{ video_url }}">
+                            </video>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    {% if post.audios %}
+                        {% for audio_url in post.audios %}
+                        <div class="content-block audio">
+                            <audio controls>
+                                <source src="{{ audio_url }}">
+                            </audio>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            <!-- Tags -->
+            {% if post.patreon_tags %}
+            <div class="tags-section">
+                <h3 class="tags-title">Tags</h3>
+                <div class="tags-container">
+                    {% for tag in post.patreon_tags %}
+                    <a href="/tag/{{ tag }}" class="tag">{{ tag }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Comments section - second pass -->
+            {% if post.content_blocks %}
+                {% set has_comments = post.content_blocks | selectattr('type', 'equalto', 'comment') | list | length > 0 %}
+                {% if has_comments %}
+                    <div class="comments-section">
+                        {% for block in post.content_blocks | sort(attribute='order') %}
+                            {% if block.type == 'comments_header' %}
+                                <button class="comments-toggle" id="commentsToggle">
+                                    <span>{{ block.text }}</span>
+                                    <span class="arrow">▼</span>
+                                </button>
+                            {% endif %}
+                        {% endfor %}
+
+                        <div class="comments-list" id="commentsList">
+                            {% for block in post.content_blocks | sort(attribute='order') %}
+                                {% if block.type == 'comment' %}
+                                    <div class="comment {% if block.get('level', 0) > 0 %}comment-reply{% endif %}">
+                                        <div class="comment-author">
+                                            {{ block.author }}
+                                            {% if block.get('level', 0) > 0 %}
+                                                <span style="color: #999; font-weight: normal; font-size: 0.8125rem;"> ↳ replied</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="comment-text">{{ block.text }}</div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        // Speed control for audio players
+        const speeds = {};
+
+        function changeSpeed(audioId) {
+            const audio = document.getElementById('audio-' + audioId);
+            const button = event.target;
+
+            if (!speeds[audioId]) {
+                speeds[audioId] = 1;
+            }
+
+            const speedOptions = [1, 1.25, 1.5, 1.75, 2];
+            const currentIndex = speedOptions.indexOf(speeds[audioId]);
+            const nextIndex = (currentIndex + 1) % speedOptions.length;
+            const newSpeed = speedOptions[nextIndex];
+
+            audio.playbackRate = newSpeed;
+            speeds[audioId] = newSpeed;
+            button.textContent = newSpeed + 'x';
+        }
+
+        // Comments toggle
+        const commentsToggle = document.getElementById('commentsToggle');
+        const commentsList = document.getElementById('commentsList');
+
+        if (commentsToggle && commentsList) {
+            commentsToggle.addEventListener('click', function() {
+                commentsList.classList.toggle('show');
+                commentsToggle.classList.toggle('active');
+            });
+        }
+    </script>
+</body>
+</html>

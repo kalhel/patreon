@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traditional Astrology Library</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Black & White Traditional Design */
+        body {
+            background: #ffffff;
+        }
+
+        .header {
+            background: #1a1a1a;
+            border: none;
+            border-bottom: 4px solid #000000;
+            padding: 2rem 1rem;
+            box-shadow: none;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .header h1 {
+            color: #ffffff;
+            font-size: 1.5rem;
+            font-weight: 300;
+            margin: 0;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .header .subtitle {
+            color: #b0b0b0;
+            font-size: 0.8125rem;
+            font-weight: 300;
+            letter-spacing: 0.5px;
+            margin-top: 0.5rem;
+        }
+
+        /* Creator cards */
+        .creator-section {
+            margin-top: 4rem;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 3rem;
+        }
+
+        .creator-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .creator-card {
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+            border-radius: 0;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .creator-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: #000000;
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .creator-card:hover::before {
+            transform: scaleY(1);
+        }
+
+        .creator-card:hover {
+            background: #ffffff;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .creator-card.selected {
+            background: #1a1a1a;
+            border-color: #1a1a1a;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .creator-card.selected::before {
+            transform: scaleY(1);
+        }
+
+        .creator-card.selected h3,
+        .creator-card.selected .post-count,
+        .creator-card.selected .post-count::after {
+            color: #ffffff;
+        }
+
+        .creator-card.selected a {
+            color: #ffffff;
+            border-bottom-color: #ffffff;
+        }
+
+        .creator-card.selected .creator-avatar {
+            border-color: #ffffff;
+        }
+
+        .creator-card .creator-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 1.5rem;
+            border: 3px solid #1a1a1a;
+        }
+
+        .creator-card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #1a1a1a;
+            letter-spacing: 0.5px;
+        }
+
+        .creator-card .post-count {
+            color: #666666;
+            font-size: 1.5rem;
+            margin-bottom: 0.3rem;
+            font-weight: 700;
+        }
+
+        .creator-card .post-count::after {
+            content: ' posts';
+            font-size: 0.75rem;
+            font-weight: 400;
+            color: #999999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: block;
+            margin-top: 0.25rem;
+        }
+
+        .creator-card a {
+            color: #1a1a1a;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #1a1a1a;
+            transition: all 0.2s;
+        }
+
+        .creator-card a::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        .creator-card a:hover {
+            color: #666666;
+            border-bottom-color: #666666;
+        }
+
+        /* Posts section */
+        .creator-section-title {
+            font-size: 1.5rem;
+            font-weight: 300;
+            color: #1a1a1a;
+            margin: 4rem 0 2rem 0;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #1a1a1a;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .posts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        .post-card-compact {
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+            border-radius: 0;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .post-card-compact:hover {
+            background: #ffffff;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            border-color: #1a1a1a;
+        }
+
+        .post-card-compact .creator-badge {
+            color: #666666;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 1.25rem;
+        }
+
+        .post-card-compact h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #1a1a1a;
+            line-height: 1.6;
+            flex-grow: 1;
+            min-height: 3em;
+        }
+
+        .post-card-compact h3 a {
+            color: #1a1a1a;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .post-card-compact h3 a::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        .post-card-compact h3 a:hover {
+            color: #666666;
+        }
+
+        .post-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding: 1.25rem 0;
+            border-top: 1px solid #e0e0e0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stat-item .label {
+            font-size: 0.6875rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #999999;
+            font-weight: 500;
+        }
+
+        .stat-item .value {
+            font-weight: 600;
+            color: #1a1a1a;
+            font-size: 1.125rem;
+        }
+
+        .post-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8125rem;
+            color: #666666;
+            margin-top: auto;
+        }
+
+        .post-date {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 300;
+        }
+
+        .post-date::before {
+            content: '•';
+            color: #999999;
+        }
+
+        .post-likes {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+            color: #1a1a1a;
+        }
+
+        .post-likes::before {
+            content: '♥';
+            color: #666666;
+            font-size: 0.875rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 6rem 2rem;
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+        }
+
+        .empty-state p {
+            font-size: 1.125rem;
+            color: #666666;
+            margin-bottom: 2rem;
+            font-weight: 300;
+        }
+
+        .empty-state code {
+            background: #1a1a1a;
+            color: #ffffff;
+            padding: 1rem 1.5rem;
+            font-size: 0.875rem;
+            display: inline-block;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 0.5px;
+        }
+
+        /* Search bar */
+        .search-container {
+            margin: 3rem 0;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            font-size: 1rem;
+            border: 2px solid #e0e0e0;
+            background: #fafafa;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #1a1a1a;
+            background: #ffffff;
+        }
+
+        .search-input::placeholder {
+            color: #999999;
+            font-weight: 300;
+        }
+
+        .search-results-count {
+            text-align: center;
+            color: #666666;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+            font-weight: 300;
+        }
+
+        .post-card-compact.hidden {
+            display: none;
+        }
+
+        /* Tags in post cards */
+        .post-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .post-tags .tag {
+            display: inline-block;
+            background: #f5f5f5;
+            padding: 4px 10px;
+            border-radius: 3px;
+            font-size: 0.6875rem;
+            color: #666666;
+            border: 1px solid #e0e0e0;
+            text-decoration: none;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .post-tags .tag:hover {
+            background: #1a1a1a;
+            color: #ffffff;
+            border-color: #1a1a1a;
+        }
+
+        /* YouTube embed in cards */
+        .post-card-compact .youtube-preview {
+            width: 100%;
+            height: 200px;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+            border: none;
+        }
+
+        /* Audio player in cards */
+        .post-card-compact .audio-preview {
+            width: 100%;
+            margin-bottom: 1rem;
+            background: #2d3748;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .post-card-compact .audio-preview audio {
+            width: 100%;
+            height: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 2rem 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+                letter-spacing: 2px;
+            }
+
+            .posts-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .creator-list {
+                grid-template-columns: 1fr;
+            }
+
+            .post-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .creator-section-title {
+                font-size: 1.25rem;
+            }
+
+            .search-container {
+                margin: 2rem 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Traditional Astrology Library</h1>
+        <div class="subtitle">{{ total_posts }} posts extracted and ready for review</div>
+    </div>
+
+    <div class="wide-container">
+        {% if creators %}
+            <div class="creator-section">
+                <div class="creator-list">
+                    {% for creator_id, posts in creators.items() %}
+                    <div class="creator-card" data-creator-id="{{ creator_id }}">
+                        {% if creator_avatars.get(creator_id) %}
+                        <img src="{{ creator_avatars[creator_id] }}" alt="{{ creator_id }}" class="creator-avatar">
+                        {% endif %}
+                        <h3>{{ creator_id | creator_name }}</h3>
+                        <div class="post-count">{{ posts | length }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Search bar -->
+            <div class="search-container">
+                <div class="search-box">
+                    <input type="text" class="search-input" id="searchInput" placeholder="Search posts by title, creator, or tags...">
+                </div>
+                <div class="search-results-count" id="resultsCount"></div>
+            </div>
+
+            <!-- All posts in single grid -->
+            <div class="posts-grid">
+                {% for creator_id, posts in creators.items() %}
+                    {% for post in posts %}
+                    <div class="post-card-compact"
+                         data-title="{{ (post.title or 'Untitled Post') | lower }}"
+                         data-creator="{{ (post.creator_id | creator_name) | lower }}"
+                         data-creator-id="{{ post.creator_id }}"
+                         data-tags="{{ (post.patreon_tags | join(' ') if post.patreon_tags else '') | lower }}">
+                        <div class="creator-badge">{{ post.creator_id | creator_name }}</div>
+
+                        <h3><a href="/post/{{ post.post_id }}">{{ post.title or 'Untitled Post' }}</a></h3>
+
+                        {# YouTube embed if exists #}
+                        {% if post.content_blocks %}
+                            {% set youtube_blocks = post.content_blocks | selectattr('type', 'equalto', 'youtube_embed') | list %}
+                            {% if youtube_blocks %}
+                                {% set youtube_block = youtube_blocks[0] %}
+                                {% set video_id = youtube_block.url.split('v=')[1].split('&')[0] if 'v=' in youtube_block.url else youtube_block.url.split('/')[-1] %}
+                                <iframe class="youtube-preview"
+                                    src="https://www.youtube.com/embed/{{ video_id }}"
+                                    frameborder="0"
+                                    allowfullscreen>
+                                </iframe>
+                            {% endif %}
+                        {% endif %}
+
+                        {# Audio player if exists #}
+                        {% if post.content_blocks %}
+                            {% set audio_blocks = post.content_blocks | selectattr('type', 'equalto', 'audio') | list %}
+                            {% if audio_blocks %}
+                                {% set audio_block = audio_blocks[0] %}
+                                <div class="audio-preview">
+                                    <audio controls src="{{ audio_block.url }}"></audio>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+
+                        {# Tags #}
+                        {% if post.patreon_tags %}
+                        <div class="post-tags">
+                            {% for tag in post.patreon_tags[:3] %}
+                            <a href="/tag/{{ tag }}" class="tag">{{ tag }}</a>
+                            {% endfor %}
+                            {% if post.patreon_tags | length > 3 %}
+                            <span class="tag" style="background: transparent; border: none; color: #999; cursor: default;">+{{ post.patreon_tags | length - 3 }} more</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <div class="post-stats">
+                            {% if post.content_blocks %}
+                                {% set img_count = post.content_blocks | selectattr('type', 'equalto', 'image') | list | length %}
+                                {% set vid_count = (post.content_blocks | selectattr('type', 'equalto', 'video') | list | length) + (post.content_blocks | selectattr('type', 'equalto', 'youtube_embed') | list | length) %}
+                                {% set aud_count = post.content_blocks | selectattr('type', 'equalto', 'audio') | list | length %}
+                                {% set com_count = post.content_blocks | selectattr('type', 'equalto', 'comment') | list | length %}
+                            {% else %}
+                                {% set img_count = post.images | length if post.images else 0 %}
+                                {% set vid_count = post.videos | length if post.videos else 0 %}
+                                {% set aud_count = post.audios | length if post.audios else 0 %}
+                                {% set com_count = 0 %}
+                            {% endif %}
+
+                            <div class="stat-item">
+                                <span class="label">Images</span>
+                                <span class="value">{{ img_count }}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="label">Videos</span>
+                                <span class="value">{{ vid_count }}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="label">Audio</span>
+                                <span class="value">{{ aud_count }}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="label">Comments</span>
+                                <span class="value">{{ com_count }}</span>
+                            </div>
+                        </div>
+
+                        <div class="post-footer">
+                            <div class="post-date">
+                                <span>{{ post.published_at | date_eu }}</span>
+                            </div>
+                            <div class="post-likes">
+                                <span>{{ post.like_count if post.like_count else 0 }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endfor %}
+            </div>
+
+        {% else %}
+            <div class="empty-state">
+                <p>No posts found. Run Phase 2 to extract post details first.</p>
+                <code>python src/phase2_detail_extractor.py --all --headless</code>
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        // Elements
+        const searchInput = document.getElementById('searchInput');
+        const resultsCount = document.getElementById('resultsCount');
+        const postCards = document.querySelectorAll('.post-card-compact');
+        const creatorCards = document.querySelectorAll('.creator-card');
+
+        // Selected creators (empty = all)
+        let selectedCreators = new Set();
+
+        // Creator filter functionality
+        creatorCards.forEach(card => {
+            card.addEventListener('click', function(e) {
+                // Don't trigger if clicking on a link
+                if (e.target.tagName === 'A') return;
+
+                const creatorId = this.dataset.creatorId;
+
+                // Toggle selection
+                if (selectedCreators.has(creatorId)) {
+                    selectedCreators.delete(creatorId);
+                    this.classList.remove('selected');
+                } else {
+                    selectedCreators.add(creatorId);
+                    this.classList.add('selected');
+                }
+
+                // Perform filtering
+                filterPosts();
+            });
+        });
+
+        // Combined filter function (search + creators)
+        function filterPosts() {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            let visibleCount = 0;
+
+            postCards.forEach(card => {
+                const title = card.dataset.title || '';
+                const creator = card.dataset.creator || '';
+                const tags = card.dataset.tags || '';
+                const creatorId = card.dataset.creatorId || '';
+
+                // Search match
+                const searchMatch = !searchTerm ||
+                                    title.includes(searchTerm) ||
+                                    creator.includes(searchTerm) ||
+                                    tags.includes(searchTerm);
+
+                // Creator filter match (if no creators selected, show all)
+                const creatorMatch = selectedCreators.size === 0 ||
+                                     selectedCreators.has(creatorId);
+
+                // Show only if both conditions match
+                if (searchMatch && creatorMatch) {
+                    card.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+
+            // Update results count
+            if (searchTerm || selectedCreators.size > 0) {
+                const filterText = selectedCreators.size > 0
+                    ? ` (${selectedCreators.size} creator${selectedCreators.size !== 1 ? 's' : ''} selected)`
+                    : '';
+                resultsCount.textContent = `${visibleCount} post${visibleCount !== 1 ? 's' : ''} found${filterText}`;
+            } else {
+                resultsCount.textContent = '';
+            }
+        }
+
+        // Add event listener for real-time search
+        searchInput.addEventListener('input', filterPosts);
+    </script>
+</body>
+</html>

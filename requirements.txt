@@ -1,0 +1,31 @@
+# HTTP & Web Scraping
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# Browser Automation
+selenium>=4.15.0
+webdriver-manager>=4.0.0
+
+# Data Processing
+python-dotenv>=1.0.0
+
+# Notion Integration
+notion-client>=2.2.0
+
+# Media Download
+Pillow>=10.0.0
+moviepy>=1.0.3
+
+# AI for Tag Generation (optional)
+google-generativeai>=0.3.0
+
+# Firebase for state tracking
+requests>=2.31.0
+
+# Utilities
+tqdm>=4.66.0
+python-dateutil>=2.8.0
+
+# Web viewer
+flask>=3.0.0

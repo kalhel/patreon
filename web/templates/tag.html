@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tag: {{ tag }} - Traditional Astrology Library</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Black & White Traditional Design - matching index */
+        body {
+            background: #ffffff;
+        }
+
+        .header {
+            background: #1a1a1a;
+            border: none;
+            border-bottom: 4px solid #000000;
+            padding: 3rem 2rem;
+            box-shadow: none;
+        }
+
+        .header h1 {
+            color: #ffffff;
+            font-size: 2rem;
+            font-weight: 300;
+            margin-bottom: 0.5rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .header .subtitle {
+            color: #b0b0b0;
+            font-size: 0.9375rem;
+            font-weight: 300;
+            letter-spacing: 0.5px;
+        }
+
+        .tag-badge {
+            background: #ffffff;
+            color: #1a1a1a;
+            padding: 0.5rem 1.5rem;
+            border: 2px solid #ffffff;
+            display: inline-block;
+            margin-top: 1rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .back-button {
+            display: inline-block;
+            color: #1a1a1a;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #1a1a1a;
+            margin-bottom: 3rem;
+            transition: all 0.2s;
+        }
+
+        .back-button:hover {
+            color: #666666;
+            border-bottom-color: #666666;
+        }
+
+        .posts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .post-card-compact {
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+            border-radius: 0;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .post-card-compact:hover {
+            background: #ffffff;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            border-color: #1a1a1a;
+        }
+
+        .post-card-compact .creator-badge {
+            color: #666666;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 1.25rem;
+        }
+
+        .post-card-compact h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #1a1a1a;
+            line-height: 1.6;
+            flex-grow: 1;
+            min-height: 3em;
+        }
+
+        .post-card-compact h3 a {
+            color: #1a1a1a;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .post-card-compact h3 a::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        .post-card-compact h3 a:hover {
+            color: #666666;
+        }
+
+        .post-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding: 1.25rem 0;
+            border-top: 1px solid #e0e0e0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stat-item .label {
+            font-size: 0.6875rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #999999;
+            font-weight: 500;
+        }
+
+        .stat-item .value {
+            font-weight: 600;
+            color: #1a1a1a;
+            font-size: 1.125rem;
+        }
+
+        .post-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8125rem;
+            color: #666666;
+            margin-top: auto;
+        }
+
+        .post-date {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 300;
+        }
+
+        .post-date::before {
+            content: '•';
+            color: #999999;
+        }
+
+        .post-likes {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+            color: #1a1a1a;
+        }
+
+        .post-likes::before {
+            content: '♥';
+            color: #666666;
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 2rem 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+                letter-spacing: 2px;
+            }
+
+            .posts-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .post-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Tag: {{ tag }}</h1>
+        <div class="subtitle">{{ total }} posts with this tag</div>
+    </div>
+
+    <div class="wide-container">
+        <a href="/" class="back-button">← Back to Library</a>
+
+        <div class="posts-grid">
+            {% for post in posts %}
+            <div class="post-card-compact">
+                <div class="creator-badge">{{ post.creator_id | creator_name }}</div>
+
+                <h3><a href="/post/{{ post.post_id }}">{{ post.title or 'Untitled Post' }}</a></h3>
+
+                <div class="post-stats">
+                    {% if post.content_blocks %}
+                        {% set img_count = post.content_blocks | selectattr('type', 'equalto', 'image') | list | length %}
+                        {% set vid_count = (post.content_blocks | selectattr('type', 'equalto', 'video') | list | length) + (post.content_blocks | selectattr('type', 'equalto', 'youtube_embed') | list | length) %}
+                        {% set aud_count = post.content_blocks | selectattr('type', 'equalto', 'audio') | list | length %}
+                        {% set com_count = post.content_blocks | selectattr('type', 'equalto', 'comment') | list | length %}
+                    {% else %}
+                        {% set img_count = post.images | length if post.images else 0 %}
+                        {% set vid_count = post.videos | length if post.videos else 0 %}
+                        {% set aud_count = post.audios | length if post.audios else 0 %}
+                        {% set com_count = 0 %}
+                    {% endif %}
+
+                    <div class="stat-item">
+                        <span class="label">Images</span>
+                        <span class="value">{{ img_count }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="label">Videos</span>
+                        <span class="value">{{ vid_count }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="label">Audio</span>
+                        <span class="value">{{ aud_count }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="label">Comments</span>
+                        <span class="value">{{ com_count }}</span>
+                    </div>
+                </div>
+
+                <div class="post-footer">
+                    <div class="post-date">
+                        <span>{{ post.published_at | date_eu }}</span>
+                    </div>
+                    <div class="post-likes">
+                        <span>{{ post.like_count if post.like_count else 0 }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>

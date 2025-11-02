@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Círculo zodiacal exterior -->
+  <circle cx="50" cy="50" r="45" fill="none" stroke="#1a1a1a" stroke-width="2"/>
+
+  <!-- Estrella de 8 puntas (símbolo de Ishtar/Venus - astrología tradicional) -->
+  <path d="M50,10 L53,35 L62,17 L58,35 L75,25 L60,38 L80,40 L60,45 L75,58 L58,48 L62,66 L53,48 L50,73 L47,48 L38,66 L42,48 L25,58 L40,45 L20,40 L40,38 L25,25 L42,35 L38,17 L47,35 Z" fill="#1a1a1a"/>
+
+  <!-- Círculo central -->
+  <circle cx="50" cy="50" r="12" fill="none" stroke="#1a1a1a" stroke-width="2"/>
+  <circle cx="50" cy="50" r="4" fill="#1a1a1a"/>
+
+  <!-- Símbolos zodiacales simplificados alrededor -->
+  <text x="50" y="8" font-size="6" fill="#1a1a1a" text-anchor="middle">♈</text>
+  <text x="85" y="30" font-size="6" fill="#1a1a1a" text-anchor="middle">♉</text>
+  <text x="92" y="53" font-size="6" fill="#1a1a1a" text-anchor="middle">♊</text>
+  <text x="85" y="75" font-size="6" fill="#1a1a1a" text-anchor="middle">♋</text>
+  <text x="50" y="97" font-size="6" fill="#1a1a1a" text-anchor="middle">♌</text>
+  <text x="15" y="75" font-size="6" fill="#1a1a1a" text-anchor="middle">♍</text>
+  <text x="8" y="53" font-size="6" fill="#1a1a1a" text-anchor="middle">♎</text>
+  <text x="15" y="30" font-size="6" fill="#1a1a1a" text-anchor="middle">♏</text>
+</svg>
