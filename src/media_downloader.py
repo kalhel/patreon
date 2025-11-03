@@ -6,10 +6,14 @@ Downloads images, videos, and audio files from scraped posts
 
 import json
 import logging
+import os
+import shutil
+import subprocess
 import time
 from pathlib import Path
 from typing import Dict, List, Optional
 from urllib.parse import urlparse, unquote
+import tempfile
 
 import requests
 from requests.cookies import RequestsCookieJar
@@ -215,6 +219,102 @@ class MediaDownloader:
             return [url]
 
         return candidates or [url]
+
+    def _create_temp_cookie_file(self) -> Optional[str]:
+        """Create a temporary Netscape cookie file from the current session cookies."""
+        if not self.session.cookies:
+            return None
+
+        try:
+            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".cookies.txt")
+            with open(tmp.name, 'w', encoding='utf-8') as fh:
+                fh.write("# Netscape HTTP Cookie File\n")
+                fh.write("# This file was generated automatically. Edit at your own risk.\n")
+                for cookie in self.session.cookies:
+                    domain = cookie.domain or ""
+                    if not domain:
+                        continue
+                    include_subdomains = 'TRUE' if domain.startswith('.') else 'FALSE'
+                    path = cookie.path or '/'
+                    secure = 'TRUE' if cookie.secure else 'FALSE'
+                    expiry = str(cookie.expires) if cookie.expires else '0'
+                    name = cookie.name or ''
+                    value = cookie.value or ''
+                    fh.write(f"{domain}\t{include_subdomains}\t{path}\t{secure}\t{expiry}\t{name}\t{value}\n")
+            return tmp.name
+        except Exception as cookie_error:
+            logger.debug(f"Could not generate temp cookie file: {cookie_error}")
+            return None
+
+    def _download_with_ytdlp(self, candidate_urls: List[str], output_path: Path, referer: Optional[str], count_success: bool = True) -> bool:
+        """Fallback to yt-dlp for stubborn Mux streams."""
+        yt_dlp_executable = shutil.which("yt-dlp")
+        if not yt_dlp_executable:
+            python_exe = shutil.which("python3") or shutil.which("python")
+            if python_exe:
+                yt_dlp_executable = None
+                base_command = [python_exe, "-m", "yt_dlp"]
+            else:
+                logger.warning("yt-dlp not found. Install it to enable video fallback downloads.")
+                return False
+        else:
+            base_command = [yt_dlp_executable]
+
+        cookie_file = self._create_temp_cookie_file()
+        headers = []
+        if referer:
+            headers.extend(["--referer", referer])
+            headers.extend(["--add-header", "Origin: https://www.patreon.com"])
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        success = False
+
+        for candidate in candidate_urls:
+            command = base_command + [
+                "--no-mtime",
+                "--quiet",
+                "--no-warnings",
+                "--restrict-filenames",
+                "--force-overwrites",
+                "-o", str(output_path)
+            ]
+
+            if cookie_file:
+                command.extend(["--cookies", cookie_file])
+            command.extend(headers)
+            command.append(candidate)
+
+            try:
+                result = subprocess.run(
+                    command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False,
+                    text=True
+                )
+                if result.returncode == 0 and output_path.exists():
+                    file_size = output_path.stat().st_size
+                    logger.info(f"✓ yt-dlp downloaded: {output_path.name} ({self._format_size(file_size)})")
+                    if count_success:
+                        self.stats['videos']['downloaded'] += 1
+                    success = True
+                    break
+                else:
+                    logger.debug(f"yt-dlp failed for {candidate}: {result.stderr.strip()}")
+            except FileNotFoundError:
+                logger.warning("yt-dlp executable not found when attempting fallback.")
+                break
+            except Exception as fallback_error:
+                logger.debug(f"yt-dlp error for {candidate}: {fallback_error}")
+
+        if cookie_file:
+            try:
+                os.remove(cookie_file)
+            except OSError:
+                pass
+
+        return success
 
     def download_file(self, url: str, output_path: Path, media_type: str = 'image', referer: Optional[str] = None) -> bool:
         """
@@ -432,6 +532,24 @@ class MediaDownloader:
                 if self.download_file(candidate, output_path, 'video', referer=referer):
                     download_success = True
                     break
+
+            # Fallback to yt-dlp if direct download failed
+            if not download_success:
+                if self._download_with_ytdlp(candidate_urls, output_path, referer):
+                    download_success = True
+                    logger.info(f"✓ Fallback succeeded for {output_path.name}")
+
+            # Replace preview-sized files with yt-dlp result
+            elif output_path.exists():
+                try:
+                    file_size = output_path.stat().st_size
+                except OSError:
+                    file_size = 0
+                if file_size and file_size < self.min_video_size_bytes:
+                    logger.info(f"Preview-sized video detected ({self._format_size(file_size)}). Retrying with yt-dlp...")
+                    if self._download_with_ytdlp(candidate_urls, output_path, referer, count_success=False):
+                        download_success = True
+                        logger.info(f"✓ Replaced preview file with full download for {output_path.name}")
 
             if download_success:
                 abs_path = str(output_path)
