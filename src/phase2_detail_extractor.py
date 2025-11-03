@@ -12,6 +12,7 @@ from typing import List, Dict, Optional
 from patreon_auth_selenium import PatreonAuthSelenium
 from patreon_scraper_v2 import PatreonScraperV2
 from firebase_tracker import FirebaseTracker, load_firebase_config
+from media_downloader import MediaDownloader
 
 # Configure logging
 logging.basicConfig(
@@ -23,6 +24,8 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+media_downloader = MediaDownloader()
 
 
 def load_config():
@@ -99,7 +102,7 @@ def extract_post_details(
 
     try:
         # Scrape full post details
-        post_detail = scraper.scrape_post_detail(post_url)
+        post_detail = scraper.scrape_post_detail(post_url, post_id=post.get('post_id'))
 
         if not post_detail:
             error_msg = "Failed to extract post details"
@@ -112,6 +115,19 @@ def extract_post_details(
             **post,  # Existing Firebase data
             **post_detail  # New scraped details
         }
+
+        # Ensure Patreon session cookies are available for authenticated media URLs
+        media_downloader.sync_cookies_from_driver(scraper.driver)
+
+        # Download media immediately so local assets are linked to the post data
+        download_result = media_downloader.download_all_from_post(full_post_data, creator_id)
+        full_post_data['downloaded_media'] = download_result
+        if download_result.get('videos_relative'):
+            full_post_data['video_local_paths'] = download_result['videos_relative']
+        if download_result.get('audios_relative'):
+            full_post_data['audio_local_paths'] = download_result['audios_relative']
+        if download_result.get('images_relative'):
+            full_post_data['image_local_paths'] = download_result['images_relative']
 
         # Save to JSON file if requested
         if save_to_json:

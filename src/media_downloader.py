@@ -5,13 +5,14 @@ Downloads images, videos, and audio files from scraped posts
 """
 
 import json
-import requests
 import logging
-from pathlib import Path
-from typing import List, Dict, Optional
-from urllib.parse import urlparse, unquote
 import time
-from tqdm import tqdm
+from pathlib import Path
+from typing import Dict, List, Optional
+from urllib.parse import urlparse, unquote
+
+import requests
+from requests.cookies import RequestsCookieJar
 
 # Configure logging
 logging.basicConfig(
@@ -28,12 +29,13 @@ logger = logging.getLogger(__name__)
 class MediaDownloader:
     """Downloads media files from Patreon posts"""
 
-    def __init__(self, output_dir: str = "data/media"):
+    def __init__(self, output_dir: str = "data/media", cookies_path: Optional[str] = "config/patreon_cookies.json"):
         """
         Initialize downloader
 
         Args:
             output_dir: Base directory for media downloads
+            cookies_path: Optional path to Patreon cookies captured by Selenium
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -50,8 +52,15 @@ class MediaDownloader:
         # Session for downloads
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': '*/*',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Origin': 'https://www.patreon.com'
         })
+
+        self.cookies_path = Path(cookies_path) if cookies_path else None
+        if self.cookies_path:
+            self._load_cookies_from_file(self.cookies_path)
 
         # Download statistics
         self.stats = {
@@ -60,7 +69,95 @@ class MediaDownloader:
             'audios': {'total': 0, 'downloaded': 0, 'failed': 0, 'skipped': 0}
         }
 
-    def download_file(self, url: str, output_path: Path, media_type: str = 'image') -> bool:
+    def _load_cookies_from_file(self, path: Path):
+        """Load Patreon cookies exported by Selenium"""
+        if not path.exists():
+            logger.debug(f"No cookie file found at {path}")
+            return
+
+        try:
+            with open(path, 'r', encoding='utf-8') as fh:
+                cookies = json.load(fh)
+        except Exception as exc:
+            logger.warning(f"⚠️  Could not read cookies from {path}: {exc}")
+            return
+
+        loaded = 0
+        for cookie in cookies or []:
+            name = cookie.get('name')
+            value = cookie.get('value')
+            if not name or value is None:
+                continue
+            params = {
+                'domain': cookie.get('domain'),
+                'path': cookie.get('path', '/')
+            }
+            self.session.cookies.set(name, value, **{k: v for k, v in params.items() if v})
+            loaded += 1
+
+        logger.info(f"🍪 Loaded {loaded} cookies from {path}")
+
+    def sync_cookies_from_driver(self, driver, clear_existing: bool = False):
+        """
+        Copy cookies from an authenticated Selenium WebDriver into the requests session.
+
+        Args:
+            driver: Selenium WebDriver instance
+            clear_existing: Whether to clear existing cookies before syncing
+        """
+        if driver is None:
+            return
+
+        try:
+            selenium_cookies = driver.get_cookies()
+        except Exception as exc:
+            logger.debug(f"⚠️  Unable to read cookies from driver: {exc}")
+            return
+
+        if clear_existing:
+            self.session.cookies.clear()
+
+        jar = RequestsCookieJar()
+        synced = 0
+        for cookie in selenium_cookies:
+            name = cookie.get('name')
+            value = cookie.get('value')
+            if not name or value is None:
+                continue
+            jar.set(
+                name,
+                value,
+                domain=cookie.get('domain'),
+                path=cookie.get('path', '/')
+            )
+            synced += 1
+
+        self.session.cookies.update(jar)
+        logger.debug(f"🍪 Synced {synced} cookies from Selenium session")
+
+    def _flatten_urls(self, sources) -> List[str]:
+        """Flatten nested collections of URLs into a unique ordered list"""
+
+        urls: List[str] = []
+
+        def collect(value):
+            if not value:
+                return
+            if isinstance(value, str):
+                value = value.strip()
+                if value and value not in urls:
+                    urls.append(value)
+            elif isinstance(value, (list, tuple, set)):
+                for item in value:
+                    collect(item)
+            elif isinstance(value, dict):
+                for item in value.values():
+                    collect(item)
+
+        collect(sources)
+        return urls
+
+    def download_file(self, url: str, output_path: Path, media_type: str = 'image', referer: Optional[str] = None) -> bool:
         """
         Download a single file
 
@@ -68,6 +165,7 @@ class MediaDownloader:
             url: URL to download
             output_path: Path to save file
             media_type: Type of media (for stats)
+            referer: Optional HTTP referer header to include
 
         Returns:
             bool: True if downloaded successfully
@@ -81,7 +179,10 @@ class MediaDownloader:
 
             # Download
             logger.debug(f"Downloading: {url}")
-            response = self.session.get(url, stream=True, timeout=30)
+            headers = {}
+            if referer:
+                headers['Referer'] = referer
+            response = self.session.get(url, stream=True, timeout=30, headers=headers)
             response.raise_for_status()
 
             # Get total size for progress bar
@@ -145,27 +246,27 @@ class MediaDownloader:
             size_bytes /= 1024
         return f"{size_bytes:.1f}TB"
 
-    def download_images_from_post(self, post: Dict, creator_id: str) -> List[str]:
+    def download_images_from_post(self, post: Dict, creator_id: str, referer: Optional[str]) -> Dict[str, List[str]]:
         """
         Download all images from a post
 
         Args:
             post: Post dictionary
             creator_id: Creator identifier
+            referer: HTTP referer for authenticated asset requests
 
         Returns:
             List of downloaded file paths
         """
         downloaded = []
+        relatives = []
 
         # Get image URLs
-        image_urls = []
-
-        if 'images' in post and post['images']:
-            image_urls.extend(post['images'])
-
-        if 'preview_images' in post and post['preview_images']:
-            image_urls.extend(post['preview_images'])
+        image_urls = self._flatten_urls([
+            post.get('images'),
+            post.get('preview_images'),
+            post.get('image_urls')
+        ])
 
         if not image_urls:
             return downloaded
@@ -188,30 +289,44 @@ class MediaDownloader:
 
             output_path = creator_dir / filename
 
-            if self.download_file(url, output_path, 'image'):
-                downloaded.append(str(output_path))
+            if self.download_file(url, output_path, 'image', referer=referer):
+                abs_path = str(output_path)
+                if abs_path not in downloaded:
+                    downloaded.append(abs_path)
+                    try:
+                        relatives.append(output_path.relative_to(self.output_dir).as_posix())
+                    except ValueError:
+                        relatives.append(abs_path)
 
             # Small delay between downloads
             time.sleep(0.5)
 
-        return downloaded
+        return {'absolute': downloaded, 'relative': relatives}
 
-    def download_videos_from_post(self, post: Dict, creator_id: str) -> List[str]:
+    def download_videos_from_post(self, post: Dict, creator_id: str, referer: Optional[str]) -> Dict[str, List[str]]:
         """
         Download all videos from a post
 
         Args:
             post: Post dictionary
             creator_id: Creator identifier
+            referer: HTTP referer for authenticated asset requests
 
         Returns:
             List of downloaded file paths
         """
         downloaded = []
+        relatives = []
 
-        video_urls = post.get('videos', [])
+        preferred_downloads = self._flatten_urls(post.get('video_downloads'))
+        fallback_videos = self._flatten_urls(post.get('videos'))
+        stream_only_urls = self._flatten_urls(post.get('video_streams'))
+
+        video_urls = preferred_downloads if preferred_downloads else fallback_videos
 
         if not video_urls:
+            if stream_only_urls:
+                logger.info("Video available as stream-only (HLS). Saved reference for manual download.")
             return downloaded
 
         # Create creator subdirectory
@@ -221,6 +336,11 @@ class MediaDownloader:
         post_id = post.get('post_id', 'unknown')
 
         for i, url in enumerate(video_urls):
+            if url.startswith('blob:'):
+                logger.info(f"Skipped blob URL (stream-only): {url[:60]}...")
+                self.stats['videos']['skipped'] += 1
+                continue
+
             self.stats['videos']['total'] += 1
 
             filename = self._get_filename_from_url(url, '.mp4')
@@ -228,27 +348,41 @@ class MediaDownloader:
 
             output_path = creator_dir / filename
 
-            if self.download_file(url, output_path, 'video'):
-                downloaded.append(str(output_path))
+            if self.download_file(url, output_path, 'video', referer=referer):
+                abs_path = str(output_path)
+                if abs_path not in downloaded:
+                    downloaded.append(abs_path)
+                    try:
+                        relatives.append(output_path.relative_to(self.output_dir).as_posix())
+                    except ValueError:
+                        relatives.append(abs_path)
 
             time.sleep(1)  # Longer delay for videos
 
-        return downloaded
+        if not downloaded and stream_only_urls:
+            logger.info("No downloadable video URLs, but stream sources are available (HLS).")
 
-    def download_audios_from_post(self, post: Dict, creator_id: str) -> List[str]:
+        return {'absolute': downloaded, 'relative': relatives}
+
+    def download_audios_from_post(self, post: Dict, creator_id: str, referer: Optional[str]) -> Dict[str, List[str]]:
         """
         Download all audio files from a post
 
         Args:
             post: Post dictionary
             creator_id: Creator identifier
+            referer: HTTP referer for authenticated asset requests
 
         Returns:
             List of downloaded file paths
         """
         downloaded = []
+        relatives = []
 
-        audio_urls = post.get('audios', [])
+        audio_urls = self._flatten_urls([
+            post.get('audios'),
+            post.get('audio_urls')
+        ])
 
         if not audio_urls:
             return downloaded
@@ -267,12 +401,18 @@ class MediaDownloader:
 
             output_path = creator_dir / filename
 
-            if self.download_file(url, output_path, 'audio'):
-                downloaded.append(str(output_path))
+            if self.download_file(url, output_path, 'audio', referer=referer):
+                abs_path = str(output_path)
+                if abs_path not in downloaded:
+                    downloaded.append(abs_path)
+                    try:
+                        relatives.append(output_path.relative_to(self.output_dir).as_posix())
+                    except ValueError:
+                        relatives.append(abs_path)
 
             time.sleep(0.5)
 
-        return downloaded
+        return {'absolute': downloaded, 'relative': relatives}
 
     def download_all_from_post(self, post: Dict, creator_id: str) -> Dict:
         """
@@ -287,21 +427,33 @@ class MediaDownloader:
         """
         logger.info(f"\n📥 Downloading media for post: {post.get('title', 'Unknown')[:50]}...")
 
+        referer = post.get('post_url') or post.get('url') or 'https://www.patreon.com/'
+
         result = {
             'post_id': post.get('post_id'),
             'images': [],
+            'images_relative': [],
             'videos': [],
-            'audios': []
+            'videos_relative': [],
+            'video_streams': post.get('video_streams', []),
+            'audios': [],
+            'audios_relative': []
         }
 
         # Download images
-        result['images'] = self.download_images_from_post(post, creator_id)
+        images = self.download_images_from_post(post, creator_id, referer)
+        result['images'] = images['absolute']
+        result['images_relative'] = images['relative']
 
         # Download videos
-        result['videos'] = self.download_videos_from_post(post, creator_id)
+        videos = self.download_videos_from_post(post, creator_id, referer)
+        result['videos'] = videos['absolute']
+        result['videos_relative'] = videos['relative']
 
         # Download audios
-        result['audios'] = self.download_audios_from_post(post, creator_id)
+        audios = self.download_audios_from_post(post, creator_id, referer)
+        result['audios'] = audios['absolute']
+        result['audios_relative'] = audios['relative']
 
         total_downloaded = len(result['images']) + len(result['videos']) + len(result['audios'])
         logger.info(f"  ✓ Downloaded {total_downloaded} files")
@@ -388,10 +540,11 @@ def main():
     parser.add_argument('--json', type=str, help='Path to posts JSON file')
     parser.add_argument('--creator', type=str, help='Creator ID')
     parser.add_argument('--all', action='store_true', help='Download from all JSONs in data/raw/')
+    parser.add_argument('--cookies', type=str, help='Path to Patreon cookies JSON (defaults to config/patreon_cookies.json)')
 
     args = parser.parse_args()
 
-    downloader = MediaDownloader()
+    downloader = MediaDownloader(cookies_path=args.cookies or "config/patreon_cookies.json")
 
     if args.all:
         # Find all JSON files in data/raw/
