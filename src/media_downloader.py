@@ -175,7 +175,7 @@ class MediaDownloader:
         try:
             parsed = urlparse(url)
             path = parsed.path or ''
-            base, _, filename = path.rpartition('/')
+            _, _, filename = path.rpartition('/')
             query = f"?{parsed.query}" if parsed.query else ""
             prefix = url[: url.rfind('/') + 1] if '/' in url else url
 
@@ -407,8 +407,19 @@ class MediaDownloader:
 
             output_path = creator_dir / filename
 
+            candidate_urls = self._expand_mux_variants(url)
+
+            if output_path.exists() and len(candidate_urls) > 1:
+                try:
+                    existing_size = output_path.stat().st_size
+                    if existing_size < self.min_video_size_bytes:
+                        output_path.unlink()
+                        logger.debug(f"Removed {output_path.name} (size {existing_size}B) before trying alternate variants")
+                except Exception as unlink_error:
+                    logger.debug(f"Could not remove existing file before retry: {unlink_error}")
+
             download_success = False
-            for idx, candidate in enumerate(self._expand_mux_variants(url)):
+            for idx, candidate in enumerate(candidate_urls):
                 if idx > 0 and output_path.exists():
                     try:
                         existing_size = output_path.stat().st_size
