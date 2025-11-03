@@ -68,6 +68,7 @@ class MediaDownloader:
             'videos': {'total': 0, 'downloaded': 0, 'failed': 0, 'skipped': 0},
             'audios': {'total': 0, 'downloaded': 0, 'failed': 0, 'skipped': 0}
         }
+        self.min_video_size_bytes = 15 * 1024 * 1024  # 15 MB threshold to detect previews
 
     def _load_cookies_from_file(self, path: Path):
         """Load Patreon cookies exported by Selenium"""
@@ -407,7 +408,16 @@ class MediaDownloader:
             output_path = creator_dir / filename
 
             download_success = False
-            for candidate in self._expand_mux_variants(url):
+            for idx, candidate in enumerate(self._expand_mux_variants(url)):
+                if idx > 0 and output_path.exists():
+                    try:
+                        existing_size = output_path.stat().st_size
+                        if existing_size < self.min_video_size_bytes:
+                            output_path.unlink()
+                            logger.debug(f"Removed {output_path.name} (size {existing_size}B) to retry alternate variant")
+                    except Exception as unlink_error:
+                        logger.debug(f"Could not remove existing file before retry: {unlink_error}")
+
                 if self.download_file(candidate, output_path, 'video', referer=referer):
                     download_success = True
                     break
