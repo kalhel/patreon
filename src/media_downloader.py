@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import time
 from pathlib import Path
+from pathlib import PurePosixPath
 from typing import Dict, List, Optional
 from urllib.parse import urlparse, unquote
 import tempfile
@@ -487,7 +488,33 @@ class MediaDownloader:
         fallback_videos = self._flatten_urls(post.get('videos'))
         stream_only_urls = self._flatten_urls(post.get('video_streams'))
 
+        def dedupe_mux(urls: List[str]) -> List[str]:
+            unique: List[str] = []
+            seen = set()
+
+            for url in urls:
+                if not url:
+                    continue
+                key = url
+                if 'stream.mux.com' in url:
+                    try:
+                        parsed = urlparse(url)
+                        parts = [p for p in PurePosixPath(parsed.path or '').parts if p]
+                        playback_id = parts[0] if parts else url
+                        key = ('mux', playback_id)
+                    except Exception:
+                        key = url
+
+                if key in seen:
+                    continue
+                seen.add(key)
+                unique.append(url)
+
+            return unique
+
         video_urls = preferred_downloads if preferred_downloads else fallback_videos
+        video_urls = dedupe_mux(video_urls)
+        stream_only_urls = dedupe_mux(stream_only_urls)
 
         if not video_urls:
             if stream_only_urls:
