@@ -587,7 +587,8 @@
                     {% if local_videos %}
                         {% set primary_video = local_videos[0] %}
                         <div class="content-block video">
-                            <video controls preload="metadata" src="{{ url_for('media_file', filename=primary_video) }}">
+                            <video controls preload="metadata">
+                                <source src="{{ url_for('media_file', filename=primary_video) }}" type="video/mp4">
                                 Your browser does not support the video tag.
                             </video>
                         </div>
@@ -596,7 +597,8 @@
                             <p><strong>Descargas adicionales:</strong></p>
                             <ul>
                                 {% for rel_path in local_videos[1:] %}
-                                <li><a href="{{ url_for('media_file', filename=rel_path) }}" target="_blank" rel="noopener">Video {{ loop.index + 1 }}</a></li>
+                                {% set file_name = rel_path.rsplit('/', 1)[-1] %}
+                                <li><a href="{{ url_for('media_file', filename=rel_path) }}" target="_blank" rel="noopener">{{ file_name }}</a></li>
                                 {% endfor %}
                             </ul>
                         </div>

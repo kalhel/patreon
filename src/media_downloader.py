@@ -462,7 +462,13 @@ class MediaDownloader:
 
         return {'absolute': downloaded, 'relative': relatives}
 
-    def download_videos_from_post(self, post: Dict, creator_id: str, referer: Optional[str]) -> Dict[str, List[str]]:
+    def download_videos_from_post(
+        self,
+        post: Dict,
+        creator_id: str,
+        referer: Optional[str],
+        expected_count: Optional[int] = None
+    ) -> Dict[str, List[str]]:
         """
         Download all videos from a post
 
@@ -495,6 +501,8 @@ class MediaDownloader:
         post_id = post.get('post_id', 'unknown')
 
         video_extensions = {'.mp4', '.m4v', '.mov', '.webm', '.mkv'}
+
+        successful_downloads = 0
 
         for i, url in enumerate(video_urls):
             if url.startswith('blob:'):
@@ -567,6 +575,10 @@ class MediaDownloader:
                         relatives.append(output_path.relative_to(self.output_dir).as_posix())
                     except ValueError:
                         relatives.append(abs_path)
+                successful_downloads += 1
+
+            if expected_count and successful_downloads >= expected_count:
+                break
 
             time.sleep(1)  # Longer delay for videos
 
@@ -657,7 +669,14 @@ class MediaDownloader:
         result['images_relative'] = images['relative']
 
         # Download videos
-        videos = self.download_videos_from_post(post, creator_id, referer)
+        video_block_count = sum(
+            1
+            for block in post.get('content_blocks') or []
+            if isinstance(block, dict) and block.get('type') == 'video'
+        )
+        expected_videos = video_block_count if video_block_count > 0 else None
+
+        videos = self.download_videos_from_post(post, creator_id, referer, expected_videos)
         result['videos'] = videos['absolute']
         result['videos_relative'] = videos['relative']
 
