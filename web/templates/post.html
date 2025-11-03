@@ -104,95 +104,84 @@
             letter-spacing: 0.8px;
         }
 
-        .meta-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            padding: 0.35rem 0.75rem;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.08);
-            color: rgba(255, 255, 255, 0.75);
-            font-size: 0.75rem;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-        }
-
-        .meta-pill .pill-icon {
-            font-size: 0.85rem;
-        }
-
-        .meta-row {
+        .post-meta-icons {
             display: flex;
             align-items: center;
-            gap: 1.25rem;
+            gap: 1rem;
             flex-wrap: wrap;
         }
 
-        .meta-item {
+        .meta-icon,
+        .meta-icon-with-count .icon {
+            width: 18px;
+            height: 18px;
+            background-color: rgba(255, 255, 255, 0.35);
             display: inline-flex;
             align-items: center;
-            gap: 0.45rem;
-            font-size: 0.875rem;
-            color: rgba(255, 255, 255, 0.65);
+            justify-content: center;
+            -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+            -webkit-mask-size: contain;
+            mask-size: contain;
+            -webkit-mask-position: center;
+            mask-position: center;
+            transition: background-color 0.2s ease, transform 0.2s ease;
         }
 
-        .meta-item .icon {
-            font-size: 1rem;
-            display: inline-flex;
+        .meta-icon.active,
+        .meta-icon-with-count.active .icon {
+            background-color: #ffffff;
         }
 
-        .meta-item .value {
-            font-weight: 600;
-            color: #ffffff;
-            letter-spacing: 0.5px;
-        }
-
-        .meta-item-heart .icon {
-            color: #ff6f91;
-        }
-
-        .meta-item-comments .icon {
-            color: #7bdff2;
-        }
-
-        .media-flags {
-            display: flex;
-            align-items: center;
-            gap: 0.65rem;
-        }
-
-        .media-label {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            color: rgba(255, 255, 255, 0.45);
-        }
-
-        .media-icon {
+        .meta-icon-with-count {
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
-            padding: 0.35rem 0.8rem;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.06);
-            color: rgba(255, 255, 255, 0.35);
-            font-size: 0.8rem;
-            letter-spacing: 0.5px;
-            transition: all 0.25s ease;
-        }
-
-        .media-icon .glyph {
-            font-size: 1rem;
-        }
-
-        .media-icon .count {
+            font-size: 0.75rem;
             font-weight: 600;
+            color: rgba(255, 255, 255, 0.6);
+            transition: color 0.2s ease;
         }
 
-        .media-icon.active {
-            background: rgba(255, 255, 255, 0.15);
+        .meta-icon-with-count .count {
+            line-height: 1;
+        }
+
+        .meta-icon-with-count.active {
             color: #ffffff;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+        }
+
+        .post-meta-icons .meta-icon.active,
+        .post-meta-icons .meta-icon-with-count.active .icon {
+            transform: scale(1.08);
+        }
+
+        .meta-icon[data-icon="image"],
+        .meta-icon-with-count[data-icon="image"] .icon {
+            -webkit-mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCc+PHBhdGggZmlsbD0nd2hpdGUnIGQ9J001IDRoMTRhMSAxIDAgMCAxIDEgMXYxNGExIDEgMCAwIDEtMSAxSDVhMSAxIDAgMCAxLTEtMVY1YTEgMSAwIDAgMSAxLTF6bTAgMnYxMmgxNFY2SDV6bTIgOWwzLTMgMiAyIDMtNCAzIDVIN3ptMi03LjVBMS41IDEuNSAwIDEgMCA5IDYuNWExLjUgMS41IDAgMCAwIDAgM3onLz48L3N2Zz4=');
+            mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCc+PHBhdGggZmlsbD0nd2hpdGUnIGQ9J001IDRoMTRhMSAxIDAgMCAxIDEgMXYxNGExIDEgMCAwIDEtMSAxSDVhMSAxIDAgMCAxLTEtMVY1YTEgMSAwIDAgMSAxLTF6bTAgMnYxMmgxNFY2SDV6bTIgOWwzLTMgMiAyIDMtNCAzIDVIN3ptMi03LjVBMS41IDEuNSAwIDEgMCA5IDYuNWExLjUgMS41IDAgMCAwIDAgM3onLz48L3N2Zz4=');
+        }
+
+        .meta-icon[data-icon="video"],
+        .meta-icon-with-count[data-icon="video"] .icon {
+            -webkit-mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCc+PHBhdGggZmlsbD0nd2hpdGUnIGQ9J006IDRoNmEyIDIgMCAwIDEgMiAydjIuMzgybDQuNDQ3LTIuNjY3QTEgMSAwIDAgMSAyMCA2LjYxOFYxNy4zOGExIDEgMCAwIDEtMS41NTMuODM3TDE0IDE1LjU1MVYxOGEyIDIgMCAwIDEtMiAySDZhMiAyIDAgMCAxLTItMlY2YTIgMiAwIDAgMSAyLTJ6bTAgMnYxMmg2VjZINnonLz48L3N2Zz4=');
+            mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCc+PHBhdGggZmlsbD0nd2hpdGUnIGQ9J006IDRoNmEyIDIgMCAwIDEgMiAydjIuMzgybDQuNDQ3LTIuNjY3QTEgMSAwIDAgMSAyMCA2LjYxOFYxNy4zOGExIDEgMCAwIDEtMS41NTMuODM3TDE0IDE1LjU1MVYxOGEyIDIgMCAwIDEtMiAySDZhMiAyIDAgMCAxLTItMlY2YTIgMiAwIDAgMSAyLTJ6bTAgMnYxMmg2VjZINnonLz48L3N2Zz4=');
+        }
+
+        .meta-icon[data-icon="audio"],
+        .meta-icon-with-count[data-icon="audio"] .icon {
+            -webkit-mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCc+PHBhdGggZmlsbD0nd2hpdGUnIGQ9J00xNCAzYTEgMSAwIDAgMSAxIDF2MTEuMTdBMyAzIDAgMSAxIDEzIDIxYTEgMSAwIDAgMSAyIDAgMSAxIDAgMSAwIDIgMCAxIDEgMCAwIDAtMi0wLjgzVjVoLTJ2Ni4xN2EzIDMgMCAxIDEtMiAyLjgzVjRhMSAxIDAgMCAxIDEtMWgyek05IDE1YTEgMSAwIDEgMC0yIDAgMSAxIDAgMCAwIDIgMHonLz48L3N2Zz4=');
+            mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCc+PHBhdGggZmlsbD0nd2hpdGUnIGQ9J00xNCAzYTEgMSAwIDAgMSAxIDF2MTEuMTdBMyAzIDAgMSAxIDEzIDIxYTEgMSAwIDAgMSAyIDAgMSAxIDAgMSAwIDIgMCAxIDEgMCAwIDAtMi0wLjgzVjVoLTJ2Ni4xN2EzIDMgMCAxIDEtMiAyLjgzVjRhMSAxIDAgMCAxIDEtMWgyek05IDE1YTEgMSAwIDEgMC0yIDAgMSAxIDAgMCAwIDIgMHonLz48L3N2Zz4=');
+        }
+
+        .meta-icon-with-count[data-icon="comment"] .icon {
+            -webkit-mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCc+PHBhdGggZmlsbD0nd2hpdGUnIGQ9J000IDRoMTZhMSAxIDAgMCAxIDEgMXYxMC41ODZhMSAxIDAgMCAxLS4yOTMuNzA3bC0zLjQxNCAzLjQxNEExIDEgMCAwIDEgMTYuNTg2IDIwSDVhMSAxIDAgMCAxLTEtMVY1YTEgMSAwIDAgMSAxLTF6bTEgMnYxMmgxMC41ODZMMTkgMTUuNTg2VjZINXonLz48L3N2Zz4=');
+            mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCc+PHBhdGggZmlsbD0nd2hpdGUnIGQ9J000IDRoMTZhMSAxIDAgMCAxIDEgMXYxMC41ODZhMSAxIDAgMCAxLS4yOTMuNzA3bC0zLjQxNCAzLjQxNEExIDEgMCAwIDEgMTYuNTg2IDIwSDVhMSAxIDAgMCAxLTEtMVY1YTEgMSAwIDAgMSAxLTF6bTEgMnYxMmgxMC41ODZMMTkgMTUuNTg2VjZINXonLz48L3N2Zz4=');
+        }
+
+        .meta-icon-with-count[data-icon="like"] .icon {
+            -webkit-mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCc+PHBhdGggZmlsbD0nd2hpdGUnIGQ9J00xMiA1Ljc0OGwtLjcxNy0uNzM3QzkuNiAzLjYgNy4wNTMgMy4yNiA1LjMxNCA0Ljk5OGMtMS43NCAxLjczOS0xLjQgNC4yODcuNzA3IDYuMzk1TDEyIDE3LjQxNGw1Ljk4LTYuMDJjMi4xMDctMi4xMDggMi40NDctNC42NTYuNzA3LTYuMzk1LTEuNzM5LTEuNzM5LTQuMjg2LTEuMzk4LTUuOTY5LjAxM0wxMiA1Ljc0OHonLz48L3N2Zz4=');
+            mask-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCc+PHBhdGggZmlsbD0nd2hpdGUnIGQ9J00xMiA1Ljc0OGwtLjcxNy0uNzM3QzkuNiAzLjYgNy4wNTMgMy4yNiA1LjMxNCA0Ljk5OGMtMS43NCAxLjczOS0xLjQgNC4yODcuNzA3IDYuMzk1TDEyIDE3LjQxNGw1Ljk4LTYuMDJjMi4xMDctMi4xMDggMi40NDctNC42NTYuNzA3LTYuMzk1LTEuNzM5LTEuNzM5LTQuMjg2LTEuMzk4LTUuOTY5LjAxM0wxMiA1Ljc0OHonLz48L3N2Zz4=');
         }
 
         @media (max-width: 768px) {
@@ -214,10 +203,6 @@
                 margin-top: 1.25rem;
             }
 
-            .media-flags {
-                flex-wrap: wrap;
-                gap: 0.5rem;
-            }
         }
 
         .post-content {
@@ -436,6 +421,26 @@
             <a href="/">← Back to Library</a>
             <a href="{{ post.post_url }}" target="_blank">View Original →</a>
         </div>
+        {% if post.content_blocks %}
+            {% set img_count = post.content_blocks | selectattr('type', 'equalto', 'image') | list | length %}
+            {% set vid_count = (post.content_blocks | selectattr('type', 'equalto', 'video') | list | length) + (post.content_blocks | selectattr('type', 'equalto', 'youtube_embed') | list | length) %}
+            {% set aud_count = post.content_blocks | selectattr('type', 'equalto', 'audio') | list | length %}
+            {% set com_count = post.content_blocks | selectattr('type', 'equalto', 'comment') | list | length %}
+        {% else %}
+            {% set img_count = post.images | length if post.images else 0 %}
+            {% set vid_count = post.videos | length if post.videos else 0 %}
+            {% set aud_count = post.audios | length if post.audios else 0 %}
+            {% set com_count = 0 %}
+        {% endif %}
+        {% if post.video_local_paths is defined and post.video_local_paths %}
+            {% set extra_videos = post.video_local_paths | length %}
+        {% elif post.video_downloads is defined and post.video_downloads %}
+            {% set extra_videos = post.video_downloads | length %}
+        {% else %}
+            {% set extra_videos = 0 %}
+        {% endif %}
+        {% set vid_count = vid_count + extra_videos %}
+        {% set likes_display = likes_count if likes_count is not none else (post.like_count if post.like_count else 0) %}
         <div class="post-overview">
             <div class="avatar-frame">
                 {% if creator_avatar %}
@@ -447,36 +452,18 @@
             <div class="overview-main">
                 <div class="creator-line">
                     <span class="creator-name">{{ creator_display_name }}</span>
-                    {% if published_label %}
-                    <span class="meta-pill">
-                        <span class="pill-icon">📅</span>
-                        <span>{{ published_label }}</span>
-                    </span>
-                    {% endif %}
                 </div>
-                <div class="meta-row">
-                    <span class="meta-item meta-item-heart">
-                        <span class="icon">♥</span>
-                        <span class="value">{{ likes_count }}</span>
+                <div class="post-meta-icons">
+                    <span class="meta-icon {% if img_count > 0 %}active{% endif %}" data-icon="image" title="Imágenes"></span>
+                    <span class="meta-icon {% if vid_count > 0 %}active{% endif %}" data-icon="video" title="Videos"></span>
+                    <span class="meta-icon {% if aud_count > 0 %}active{% endif %}" data-icon="audio" title="Audio"></span>
+                    <span class="meta-icon-with-count {% if com_count > 0 %}active{% endif %}" data-icon="comment" title="Comentarios">
+                        <span class="icon"></span>
+                        <span class="count">{{ com_count }}</span>
                     </span>
-                    <span class="meta-item meta-item-comments">
-                        <span class="icon">💬</span>
-                        <span class="value">{{ comments_count }}</span>
-                    </span>
-                </div>
-                <div class="media-flags">
-                    <span class="media-label">Media</span>
-                    <span class="media-icon {% if media_counts.images %}active{% endif %}">
-                        <span class="glyph">🖼️</span>
-                        <span class="count">{{ media_counts.images }}</span>
-                    </span>
-                    <span class="media-icon {% if media_counts.videos %}active{% endif %}">
-                        <span class="glyph">🎥</span>
-                        <span class="count">{{ media_counts.videos }}</span>
-                    </span>
-                    <span class="media-icon {% if media_counts.audios %}active{% endif %}">
-                        <span class="glyph">🎵</span>
-                        <span class="count">{{ media_counts.audios }}</span>
+                    <span class="meta-icon-with-count {% if likes_display > 0 %}active{% endif %}" data-icon="like" title="Likes">
+                        <span class="icon"></span>
+                        <span class="count">{{ likes_display }}</span>
                     </span>
                 </div>
             </div>

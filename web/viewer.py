@@ -206,30 +206,6 @@ def view_post(post_id):
     post['video_local_paths'] = local_video_paths
     post['audio_local_paths'] = local_audio_paths
 
-    image_items = ensure_list(post.get('images'))
-    remote_video_candidates = filter_by_extension(post.get('video_downloads'), {'.mp4', '.m4v', '.mov', '.webm', '.mkv'})
-    remote_video_candidates += filter_by_extension(post.get('videos'), {'.mp4', '.m4v', '.mov', '.webm', '.mkv'})
-    stream_video_candidates = ensure_list(post.get('video_streams'))
-
-    # Deduplicate while preserving order
-    def dedupe(sequence):
-        seen = set()
-        result = []
-        for item in sequence:
-            if item not in seen:
-                seen.add(item)
-                result.append(item)
-        return result
-
-    video_items = dedupe(local_video_paths + remote_video_candidates + stream_video_candidates)
-    audio_items = dedupe(local_audio_paths + ensure_list(post.get('audios')))
-
-    media_counts = {
-        'images': len(image_items),
-        'videos': len(video_items),
-        'audios': len(audio_items),
-    }
-
     return render_template(
         'post.html',
         post=post,
@@ -238,7 +214,6 @@ def view_post(post_id):
         likes_count=likes_count,
         comments_count=comments_count,
         published_label=published_label,
-        media_counts=media_counts,
     )
 
 
