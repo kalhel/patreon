@@ -518,7 +518,31 @@ class MediaDownloader:
 
         if not video_urls:
             if stream_only_urls:
-                logger.info("Video available as stream-only (HLS). Saved reference for manual download.")
+                logger.info("Video available as stream-only (HLS). Attempting yt-dlp fallback.")
+
+                for idx, stream_url in enumerate(stream_only_urls):
+                    filename = self._get_filename_from_url(stream_url, '.mp4')
+                    if Path(filename).suffix.lower() not in video_extensions:
+                        filename = f"{Path(filename).stem}.mp4"
+
+                    filename = f"{post_id}_{idx:02d}_{filename}"
+                    output_path = creator_dir / filename
+
+                    if self._download_with_ytdlp([stream_url], output_path, referer):
+                        abs_path = str(output_path)
+                        if abs_path not in downloaded:
+                            downloaded.append(abs_path)
+                            try:
+                                relatives.append(output_path.relative_to(self.output_dir).as_posix())
+                            except ValueError:
+                                relatives.append(abs_path)
+
+                        self.stats['videos']['total'] += 1
+
+                if downloaded:
+                    logger.info("✓ Downloaded stream-only video via yt-dlp")
+                    return {'absolute': downloaded, 'relative': relatives}
+
             return {'absolute': [], 'relative': []}
 
         # Create creator subdirectory
