@@ -157,6 +157,64 @@ class MediaDownloader:
         collect(sources)
         return urls
 
+    def _expand_mux_variants(self, url: str) -> List[str]:
+        """
+        Generate additional download candidates for Mux playback URLs.
+
+        Args:
+            url: Original URL detected in the post
+
+        Returns:
+            Ordered list of URLs to try (original first)
+        """
+        candidates: List[str] = []
+        if not url or 'stream.mux.com' not in url:
+            return [url]
+
+        try:
+            parsed = urlparse(url)
+            path = parsed.path or ''
+            base, _, filename = path.rpartition('/')
+            query = f"?{parsed.query}" if parsed.query else ""
+            prefix = url[: url.rfind('/') + 1] if '/' in url else url
+
+            def add_candidate(suffix: str):
+                candidate = f"{prefix}{suffix}{query}"
+                if candidate not in candidates:
+                    candidates.append(candidate)
+
+            candidates.append(url)
+
+            if filename.lower().endswith('.mp4'):
+                name = filename.lower()
+                variant_order: List[str] = []
+                if name == 'medium.mp4':
+                    variant_order = [
+                        'download.mp4',
+                        'source.mp4',
+                        'high.mp4',
+                        '720p.mp4',
+                        '1080p.mp4'
+                    ]
+                elif name == 'high.mp4':
+                    variant_order = ['download.mp4', 'source.mp4']
+                elif name == 'source.mp4':
+                    variant_order = ['download.mp4']
+
+                for variant in variant_order:
+                    add_candidate(variant)
+
+                if query:
+                    download_flag = f"{url}&download=1"
+                else:
+                    download_flag = f"{url}?download=1"
+                if download_flag not in candidates:
+                    candidates.append(download_flag)
+        except Exception:
+            return [url]
+
+        return candidates or [url]
+
     def download_file(self, url: str, output_path: Path, media_type: str = 'image', referer: Optional[str] = None) -> bool:
         """
         Download a single file
@@ -348,7 +406,13 @@ class MediaDownloader:
 
             output_path = creator_dir / filename
 
-            if self.download_file(url, output_path, 'video', referer=referer):
+            download_success = False
+            for candidate in self._expand_mux_variants(url):
+                if self.download_file(candidate, output_path, 'video', referer=referer):
+                    download_success = True
+                    break
+
+            if download_success:
                 abs_path = str(output_path)
                 if abs_path not in downloaded:
                     downloaded.append(abs_path)

@@ -60,6 +60,14 @@ class MediaDownloaderTests(unittest.TestCase):
 
             self.assertEqual(downloader.session.cookies.get('session_id'), 'abc123')
 
+    def test_expand_mux_variants_includes_download(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            downloader = MediaDownloader(output_dir=tmpdir, cookies_path=None)
+            original = "https://stream.mux.com/PLAYBACK/medium.mp4?token=abc"
+            expanded = downloader._expand_mux_variants(original)
+            self.assertIn(original, expanded)
+            self.assertIn("https://stream.mux.com/PLAYBACK/download.mp4?token=abc", expanded)
+
 
 if __name__ == "__main__":
     unittest.main()
