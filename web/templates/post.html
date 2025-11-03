@@ -20,6 +20,7 @@
             padding: 1.5rem 2rem;
             margin-bottom: 0;
             border-bottom: 4px solid #000000;
+            border-radius: 0 0 24px 24px;
         }
 
         .header-nav {
@@ -326,7 +327,7 @@
                         {% elif block.type == 'bulleted_list' %}
                             <div class="content-block bulleted-list">
                                 <ul>
-                                    {% for item in block.items %}
+                                    {% for item in block['items'] %}
                                     <li>{{ item }}</li>
                                     {% endfor %}
                                 </ul>
@@ -335,7 +336,7 @@
                         {% elif block.type == 'numbered_list' %}
                             <div class="content-block numbered-list">
                                 <ol>
-                                    {% for item in block.items %}
+                                    {% for item in block['items'] %}
                                     <li>{{ item }}</li>
                                     {% endfor %}
                                 </ol>

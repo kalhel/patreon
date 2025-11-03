@@ -474,7 +474,7 @@ class PatreonScraperV2:
             logger.debug(f"Error extracting post data: {e}")
             return None
 
-    def scrape_post_detail(self, post_url: str) -> Optional[Dict]:
+    def scrape_post_detail(self, post_url: str, post_id: Optional[str] = None) -> Optional[Dict]:
         """
         Scrape full content of a single post
 
@@ -493,6 +493,14 @@ class PatreonScraperV2:
             'post_url': post_url,
             'scraped_at': datetime.now().isoformat()
         }
+
+        if post_id:
+            post_detail['post_id'] = str(post_id)
+
+        if 'post_id' not in post_detail:
+            match = re.search(r'(\d+)(?:$|[/?#])', post_url)
+            if match:
+                post_detail['post_id'] = match.group(1)
 
         try:
             # Extract full title
