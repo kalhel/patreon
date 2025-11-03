@@ -20,30 +20,135 @@
             padding: 1.5rem 2rem;
             margin-bottom: 0;
             border-bottom: 4px solid #000000;
-            border-radius: 0 0 24px 24px;
+            border-radius: 24px;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.15);
         }
 
-        .header-nav {
+        .nav-options {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.45rem;
+            margin-top: 0.65rem;
+        }
+
+        .single-nav {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            padding: 0.4rem 0.95rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.14);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+        }
+
+        .single-nav a {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.45px;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .single-nav a:hover {
+            color: #ffffff;
+        }
+
+        .post-meta-summary {
+            margin-top: 1.75rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 2rem;
+            gap: 1.5rem;
         }
 
-        .header-nav a {
+        .creator-highlight {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .creator-badge {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid rgba(255, 255, 255, 0.35);
+            background: rgba(255, 255, 255, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            font-weight: 600;
             color: #ffffff;
-            text-decoration: none;
-            font-size: 0.875rem;
-            font-weight: 500;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            padding-bottom: 4px;
-            border-bottom: 1px solid transparent;
-            transition: all 0.2s;
         }
 
-        .header-nav a:hover {
-            border-bottom-color: #ffffff;
+        .creator-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .creator-details .name {
+            color: #ffffff;
+            font-size: 1.125rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .creator-date-label {
+            color: rgba(255, 255, 255, 0.65);
+            font-size: 0.75rem;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+
+        .meta-icon-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .meta-icon-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: rgba(255, 255, 255, 0.12);
+            color: rgba(255, 255, 255, 0.85);
+            padding: 0.45rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
+
+        .meta-icon-pill .icon {
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        .meta-icon-pill .count {
+            font-variant-numeric: tabular-nums;
+        }
+
+        .meta-icon-pill:not(.active) {
+            opacity: 0.45;
+        }
+
+        .meta-icon-pill.active {
+            background: rgba(255, 255, 255, 0.2);
+            opacity: 1;
+        }
+
+        .meta-icon-pill.emoji .icon {
+            font-size: 1rem;
+        }
+
+        .meta-icon-pill.like .icon {
+            color: #ff6b6b;
         }
 
         @media (max-width: 768px) {
@@ -51,18 +156,31 @@
                 padding: 1rem;
             }
 
-            .header-nav {
+            .nav-options {
+                gap: 0.35rem;
+                margin-top: 0.8rem;
+            }
+
+            .post-meta-summary {
                 flex-direction: column;
-                gap: 1rem;
                 align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .meta-icon-group {
+                flex-wrap: wrap;
+                justify-content: flex-start;
+                gap: 0.5rem;
             }
         }
 
         .post-content {
             background: white;
-            padding: 3rem;
+            padding: 1rem 3rem 3rem 3rem;
             max-width: 700px;
             margin: 0 auto;
+            border-radius: 24px;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.07);
         }
         .content-block { margin: 25px 0; }
 
@@ -71,7 +189,7 @@
             max-width: 100%;
             height: auto;
             display: block;
-            border-radius: 4px;
+            border-radius: 16px;
         }
 
         /* Audio player - Dark professional style */
@@ -127,7 +245,7 @@
         }
 
         /* Headings */
-        .content-block h1 { font-size: 32px; margin: 40px 0 20px 0; font-weight: 700; }
+        .content-block h1 { font-size: 32px; margin: 20px 0 20px 0; font-weight: 700; }
         .content-block h2 { font-size: 24px; margin: 30px 0 15px 0; font-weight: 600; }
         .content-block h3 { font-size: 20px; margin: 25px 0 12px 0; font-weight: 600; }
 
@@ -188,6 +306,7 @@
             border: 1px solid #e0e0e0;
             border-left: 3px solid #1a1a1a;
             transition: all 0.2s ease;
+            border-radius: 14px;
         }
 
         .comment:hover {
@@ -228,7 +347,7 @@
             padding: 20px;
             background: white;
             border: 1px solid #e0e0e0;
-            border-radius: 4px;
+            border-radius: 16px;
         }
         .tags-title {
             font-size: 16px;
@@ -245,7 +364,7 @@
             display: inline-block;
             background: #f5f5f5;
             padding: 6px 14px;
-            border-radius: 4px;
+            border-radius: 20px;
             font-size: 13px;
             color: #555;
             border: 1px solid #e0e0e0;
@@ -262,9 +381,49 @@
 </head>
 <body>
     <div class="post-header">
-        <div class="header-nav">
-            <a href="/">← Back to Library</a>
-            <a href="{{ post.post_url }}" target="_blank">View Original →</a>
+        <div class="post-meta-summary">
+            <div class="creator-highlight">
+                {% if creator_avatar %}
+                <img src="{{ creator_avatar }}" alt="{{ creator_display_name }}" class="creator-badge">
+                {% else %}
+                <div class="creator-badge">{{ creator_display_name[:1]|upper }}</div>
+                {% endif %}
+                <div class="creator-details">
+                    <div class="name">{{ creator_display_name }}</div>
+                    {% if published_label %}
+                    <div class="creator-date-label" aria-label="Publication date">
+                        {{ published_label }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="meta-icon-group">
+                <div class="meta-icon-pill {% if has_images %}active{% endif %}">
+                    <span class="icon" aria-hidden="true">🖼️</span>
+                    <span class="count">{{ image_count }}</span>
+                </div>
+                <div class="meta-icon-pill {% if has_videos %}active{% endif %}">
+                    <span class="icon" aria-hidden="true">🎥</span>
+                    <span class="count">{{ video_count }}</span>
+                </div>
+                <div class="meta-icon-pill {% if has_audio %}active{% endif %}">
+                    <span class="icon" aria-hidden="true">🎵</span>
+                    <span class="count">{{ audio_count }}</span>
+                </div>
+                <div class="meta-icon-pill emoji {% if comments_count %}active{% endif %}">
+                    <span class="icon" aria-hidden="true">💬</span>
+                    <span class="count">{{ comments_count }}</span>
+                </div>
+                <div class="meta-icon-pill emoji like">
+                    <span class="icon" aria-hidden="true">❤️</span>
+                    <span class="count">{{ likes_count }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="nav-options">
+            <div class="header-nav single-nav">
+                <a href="/">← Back to Library</a>
+            </div>
         </div>
     </div>
 
@@ -291,9 +450,12 @@
                             </div>
 
                         {% elif block.type == 'paragraph' %}
+                            {% set paragraph_text = (block.text or '') | trim %}
+                            {% if paragraph_text and paragraph_text not in date_skip_values and paragraph_text | lower not in date_skip_values_lower %}
                             <div class="content-block paragraph">
                                 <p>{{ block.text }}</p>
                             </div>
+                            {% endif %}
 
                         {% elif block.type == 'image' %}
                             <div class="content-block image">

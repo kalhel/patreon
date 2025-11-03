@@ -512,9 +512,22 @@ class MediaDownloader:
 
             return unique
 
+
+        def filter_video_candidates(urls: List[str]) -> List[str]:
+            filtered = []
+            for url in urls or []:
+                if not url:
+                    continue
+                lower = url.lower()
+                if any(lower.endswith(ext) for ext in video_extensions) or 'm3u8' in lower or 'stream.mux.com' in lower:
+                    filtered.append(url)
+            return filtered
+
         video_urls = preferred_downloads if preferred_downloads else fallback_videos
         video_urls = dedupe_mux(video_urls)
+        video_urls = filter_video_candidates(video_urls)
         stream_only_urls = dedupe_mux(stream_only_urls)
+        stream_only_urls = filter_video_candidates(stream_only_urls)
 
         if not video_urls:
             if stream_only_urls:
@@ -538,10 +551,15 @@ class MediaDownloader:
                                 relatives.append(abs_path)
 
                         self.stats['videos']['total'] += 1
+                        successful_downloads += 1
 
-                if downloaded:
-                    logger.info("✓ Downloaded stream-only video via yt-dlp")
-                    return {'absolute': downloaded, 'relative': relatives}
+                        if expected_count and successful_downloads >= expected_count:
+                            logger.info("✓ Downloaded stream-only video via yt-dlp")
+                            return {'absolute': downloaded, 'relative': relatives}
+
+                        # If no expected count, we only need the first success
+                        logger.info("✓ Downloaded stream-only video via yt-dlp")
+                        return {'absolute': downloaded, 'relative': relatives}
 
             return {'absolute': [], 'relative': []}
 
@@ -632,8 +650,8 @@ class MediaDownloader:
                         relatives.append(abs_path)
                 successful_downloads += 1
 
-            if expected_count and successful_downloads >= expected_count:
-                break
+                if expected_count and successful_downloads >= expected_count:
+                    break
 
             time.sleep(1)  # Longer delay for videos
 

@@ -175,11 +175,43 @@ def view_post(post_id):
     elif metadata.get('creator_avatar'):
         creator_avatar = metadata['creator_avatar']
 
-    likes_count = metadata.get('likes_count') or 0
-    comments_count = metadata.get('comments_count') or 0
-    published_label = metadata.get('published_date')
+    likes_count = metadata.get('likes_count') or post.get('like_count') or 0
+
+    content_blocks = post.get('content_blocks') or []
+
+    def count_blocks(block_type):
+        return sum(1 for block in content_blocks if block.get('type') == block_type)
+
+    image_count = count_blocks('image')
+    video_count = count_blocks('video') + count_blocks('youtube_embed')
+    audio_count = count_blocks('audio')
+    comment_block_count = count_blocks('comment')
+
+    if not content_blocks:
+        image_count = len(post.get('images') or [])
+        video_count = len(post.get('videos') or [])
+        audio_count = len(post.get('audios') or [])
+
+    comments_count = metadata.get('comments_count') or comment_block_count
+    published_raw = (metadata.get('published_date') or '').strip()
+    published_label = published_raw or format_date_eu(post.get('created_at'))
     if not published_label:
-        published_label = format_date_eu(post.get('created_at'))
+        published_label = 'Date unknown'
+
+    date_skip_originals = set()
+    if published_raw:
+        date_skip_originals.add(published_raw.strip())
+        formatted_raw = format_date_eu(published_raw)
+        if formatted_raw:
+            date_skip_originals.add(formatted_raw)
+
+    created_formatted = format_date_eu(post.get('created_at'))
+    if created_formatted:
+        date_skip_originals.add(created_formatted)
+
+    date_skip_originals.add(published_label)
+    date_skip_originals = {s for s in date_skip_originals if isinstance(s, str) and s.strip()}
+    date_skip_lower = {s.lower() for s in date_skip_originals}
 
     def ensure_list(value):
         if not value:
@@ -213,7 +245,15 @@ def view_post(post_id):
         creator_avatar=creator_avatar,
         likes_count=likes_count,
         comments_count=comments_count,
+        image_count=image_count,
+        video_count=video_count,
+        audio_count=audio_count,
+        has_images=image_count > 0,
+        has_videos=video_count > 0,
+        has_audio=audio_count > 0,
         published_label=published_label,
+        date_skip_values=sorted(date_skip_originals),
+        date_skip_values_lower=sorted(date_skip_lower),
     )
 
 

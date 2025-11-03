@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traditional Astrology Library</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Black & White Traditional Design */
+        body {
+            background: #ffffff;
+        }
+
+        .header {
+            background: #1a1a1a;
+            border: none;
+            border-bottom: 4px solid #000000;
+            padding: 2rem 1rem;
+            box-shadow: none;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .header h1 {
+            color: #ffffff;
+            font-size: 1.5rem;
+            font-weight: 300;
+            margin: 0;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .header .subtitle {
+            color: #b0b0b0;
+            font-size: 0.8125rem;
+            font-weight: 300;
+            letter-spacing: 0.5px;
+            margin-top: 0.5rem;
+        }
+
+        /* Creator cards */
+        .creator-section {
+            margin-top: 4rem;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 3rem;
+        }
+
+        .creator-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 320px));
+            gap: 2rem;
+            justify-content: center;
+        }
+
+        .creator-card {
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+            border-radius: 0;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            width: 100%;
+        }
+
+        .creator-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: #000000;
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .creator-card:hover::before {
+            transform: scaleY(1);
+        }
+
+        .creator-card:hover {
+            background: #ffffff;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .creator-card.selected {
+            background: #1a1a1a;
+            border-color: #1a1a1a;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .creator-card.selected::before {
+            transform: scaleY(1);
+        }
+
+        .creator-card.selected h3,
+        .creator-card.selected .post-count,
+        .creator-card.selected .post-count::after {
+            color: #ffffff;
+        }
+
+        .creator-card.selected a {
+            color: #ffffff;
+            border-bottom-color: #ffffff;
+        }
+
+        .creator-card.selected .creator-avatar {
+            border-color: #ffffff;
+        }
+
+        .creator-card .creator-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 1.5rem;
+            border: 3px solid #1a1a1a;
+        }
+
+        .creator-card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #1a1a1a;
+            letter-spacing: 0.5px;
+        }
+
+        .creator-card .post-count {
+            color: #666666;
+            font-size: 1.5rem;
+            margin-bottom: 0.3rem;
+            font-weight: 700;
+        }
+
+        .creator-card .post-count::after {
+            content: ' posts';
+            font-size: 0.75rem;
+            font-weight: 400;
+            color: #999999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: block;
+            margin-top: 0.25rem;
+        }
+
+        .creator-card a {
+            color: #1a1a1a;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #1a1a1a;
+            transition: all 0.2s;
+        }
+
+        .creator-card a::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        .creator-card a:hover {
+            color: #666666;
+            border-bottom-color: #666666;
+        }
+
+        /* Posts section */
+        .creator-section-title {
+            font-size: 1.5rem;
+            font-weight: 300;
+            color: #1a1a1a;
+            margin: 4rem 0 2rem 0;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #1a1a1a;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .wide-container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .posts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 4rem;
+        }
+
+        @media (min-width: 1200px) {
+            .posts-grid {
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            }
+        }
+
+        @media (min-width: 1600px) {
+            .posts-grid {
+                grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            }
+        }
+
+        .post-card-compact {
+            background:
+                radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.8) 0%, transparent 50%),
+                linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+            border: 1px solid transparent;
+            background-clip: padding-box;
+            border-radius: 2px;
+            padding: 2rem;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            position: relative;
+            cursor: pointer;
+            box-shadow:
+                0 1px 3px rgba(0, 0, 0, 0.06),
+                0 1px 2px rgba(0, 0, 0, 0.04);
+            overflow: hidden;
+        }
+
+        .post-card-compact::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg,
+                #e0e0e0 0%,
+                #f0f0f0 25%,
+                #e0e0e0 50%,
+                #f0f0f0 75%,
+                #e0e0e0 100%);
+            border-radius: 2px;
+            z-index: -1;
+            opacity: 1;
+            transition: all 0.4s ease;
+        }
+
+        .post-card-compact::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg,
+                transparent 0%,
+                rgba(255, 255, 255, 0.3) 50%,
+                transparent 100%);
+            transition: left 0.6s ease;
+            pointer-events: none;
+        }
+
+        .post-card-compact:hover {
+            background:
+                radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 1) 0%, transparent 50%),
+                linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
+            box-shadow:
+                0 10px 30px rgba(0, 0, 0, 0.08),
+                0 4px 12px rgba(0, 0, 0, 0.06),
+                inset 0 0 60px rgba(255, 255, 255, 0.5);
+            transform: translateY(-4px);
+        }
+
+        .post-card-compact:hover::before {
+            background: linear-gradient(45deg,
+                #1a1a1a 0%,
+                #3a3a3a 25%,
+                #1a1a1a 50%,
+                #3a3a3a 75%,
+                #1a1a1a 100%);
+            box-shadow: 0 0 20px rgba(26, 26, 26, 0.3);
+        }
+
+        .post-card-compact:hover::after {
+            left: 100%;
+        }
+
+        .post-card-compact .creator-badge {
+            color: #666666;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 1.25rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            background: linear-gradient(90deg, rgba(0,0,0,0.03) 0%, transparent 100%);
+            border-left: 2px solid #e0e0e0;
+            transition: all 0.3s ease;
+        }
+
+        .post-card-compact:hover .creator-badge {
+            border-left-color: #1a1a1a;
+            color: #1a1a1a;
+            background: linear-gradient(90deg, rgba(0,0,0,0.05) 0%, transparent 100%);
+        }
+
+        .post-card-compact h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #1a1a1a;
+            line-height: 1.6;
+            flex-grow: 1;
+            min-height: 3em;
+            position: relative;
+        }
+
+        .post-card-compact h3 a {
+            color: #1a1a1a;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            background-image: linear-gradient(90deg,
+                transparent 0%,
+                rgba(26, 26, 26, 0.1) 50%,
+                transparent 100%);
+            background-size: 0% 100%;
+            background-repeat: no-repeat;
+            background-position: center;
+            display: inline;
+            position: relative;
+        }
+
+        .post-card-compact h3 a::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        .post-card-compact:hover h3 a {
+            background-size: 100% 100%;
+            letter-spacing: 0.3px;
+        }
+
+        .post-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding: 1.5rem 0;
+            border-top: 1px solid transparent;
+            border-bottom: 1px solid transparent;
+            background-image:
+                linear-gradient(white, white),
+                linear-gradient(90deg, transparent 0%, #e0e0e0 50%, transparent 100%);
+            background-clip: padding-box, border-box;
+            background-origin: padding-box, border-box;
+            position: relative;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            border-radius: 4px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 0;
+            height: 100%;
+            background: linear-gradient(90deg,
+                transparent 0%,
+                rgba(26, 26, 26, 0.03) 50%,
+                transparent 100%);
+            transform: translateX(-50%);
+            transition: width 0.4s ease;
+        }
+
+        .post-card-compact:hover .stat-item::before {
+            width: 100%;
+        }
+
+        .post-card-compact:hover .stat-item {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .stat-item .label {
+            font-size: 0.6875rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #999999;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .post-card-compact:hover .stat-item .label {
+            color: #666666;
+        }
+
+        .stat-item .value {
+            font-weight: 700;
+            color: #1a1a1a;
+            font-size: 1.25rem;
+            font-family: 'Georgia', serif;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .post-card-compact:hover .stat-item .value {
+            transform: scale(1.1);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .post-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8125rem;
+            color: #666666;
+            margin-top: auto;
+            padding-top: 1.25rem;
+            position: relative;
+        }
+
+        .post-footer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg,
+                transparent 0%,
+                #e0e0e0 10%,
+                #e0e0e0 90%,
+                transparent 100%);
+        }
+
+        .post-date {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 400;
+            font-family: 'Georgia', serif;
+            padding: 0.25rem 0.75rem;
+            background: linear-gradient(90deg,
+                rgba(0, 0, 0, 0.02) 0%,
+                transparent 100%);
+            border-left: 2px solid #f0f0f0;
+            transition: all 0.3s ease;
+        }
+
+        .post-card-compact:hover .post-date {
+            border-left-color: #d0d0d0;
+            background: linear-gradient(90deg,
+                rgba(0, 0, 0, 0.04) 0%,
+                transparent 100%);
+        }
+
+        .post-date::before {
+            content: '☽';
+            color: #cccccc;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+        }
+
+        .post-card-compact:hover .post-date::before {
+            color: #999999;
+            transform: rotate(20deg);
+        }
+
+        .post-likes {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            padding: 0.25rem 0.75rem;
+            background: linear-gradient(-90deg,
+                rgba(0, 0, 0, 0.02) 0%,
+                transparent 100%);
+            border-right: 2px solid #f0f0f0;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .post-likes::before {
+            content: '♥';
+            color: #d0d0d0;
+            font-size: 0.875rem;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .post-card-compact:hover .post-likes {
+            border-right-color: #cc6666;
+            background: linear-gradient(-90deg,
+                rgba(204, 102, 102, 0.05) 0%,
+                transparent 100%);
+        }
+
+        .post-card-compact:hover .post-likes::before {
+            color: #cc6666;
+            transform: scale(1.3);
+            filter: drop-shadow(0 0 3px rgba(204, 102, 102, 0.4));
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 6rem 2rem;
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+        }
+
+        .empty-state p {
+            font-size: 1.125rem;
+            color: #666666;
+            margin-bottom: 2rem;
+            font-weight: 300;
+        }
+
+        .empty-state code {
+            background: #1a1a1a;
+            color: #ffffff;
+            padding: 1rem 1.5rem;
+            font-size: 0.875rem;
+            display: inline-block;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 0.5px;
+        }
+
+        /* Search bar */
+        .search-container {
+            margin: 3rem 0;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            font-size: 1rem;
+            border: 2px solid #e0e0e0;
+            background: #fafafa;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #1a1a1a;
+            background: #ffffff;
+        }
+
+        .search-input::placeholder {
+            color: #999999;
+            font-weight: 300;
+        }
+
+        .search-results-count {
+            text-align: center;
+            color: #666666;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+            font-weight: 300;
+        }
+
+        /* Content filters */
+        .content-filters {
+            display: flex;
+            gap: 1rem;
+            margin: 2rem auto;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 800px;
+        }
+
+        .content-filter-btn {
+            background: #fafafa;
+            border: 2px solid #e0e0e0;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            color: #666666;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .content-filter-btn:hover {
+            background: #ffffff;
+            border-color: #1a1a1a;
+            color: #1a1a1a;
+        }
+
+        .content-filter-btn.selected {
+            background: #1a1a1a;
+            color: #ffffff;
+            border-color: #1a1a1a;
+        }
+
+        .content-filter-btn .icon {
+            font-size: 1.125rem;
+        }
+
+        /* Tags filter */
+        .tags-filter-container {
+            margin: 1.5rem 0;
+            display: none;
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+            padding: 2rem;
+        }
+
+        .tags-filter-container.show {
+            display: block;
+        }
+
+        .tags-filter-scroll {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            padding: 0;
+            max-height: calc(2 * (2rem + 0.75rem));
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .tags-filter-scroll.expanded {
+            max-height: none;
+        }
+
+        .tag-filter-item {
+            background: #ffffff;
+            padding: 6px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            color: #666666;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .tag-filter-item:hover {
+            background: #ffffff;
+            border-color: #1a1a1a;
+            color: #1a1a1a;
+        }
+
+        .tag-filter-item.selected {
+            background: #1a1a1a;
+            color: #ffffff;
+            border-color: #1a1a1a;
+        }
+
+        .load-more-tags {
+            background: #ffffff;
+            border: 2px solid #1a1a1a;
+            color: #1a1a1a;
+            padding: 0.75rem 2rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 1.5rem auto 0 auto;
+            display: block;
+        }
+
+        .load-more-tags:hover {
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+
+        .load-more-tags.hidden {
+            display: none;
+        }
+
+        .post-card-compact.hidden {
+            display: none;
+        }
+
+        /* Search match indicators */
+        .search-match-indicator {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-match-indicator.hidden {
+            display: none;
+        }
+
+        .match-badge {
+            background: #1a1a1a;
+            color: #ffffff;
+            padding: 0 10px;
+            border-radius: 3px;
+            font-size: 0.625rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            height: 20px;
+            min-height: 20px;
+        }
+
+        .match-badge.title {
+            background: #2d5f2e;
+        }
+
+        .match-badge.tags {
+            background: #5f2d2d;
+        }
+
+        .match-badge.content {
+            background: #2d3f5f;
+        }
+
+        /* Tags in post cards */
+        .post-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .post-tags .tag {
+            display: inline-block;
+            background: #f5f5f5;
+            padding: 4px 10px;
+            border-radius: 3px;
+            font-size: 0.6875rem;
+            color: #666666;
+            border: 1px solid #e0e0e0;
+            text-decoration: none;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .post-tags .tag:hover {
+            background: #1a1a1a;
+            color: #ffffff;
+            border-color: #1a1a1a;
+        }
+
+        /* YouTube embed in cards */
+        .post-card-compact .youtube-preview {
+            width: 100%;
+            height: 200px;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+            border: none;
+        }
+
+        /* Audio player in cards */
+        .post-card-compact .audio-preview {
+            width: 100%;
+            margin-bottom: 1rem;
+            background: #2d3748;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .post-card-compact .audio-preview audio {
+            width: 100%;
+            height: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 2rem 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+                letter-spacing: 2px;
+            }
+
+            .posts-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .creator-list {
+                grid-template-columns: 1fr;
+            }
+
+            .post-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .creator-section-title {
+                font-size: 1.25rem;
+            }
+
+            .search-container {
+                margin: 2rem 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Traditional Astrology Library</h1>
+        <div class="subtitle">{{ total_posts }} posts extracted and ready for review</div>
+    </div>
+
+    <div class="wide-container">
+        {% if creators %}
+            <div class="creator-section">
+                <div class="creator-list">
+                    {% for creator_id, posts in creators.items() %}
+                    <div class="creator-card" data-creator-id="{{ creator_id }}">
+                        {% if creator_avatars.get(creator_id) %}
+                        <img src="{{ creator_avatars[creator_id] }}" alt="{{ creator_id }}" class="creator-avatar">
+                        {% endif %}
+                        <h3>{{ creator_id | creator_name }}</h3>
+                        <div class="post-count">{{ posts | length }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Search bar -->
+            <div class="search-container">
+                <div class="search-box">
+                    <input type="text" class="search-input" id="searchInput" placeholder="Search posts by title, creator, or tags...">
+                </div>
+                <div class="search-results-count" id="resultsCount"></div>
+            </div>
+
+            <!-- Content filters -->
+            <div class="content-filters">
+                <button class="content-filter-btn" id="filterImages">
+                    <span class="icon">🖼️</span>
+                    <span>With Images</span>
+                </button>
+                <button class="content-filter-btn" id="filterVideos">
+                    <span class="icon">🎥</span>
+                    <span>With Videos</span>
+                </button>
+                <button class="content-filter-btn" id="filterAudio">
+                    <span class="icon">🎵</span>
+                    <span>With Audio</span>
+                </button>
+                <button class="content-filter-btn" id="toggleTags">
+                    <span class="icon">🏷️</span>
+                    <span>Show Tags</span>
+                </button>
+            </div>
+
+            <!-- Tags filter (hidden by default) -->
+            <div class="tags-filter-container" id="tagsFilter">
+                <div class="tags-filter-scroll" id="tagsFilterScroll">
+                    <!-- Tags will be dynamically populated here -->
+                </div>
+                <button class="load-more-tags hidden" id="loadMoreTags">Load More Tags</button>
+            </div>
+
+            <!-- All posts in single grid -->
+            <div class="posts-grid">
+                {% for creator_id, posts in creators.items() %}
+                    {% for post in posts %}
+                    {% if post.content_blocks %}
+                        {% set img_count = post.content_blocks | selectattr('type', 'equalto', 'image') | list | length %}
+                        {% set vid_count = (post.content_blocks | selectattr('type', 'equalto', 'video') | list | length) + (post.content_blocks | selectattr('type', 'equalto', 'youtube_embed') | list | length) %}
+                        {% set aud_count = post.content_blocks | selectattr('type', 'equalto', 'audio') | list | length %}
+                    {% else %}
+                        {% set img_count = post.images | length if post.images else 0 %}
+                        {% set vid_count = post.videos | length if post.videos else 0 %}
+                        {% set aud_count = post.audios | length if post.audios else 0 %}
+                    {% endif %}
+                    <div class="post-card-compact"
+                         data-title="{{ (post.title or 'Untitled Post') | lower }}"
+                         data-creator="{{ (post.creator_id | creator_name) | lower }}"
+                         data-creator-id="{{ post.creator_id }}"
+                         data-tags="{{ (post.patreon_tags | join('|') if post.patreon_tags else '') | lower }}"
+                         data-content="{{ (post.full_content[:500] if post.full_content else '') | lower }}"
+                         data-has-images="{{ 'true' if img_count > 0 else 'false' }}"
+                         data-has-videos="{{ 'true' if vid_count > 0 else 'false' }}"
+                         data-has-audio="{{ 'true' if aud_count > 0 else 'false' }}">
+                        <div class="creator-badge">{{ post.creator_id | creator_name }}</div>
+
+                        <!-- Search match indicator -->
+                        <div class="search-match-indicator hidden"></div>
+
+                        <h3><a href="/post/{{ post.post_id }}">{{ post.title or 'Untitled Post' }}</a></h3>
+
+                        {# YouTube embed if exists #}
+                        {% if post.content_blocks %}
+                            {% set youtube_blocks = post.content_blocks | selectattr('type', 'equalto', 'youtube_embed') | list %}
+                            {% if youtube_blocks %}
+                                {% set youtube_block = youtube_blocks[0] %}
+                                {% set video_id = youtube_block.url.split('v=')[1].split('&')[0] if 'v=' in youtube_block.url else youtube_block.url.split('/')[-1] %}
+                                <iframe class="youtube-preview"
+                                    src="https://www.youtube.com/embed/{{ video_id }}"
+                                    frameborder="0"
+                                    allowfullscreen>
+                                </iframe>
+                            {% endif %}
+                        {% endif %}
+
+                        {# Audio player if exists #}
+                        {% if post.content_blocks %}
+                            {% set audio_blocks = post.content_blocks | selectattr('type', 'equalto', 'audio') | list %}
+                            {% if audio_blocks %}
+                                {% set audio_block = audio_blocks[0] %}
+                                <div class="audio-preview">
+                                    <audio controls src="{{ audio_block.url }}"></audio>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+
+                        {# Tags #}
+                        <div class="post-tags">
+                            {% if post.patreon_tags %}
+                                {% for tag in post.patreon_tags[:3] %}
+                                <a href="/tag/{{ tag }}" class="tag">{{ tag }}</a>
+                                {% endfor %}
+                                {% if post.patreon_tags | length > 3 %}
+                                <span class="tag" style="background: transparent; border: none; color: #999; cursor: default;">+{{ post.patreon_tags | length - 3 }} more</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="tag" style="background: transparent; border: none; color: #999; cursor: default; font-style: italic;">No tags</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="post-stats">
+                            {% if post.content_blocks %}
+                                {% set img_count = post.content_blocks | selectattr('type', 'equalto', 'image') | list | length %}
+                                {% set vid_count = (post.content_blocks | selectattr('type', 'equalto', 'video') | list | length) + (post.content_blocks | selectattr('type', 'equalto', 'youtube_embed') | list | length) %}
+                                {% set aud_count = post.content_blocks | selectattr('type', 'equalto', 'audio') | list | length %}
+                                {% set com_count = post.content_blocks | selectattr('type', 'equalto', 'comment') | list | length %}
+                            {% else %}
+                                {% set img_count = post.images | length if post.images else 0 %}
+                                {% set vid_count = post.videos | length if post.videos else 0 %}
+                                {% set aud_count = post.audios | length if post.audios else 0 %}
+                                {% set com_count = 0 %}
+                            {% endif %}
+
+                            <div class="stat-item">
+                                <span class="label">Images</span>
+                                <span class="value">{{ img_count }}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="label">Videos</span>
+                                <span class="value">{{ vid_count }}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="label">Audio</span>
+                                <span class="value">{{ aud_count }}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="label">Comments</span>
+                                <span class="value">{{ com_count }}</span>
+                            </div>
+                        </div>
+
+                        <div class="post-footer">
+                            <div class="post-date">
+                                <span>{{ post.published_at | date_eu }}</span>
+                            </div>
+                            <div class="post-likes">
+                                <span>{{ post.like_count if post.like_count else 0 }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endfor %}
+            </div>
+
+        {% else %}
+            <div class="empty-state">
+                <p>No posts found. Run Phase 2 to extract post details first.</p>
+                <code>python src/phase2_detail_extractor.py --all --headless</code>
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        // Elements
+        const searchInput = document.getElementById('searchInput');
+        const resultsCount = document.getElementById('resultsCount');
+        const postCards = document.querySelectorAll('.post-card-compact');
+        const creatorCards = document.querySelectorAll('.creator-card');
+        const filterImages = document.getElementById('filterImages');
+        const filterVideos = document.getElementById('filterVideos');
+        const filterAudio = document.getElementById('filterAudio');
+        const toggleTags = document.getElementById('toggleTags');
+        const tagsFilter = document.getElementById('tagsFilter');
+        const tagsFilterScroll = document.getElementById('tagsFilterScroll');
+        const loadMoreTags = document.getElementById('loadMoreTags');
+
+        // Selected filters
+        let selectedCreators = new Set();
+        let selectedTags = new Set();
+        let contentFilters = {
+            images: false,
+            videos: false,
+            audio: false
+        };
+        let tagsVisible = false;
+        let tagsExpanded = false;
+
+        // Creator filter functionality
+        creatorCards.forEach(card => {
+            card.addEventListener('click', function(e) {
+                // Don't trigger if clicking on a link
+                if (e.target.tagName === 'A') return;
+
+                const creatorId = this.dataset.creatorId;
+
+                // Toggle selection
+                if (selectedCreators.has(creatorId)) {
+                    selectedCreators.delete(creatorId);
+                    this.classList.remove('selected');
+                } else {
+                    selectedCreators.add(creatorId);
+                    this.classList.add('selected');
+                }
+
+                // Perform filtering
+                filterPosts();
+            });
+        });
+
+        // Content type filters
+        filterImages.addEventListener('click', function() {
+            contentFilters.images = !contentFilters.images;
+            this.classList.toggle('selected');
+            filterPosts();
+        });
+
+        filterVideos.addEventListener('click', function() {
+            contentFilters.videos = !contentFilters.videos;
+            this.classList.toggle('selected');
+            filterPosts();
+        });
+
+        filterAudio.addEventListener('click', function() {
+            contentFilters.audio = !contentFilters.audio;
+            this.classList.toggle('selected');
+            filterPosts();
+        });
+
+        // Show/Hide tags toggle
+        toggleTags.addEventListener('click', function() {
+            tagsVisible = !tagsVisible;
+            if (tagsVisible) {
+                tagsFilter.classList.add('show');
+                this.querySelector('span:last-child').textContent = 'Hide Tags';
+                tagsExpanded = false;
+                populateTagsFilter();
+            } else {
+                tagsFilter.classList.remove('show');
+                this.querySelector('span:last-child').textContent = 'Show Tags';
+                tagsExpanded = false;
+            }
+        });
+
+        // Load More tags button
+        loadMoreTags.addEventListener('click', function() {
+            tagsExpanded = !tagsExpanded;
+            if (tagsExpanded) {
+                tagsFilterScroll.classList.add('expanded');
+                this.textContent = 'Show Less';
+            } else {
+                tagsFilterScroll.classList.remove('expanded');
+                this.textContent = 'Load More Tags';
+            }
+        });
+
+        // Populate tags filter with all unique tags
+        function populateTagsFilter() {
+            const allTags = new Set();
+            postCards.forEach(card => {
+                const tags = card.dataset.tags;
+                if (tags) {
+                    tags.split('|').forEach(tag => {
+                        const trimmed = tag.trim();
+                        if (trimmed) allTags.add(trimmed);
+                    });
+                }
+            });
+
+            tagsFilterScroll.innerHTML = '';
+            Array.from(allTags).sort().forEach(tag => {
+                const tagElement = document.createElement('div');
+                tagElement.className = 'tag-filter-item';
+                tagElement.textContent = tag;
+                tagElement.addEventListener('click', function() {
+                    if (selectedTags.has(tag)) {
+                        selectedTags.delete(tag);
+                        this.classList.remove('selected');
+                    } else {
+                        selectedTags.add(tag);
+                        this.classList.add('selected');
+                    }
+                    filterPosts();
+                });
+                tagsFilterScroll.appendChild(tagElement);
+            });
+
+            // Check if we need to show the "Load More" button
+            // We check if the scroll height is greater than 2 rows
+            setTimeout(() => {
+                if (tagsFilterScroll.scrollHeight > 80) {
+                    loadMoreTags.classList.remove('hidden');
+                } else {
+                    loadMoreTags.classList.add('hidden');
+                }
+            }, 100);
+        }
+
+        // Combined filter function (search + creators + content + tags)
+        function filterPosts() {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            let visibleCount = 0;
+
+            // Split search terms by spaces for multi-term search
+            const searchTerms = searchTerm ? searchTerm.split(/\s+/).filter(t => t) : [];
+
+            postCards.forEach(card => {
+                const title = card.dataset.title || '';
+                const creator = card.dataset.creator || '';
+                const tags = card.dataset.tags || '';
+                const content = card.dataset.content || '';
+                const creatorId = card.dataset.creatorId || '';
+                const hasImages = card.dataset.hasImages === 'true';
+                const hasVideos = card.dataset.hasVideos === 'true';
+                const hasAudio = card.dataset.hasAudio === 'true';
+
+                // Combine all searchable text (including post content)
+                const searchableText = `${title} ${creator} ${tags} ${content}`;
+
+                // Search match - all terms must be present (AND logic)
+                const searchMatch = searchTerms.length === 0 ||
+                                    searchTerms.every(term => searchableText.includes(term));
+
+                // Detect where the search terms were found
+                const matchIndicator = card.querySelector('.search-match-indicator');
+                if (searchTerms.length > 0 && searchMatch) {
+                    const matchLocations = new Set();
+                    searchTerms.forEach(term => {
+                        if (title.includes(term)) matchLocations.add('title');
+                        if (tags.includes(term)) matchLocations.add('tags');
+                        if (content.includes(term)) matchLocations.add('content');
+                    });
+
+                    // Update match indicator
+                    matchIndicator.innerHTML = '';
+                    if (matchLocations.has('title')) {
+                        matchIndicator.innerHTML += '<span class="match-badge title">Title</span>';
+                    }
+                    if (matchLocations.has('tags')) {
+                        matchIndicator.innerHTML += '<span class="match-badge tags">Tags</span>';
+                    }
+                    if (matchLocations.has('content')) {
+                        matchIndicator.innerHTML += '<span class="match-badge content">Text</span>';
+                    }
+                    matchIndicator.classList.remove('hidden');
+                } else {
+                    matchIndicator.classList.add('hidden');
+                }
+
+                // Creator filter match (if no creators selected, show all)
+                const creatorMatch = selectedCreators.size === 0 ||
+                                     selectedCreators.has(creatorId);
+
+                // Content filters (only apply if at least one is active)
+                let contentMatch = true;
+                if (contentFilters.images || contentFilters.videos || contentFilters.audio) {
+                    contentMatch = (contentFilters.images && hasImages) ||
+                                   (contentFilters.videos && hasVideos) ||
+                                   (contentFilters.audio && hasAudio);
+                }
+
+                // Tag filters (only apply if at least one tag is selected)
+                let tagMatch = true;
+                if (selectedTags.size > 0) {
+                    const postTags = tags.split('|').map(t => t.trim()).filter(t => t);
+                    tagMatch = postTags.some(tag => selectedTags.has(tag));
+                }
+
+                // Show only if all conditions match
+                if (searchMatch && creatorMatch && contentMatch && tagMatch) {
+                    card.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+
+            // Update results count
+            const hasActiveFilters = searchTerm || selectedCreators.size > 0 ||
+                                     contentFilters.images || contentFilters.videos ||
+                                     contentFilters.audio || selectedTags.size > 0;
+            if (hasActiveFilters) {
+                const filterText = selectedCreators.size > 0
+                    ? ` (${selectedCreators.size} creator${selectedCreators.size !== 1 ? 's' : ''} selected)`
+                    : '';
+                resultsCount.textContent = `${visibleCount} post${visibleCount !== 1 ? 's' : ''} found${filterText}`;
+            } else {
+                resultsCount.textContent = '';
+            }
+        }
+
+        // Add event listener for real-time search
+        searchInput.addEventListener('input', filterPosts);
+    </script>
+</body>
+</html>
