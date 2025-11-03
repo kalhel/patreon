@@ -494,6 +494,8 @@ class MediaDownloader:
 
         post_id = post.get('post_id', 'unknown')
 
+        video_extensions = {'.mp4', '.m4v', '.mov', '.webm', '.mkv'}
+
         for i, url in enumerate(video_urls):
             if url.startswith('blob:'):
                 logger.info(f"Skipped blob URL (stream-only): {url[:60]}...")
@@ -506,10 +508,11 @@ class MediaDownloader:
             filename = f"{post_id}_{i:02d}_{filename}"
 
             output_path = creator_dir / filename
+            suffix = Path(filename).suffix.lower()
 
-            candidate_urls = self._expand_mux_variants(url)
+            candidate_urls = self._expand_mux_variants(url) if suffix in video_extensions else [url]
 
-            if output_path.exists() and len(candidate_urls) > 1:
+            if output_path.exists() and len(candidate_urls) > 1 and suffix in video_extensions:
                 try:
                     existing_size = output_path.stat().st_size
                     if existing_size < self.min_video_size_bytes:
@@ -520,7 +523,7 @@ class MediaDownloader:
 
             download_success = False
             for idx, candidate in enumerate(candidate_urls):
-                if idx > 0 and output_path.exists():
+                if idx > 0 and output_path.exists() and suffix in video_extensions:
                     try:
                         existing_size = output_path.stat().st_size
                         if existing_size < self.min_video_size_bytes:
@@ -534,13 +537,13 @@ class MediaDownloader:
                     break
 
             # Fallback to yt-dlp if direct download failed
-            if not download_success:
+            if not download_success and suffix in video_extensions:
                 if self._download_with_ytdlp(candidate_urls, output_path, referer):
                     download_success = True
                     logger.info(f"✓ Fallback succeeded for {output_path.name}")
 
             # Replace preview-sized files with yt-dlp result
-            elif output_path.exists():
+            elif output_path.exists() and suffix in video_extensions:
                 try:
                     file_size = output_path.stat().st_size
                 except OSError:
