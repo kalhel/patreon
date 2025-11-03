@@ -12,6 +12,8 @@ import re
 from pathlib import Path
 from typing import List, Dict, Optional
 from datetime import datetime, timedelta
+
+import requests
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -88,6 +90,8 @@ logger = logging.getLogger(__name__)
 
 class PatreonScraperV2:
     """Improved scraper for Patreon posts with Load More button support"""
+
+    PATREON_API_POST_URL = "https://www.patreon.com/api/posts/{post_id}?include=media,attachments,post_file"
 
     def __init__(self, auth: PatreonAuthSelenium):
         """
@@ -717,7 +721,124 @@ class PatreonScraperV2:
         logger.info(f"  ✓ Audios: {len(post_detail.get('audios', []))}")
         logger.info(f"  ✓ Patreon Tags: {len(post_detail.get('patreon_tags', []))}")
 
+        try:
+            self._enrich_video_sources(post_detail)
+        except Exception as enrich_error:
+            logger.debug(f"    ⚠️  Could not enrich video sources: {enrich_error}")
+
         return post_detail
+
+    def _fetch_post_api(self, post_id: str) -> Optional[Dict]:
+        """Call Patreon API for a post using cookies from the Selenium session"""
+
+        try:
+            session = requests.Session()
+            for cookie in self.driver.get_cookies():
+                session.cookies.set(cookie['name'], cookie['value'])
+
+            session.headers.update({
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'application/json',
+                'Referer': 'https://www.patreon.com/'
+            })
+
+            url = self.PATREON_API_POST_URL.format(post_id=post_id)
+            response = session.get(url, timeout=15)
+            if response.status_code == 200:
+                return response.json()
+            logger.debug(f"    ⚠️  Patreon API returned {response.status_code} for post {post_id}")
+        except Exception as api_error:
+            logger.debug(f"    ⚠️  Error calling Patreon API for post {post_id}: {api_error}")
+        return None
+
+    def _enrich_video_sources(self, post_detail: Dict):
+        """Fetch additional downloadable/stream URLs for Patreon-hosted videos"""
+
+        post_id = post_detail.get('post_id')
+        if not post_id:
+            return
+
+        existing_videos = post_detail.get('videos', []) or []
+        needs_lookup = not existing_videos or any(url.startswith('blob:') for url in existing_videos)
+
+        if not needs_lookup:
+            return
+
+        api_data = self._fetch_post_api(post_id)
+        if not api_data:
+            return
+
+        download_urls: set = set()
+        stream_urls: set = set()
+
+        def register(url):
+            if not url or not isinstance(url, str):
+                return
+            if url.startswith('blob:'):
+                return
+            if '://' not in url:
+                return
+            lowered = url.lower()
+            if 'm3u8' in lowered or lowered.endswith('.m3u8'):
+                stream_urls.add(url)
+            elif lowered.startswith('data:'):
+                return
+            else:
+                download_urls.add(url)
+
+        def collect(obj):
+            if isinstance(obj, dict):
+                for value in obj.values():
+                    if isinstance(value, (dict, list)):
+                        collect(value)
+                    else:
+                        register(value)
+            elif isinstance(obj, list):
+                for value in obj:
+                    if isinstance(value, (dict, list)):
+                        collect(value)
+                    else:
+                        register(value)
+            else:
+                register(obj)
+
+        data_section = api_data.get('data') or {}
+        if isinstance(data_section, dict):
+            attrs = data_section.get('attributes') or {}
+            collect(attrs.get('post_file'))
+            collect(attrs.get('download_url'))
+            collect(attrs.get('stream_url'))
+
+        for item in api_data.get('included') or []:
+            if not isinstance(item, dict):
+                continue
+            attrs = item.get('attributes') or {}
+            collect(attrs.get('download_url'))
+            collect(attrs.get('stream_url'))
+            collect(attrs.get('url'))
+            collect(attrs.get('source_url'))
+            collect(attrs.get('file_url'))
+            collect(attrs.get('variant_streams'))
+            collect(attrs.get('variants'))
+
+        def dedupe(sequence):
+            seen = set()
+            result = []
+            for value in sequence:
+                if value not in seen:
+                    seen.add(value)
+                    result.append(value)
+            return result
+
+        sanitized = [url for url in existing_videos if url and not url.startswith('blob:')]
+        if download_urls:
+            sanitized.extend(sorted(download_urls))
+        post_detail['videos'] = dedupe(sanitized)
+
+        if download_urls:
+            post_detail['video_downloads'] = dedupe(sorted(download_urls))
+        if stream_urls:
+            post_detail['video_streams'] = dedupe(sorted(stream_urls))
 
     def save_posts(self, posts: List[Dict], creator_id: str, output_dir: str = "data/raw"):
         """

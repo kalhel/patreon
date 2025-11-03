@@ -555,11 +555,15 @@ class MediaDownloader:
 
         successful_downloads = 0
 
+        encountered_blob_only = True
+
         for i, url in enumerate(video_urls):
             if url.startswith('blob:'):
                 logger.info(f"Skipped blob URL (stream-only): {url[:60]}...")
                 self.stats['videos']['skipped'] += 1
                 continue
+
+            encountered_blob_only = False
 
             self.stats['videos']['total'] += 1
 
@@ -632,6 +636,37 @@ class MediaDownloader:
                 break
 
             time.sleep(1)  # Longer delay for videos
+
+        if not downloaded and (stream_only_urls or encountered_blob_only):
+            candidates = stream_only_urls or []
+            if encountered_blob_only and not candidates:
+                candidates = preferred_downloads or fallback_videos
+
+            if candidates:
+                logger.info("No direct video download succeeded. Attempting yt-dlp fallback for stream sources.")
+
+                for idx, stream_url in enumerate(candidates):
+                    filename = self._get_filename_from_url(stream_url, '.mp4')
+                    suffix = Path(filename).suffix.lower()
+                    if suffix not in video_extensions:
+                        filename = f"{Path(filename).stem}.mp4"
+                    filename = f"{post_id}_stream_{idx:02d}_{filename}"
+                    output_path = creator_dir / filename
+
+                    if self._download_with_ytdlp([stream_url], output_path, referer):
+                        abs_path = str(output_path)
+                        if abs_path not in downloaded:
+                            downloaded.append(abs_path)
+                            try:
+                                relatives.append(output_path.relative_to(self.output_dir).as_posix())
+                            except ValueError:
+                                relatives.append(abs_path)
+
+                        self.stats['videos']['total'] += 1
+
+                if downloaded:
+                    logger.info("✓ Stream-only video captured via yt-dlp")
+                    return {'absolute': downloaded, 'relative': relatives}
 
         if not downloaded and stream_only_urls:
             logger.info("No downloadable video URLs, but stream sources are available (HLS).")
