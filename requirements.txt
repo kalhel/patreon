@@ -16,6 +16,7 @@ notion-client>=2.2.0
 # Media Download
 Pillow>=10.0.0
 moviepy>=1.0.3
+yt-dlp>=2023.7.6
 
 # AI for Tag Generation (optional)
 google-generativeai>=0.3.0
