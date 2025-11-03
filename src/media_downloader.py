@@ -269,7 +269,7 @@ class MediaDownloader:
         ])
 
         if not image_urls:
-            return downloaded
+            return {'absolute': [], 'relative': []}
 
         # Create creator subdirectory
         creator_dir = self.images_dir / creator_id
@@ -327,7 +327,7 @@ class MediaDownloader:
         if not video_urls:
             if stream_only_urls:
                 logger.info("Video available as stream-only (HLS). Saved reference for manual download.")
-            return downloaded
+            return {'absolute': [], 'relative': []}
 
         # Create creator subdirectory
         creator_dir = self.videos_dir / creator_id
@@ -385,7 +385,7 @@ class MediaDownloader:
         ])
 
         if not audio_urls:
-            return downloaded
+            return {'absolute': [], 'relative': []}
 
         # Create creator subdirectory
         creator_dir = self.audio_dir / creator_id
