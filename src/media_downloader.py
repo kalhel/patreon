@@ -538,7 +538,12 @@ class MediaDownloader:
 
             # Fallback to yt-dlp if direct download failed
             if not download_success and suffix in video_extensions:
-                if self._download_with_ytdlp(candidate_urls, output_path, referer):
+                yt_candidates = candidate_urls.copy()
+                for stream_url in stream_only_urls:
+                    if stream_url not in yt_candidates:
+                        yt_candidates.append(stream_url)
+
+                if self._download_with_ytdlp(yt_candidates, output_path, referer):
                     download_success = True
                     logger.info(f"✓ Fallback succeeded for {output_path.name}")
 
