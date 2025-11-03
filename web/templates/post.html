@@ -49,6 +49,152 @@
             border-bottom-color: #ffffff;
         }
 
+        .post-overview {
+            margin-top: 1.75rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .avatar-frame {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+            flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .avatar-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .avatar-placeholder {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.85);
+            letter-spacing: 1px;
+        }
+
+        .overview-main {
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+            color: #f2f2f2;
+            flex: 1;
+        }
+
+        .creator-line {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .creator-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: 0.8px;
+        }
+
+        .meta-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .meta-pill .pill-icon {
+            font-size: 0.85rem;
+        }
+
+        .meta-row {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            flex-wrap: wrap;
+        }
+
+        .meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.65);
+        }
+
+        .meta-item .icon {
+            font-size: 1rem;
+            display: inline-flex;
+        }
+
+        .meta-item .value {
+            font-weight: 600;
+            color: #ffffff;
+            letter-spacing: 0.5px;
+        }
+
+        .meta-item-heart .icon {
+            color: #ff6f91;
+        }
+
+        .meta-item-comments .icon {
+            color: #7bdff2;
+        }
+
+        .media-flags {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+        }
+
+        .media-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: rgba(255, 255, 255, 0.45);
+        }
+
+        .media-icon {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.8rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.06);
+            color: rgba(255, 255, 255, 0.35);
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+            transition: all 0.25s ease;
+        }
+
+        .media-icon .glyph {
+            font-size: 1rem;
+        }
+
+        .media-icon .count {
+            font-weight: 600;
+        }
+
+        .media-icon.active {
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+        }
+
         @media (max-width: 768px) {
             .post-header {
                 padding: 1rem;
@@ -59,6 +205,18 @@
                 flex-direction: column;
                 gap: 1rem;
                 align-items: flex-start;
+            }
+
+            .post-overview {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1.25rem;
+                margin-top: 1.25rem;
+            }
+
+            .media-flags {
+                flex-wrap: wrap;
+                gap: 0.5rem;
             }
         }
 
@@ -278,6 +436,51 @@
             <a href="/">← Back to Library</a>
             <a href="{{ post.post_url }}" target="_blank">View Original →</a>
         </div>
+        <div class="post-overview">
+            <div class="avatar-frame">
+                {% if creator_avatar %}
+                <img src="{{ creator_avatar }}" alt="{{ creator_display_name }}">
+                {% else %}
+                <div class="avatar-placeholder">{{ (creator_display_name or 'A')[0] | upper }}</div>
+                {% endif %}
+            </div>
+            <div class="overview-main">
+                <div class="creator-line">
+                    <span class="creator-name">{{ creator_display_name }}</span>
+                    {% if published_label %}
+                    <span class="meta-pill">
+                        <span class="pill-icon">📅</span>
+                        <span>{{ published_label }}</span>
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="meta-row">
+                    <span class="meta-item meta-item-heart">
+                        <span class="icon">♥</span>
+                        <span class="value">{{ likes_count }}</span>
+                    </span>
+                    <span class="meta-item meta-item-comments">
+                        <span class="icon">💬</span>
+                        <span class="value">{{ comments_count }}</span>
+                    </span>
+                </div>
+                <div class="media-flags">
+                    <span class="media-label">Media</span>
+                    <span class="media-icon {% if media_counts.images %}active{% endif %}">
+                        <span class="glyph">🖼️</span>
+                        <span class="count">{{ media_counts.images }}</span>
+                    </span>
+                    <span class="media-icon {% if media_counts.videos %}active{% endif %}">
+                        <span class="glyph">🎥</span>
+                        <span class="count">{{ media_counts.videos }}</span>
+                    </span>
+                    <span class="media-icon {% if media_counts.audios %}active{% endif %}">
+                        <span class="glyph">🎵</span>
+                        <span class="count">{{ media_counts.audios }}</span>
+                    </span>
+                </div>
+            </div>
+        </div>
     </div>
 
             <!-- Content blocks -->
@@ -339,7 +542,7 @@
                         {% elif block.type == 'bulleted_list' %}
                             <div class="content-block bulleted-list">
                                 <ul>
-                                    {% for item in block.items %}
+                                    {% for item in block['items'] %}
                                     <li>{{ item }}</li>
                                     {% endfor %}
                                 </ul>
@@ -348,7 +551,7 @@
                         {% elif block.type == 'numbered_list' %}
                             <div class="content-block numbered-list">
                                 <ol>
-                                    {% for item in block.items %}
+                                    {% for item in block['items'] %}
                                     <li>{{ item }}</li>
                                     {% endfor %}
                                 </ol>
@@ -393,7 +596,16 @@
                         {% endfor %}
                     {% endif %}
 
-                    {% if post.videos %}
+                    {% set local_videos = post.video_local_paths if post.video_local_paths is defined and post.video_local_paths else [] %}
+                    {% if local_videos %}
+                        {% for rel_path in local_videos %}
+                        <div class="content-block video">
+                            <video controls preload="metadata" src="{{ url_for('media_file', filename=rel_path) }}">
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>
+                        {% endfor %}
+                    {% elif post.videos %}
                         {% for video_url in post.videos %}
                         <div class="content-block video">
                             <video controls>
@@ -403,7 +615,14 @@
                         {% endfor %}
                     {% endif %}
 
-                    {% if post.audios %}
+                    {% set local_audios = post.audio_local_paths if post.audio_local_paths is defined and post.audio_local_paths else [] %}
+                    {% if local_audios %}
+                        {% for rel_path in local_audios %}
+                        <div class="content-block audio">
+                            <audio controls preload="metadata" src="{{ url_for('media_file', filename=rel_path) }}"></audio>
+                        </div>
+                        {% endfor %}
+                    {% elif post.audios %}
                         {% for audio_url in post.audios %}
                         <div class="content-block audio">
                             <audio controls>
