@@ -173,9 +173,8 @@ def extract_post_details(
         return True
 
     except Exception as e:
-        error_msg = str(e)
-        logger.error(f"   ❌ Error extracting post {post_id}: {error_msg}")
-        tracker.mark_details_extracted(post_id, success=False, error=error_msg)
+        logger.exception(f"   ❌ Error extracting post {post_id}")
+        tracker.mark_details_extracted(post_id, success=False, error=str(e))
         return False
 
 
