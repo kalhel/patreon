@@ -710,17 +710,10 @@
             flex-wrap: wrap;
             align-items: center;
             min-height: 32px;
-            height: 32px;
         }
 
         .search-match-indicator.hidden {
-            visibility: hidden;
-        }
-
-        .search-match-indicator:empty {
-            height: 0;
-            min-height: 0;
-            margin-bottom: 0;
+            display: none;
         }
 
         .match-badge {
@@ -1280,16 +1273,16 @@
                         if (content.includes(term)) matchLocations.add('content');
                     });
 
-                    // Update match indicator
+                    // Update match indicator (order: Title → Text → Tags)
                     matchIndicator.innerHTML = '';
                     if (matchLocations.has('title')) {
                         matchIndicator.innerHTML += '<span class="match-badge title">Title</span>';
                     }
-                    if (matchLocations.has('tags')) {
-                        matchIndicator.innerHTML += '<span class="match-badge tags">Tags</span>';
-                    }
                     if (matchLocations.has('content')) {
                         matchIndicator.innerHTML += '<span class="match-badge content">Text</span>';
+                    }
+                    if (matchLocations.has('tags')) {
+                        matchIndicator.innerHTML += '<span class="match-badge tags">Tags</span>';
                     }
                     matchIndicator.classList.remove('hidden');
                 } else {
