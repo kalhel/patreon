@@ -718,13 +718,9 @@
             display: none;
         }
 
-        /* Search match indicators */
+        /* OLD Search match indicators - HIDDEN (use v2 instead) */
         .search-match-indicator {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-            align-items: center;
-            min-height: 32px;
+            display: none !important; /* Force hide old system */
         }
 
         .search-match-indicator.hidden {
@@ -759,6 +755,48 @@
 
         .match-badge.content {
             background: #2d3f5f;
+        }
+
+        /* NEW Search indicator v2 - cleaner design */
+        .search-indicator-v2 {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            align-items: center;
+        }
+
+        .search-indicator-v2.hidden {
+            display: none;
+        }
+
+        .search-badge-v2 {
+            background: #1a1a1a;
+            color: #ffffff;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.625rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 20px;
+            height: 20px;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .search-badge-v2.title {
+            background: #10b981;
+        }
+
+        .search-badge-v2.text {
+            background: #3b82f6;
+        }
+
+        .search-badge-v2.tags {
+            background: #ef4444;
         }
 
         /* Tags in post cards */
@@ -1021,8 +1059,11 @@
                         </div>
 
                         <div class="post-card-content">
-                            <!-- Search match indicator -->
+                            <!-- OLD Search match indicator (keep for now) -->
                             <div class="search-match-indicator hidden"></div>
+
+                            <!-- NEW Search match indicator v2 -->
+                            <div class="search-indicator-v2 hidden"></div>
 
                             <!-- Título -->
                             <h3 class="post-card-title"><a href="/post/{{ post.post_id }}">{{ post.title or 'Untitled Post' }}</a></h3>
@@ -1315,6 +1356,34 @@
                     matchIndicator.classList.remove('hidden');
                 } else {
                     matchIndicator.classList.add('hidden');
+                }
+
+                // NEW: Update indicator v2 (cleaner badges with better alignment)
+                const indicatorV2 = card.querySelector('.search-indicator-v2');
+                if (searchTerms.length > 0 && searchMatch) {
+                    const matchLocations = new Set();
+                    searchTerms.forEach(term => {
+                        if (title.includes(term)) matchLocations.add('title');
+                        if (tags.includes(term)) matchLocations.add('tags');
+                        if (content.includes(term)) matchLocations.add('content');
+                    });
+
+                    // Build badges array (order: Title → Text → Tags)
+                    const badgesV2 = [];
+                    if (matchLocations.has('title')) {
+                        badgesV2.push('<span class="search-badge-v2 title">Title</span>');
+                    }
+                    if (matchLocations.has('content')) {
+                        badgesV2.push('<span class="search-badge-v2 text">Text</span>');
+                    }
+                    if (matchLocations.has('tags')) {
+                        badgesV2.push('<span class="search-badge-v2 tags">Tags</span>');
+                    }
+
+                    indicatorV2.innerHTML = badgesV2.join('');
+                    indicatorV2.classList.remove('hidden');
+                } else {
+                    indicatorV2.classList.add('hidden');
                 }
 
                 // Creator filter match (if no creators selected, show all)
