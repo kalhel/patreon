@@ -298,7 +298,6 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            flex: 1;
         }
 
         .footer-creator-avatar {
@@ -310,56 +309,46 @@
             flex-shrink: 0;
         }
 
-        .footer-creator-name {
-            color: #ffffff;
-            font-size: 0.8125rem;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-
-        .content-meta-icons {
+        .footer-meta-icons {
             display: flex;
             align-items: center;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid #e0e0e0;
+            gap: 0.75rem;
+            margin-left: auto;
         }
 
-        .content-meta-icons .meta-icon,
-        .content-meta-icons .meta-icon-with-count {
-            color: #666666;
-            font-size: 1.125rem;
+        .footer-meta-icons .meta-icon,
+        .footer-meta-icons .meta-icon-with-count {
+            color: rgba(255, 255, 255, 0.85);
         }
 
-        .content-meta-icons .meta-icon .icon,
-        .content-meta-icons .meta-icon-with-count .icon {
-            width: 24px;
-            height: 24px;
+        .footer-meta-icons .meta-icon .icon,
+        .footer-meta-icons .meta-icon-with-count .icon {
+            width: 20px;
+            height: 20px;
         }
 
-        .content-meta-icons .meta-icon:not(.active),
-        .content-meta-icons .meta-icon-with-count:not(.active) {
+        .footer-meta-icons .meta-icon:not(.active),
+        .footer-meta-icons .meta-icon-with-count:not(.active) {
             opacity: 0.3;
         }
 
-        .content-meta-icons .meta-icon.active,
-        .content-meta-icons .meta-icon-with-count.active {
+        .footer-meta-icons .meta-icon.active,
+        .footer-meta-icons .meta-icon-with-count.active {
             opacity: 1;
         }
 
-        .content-meta-icons .meta-icon-with-count .count {
-            font-size: 0.875rem;
+        .footer-meta-icons .meta-icon-with-count .count {
+            font-size: 0.75rem;
             font-weight: 600;
-            color: #666666;
+            color: rgba(255, 255, 255, 0.85);
         }
 
-        .content-meta-icons .meta-icon-with-count.like .icon svg {
+        .footer-meta-icons .meta-icon-with-count.like .icon svg {
             fill: #ff6b6b;
         }
 
-        .post-card-compact:hover .content-meta-icons .meta-icon.active,
-        .post-card-compact:hover .content-meta-icons .meta-icon-with-count.active {
+        .post-card-compact:hover .footer-meta-icons .meta-icon.active,
+        .post-card-compact:hover .footer-meta-icons .meta-icon-with-count.active {
             transform: scale(1.1);
         }
 
@@ -952,24 +941,8 @@
                                 {% elif post.creator_id == 'astrobymax' %}
                                     <img src="{{ url_for('static', filename='astrobymax.jpg') }}" alt="{{ post.creator_id | creator_name }}" class="footer-creator-avatar">
                                 {% endif %}
-                                <span class="footer-creator-name">{{ post.creator_id | creator_name }}</span>
                             </div>
-                        </div>
-
-                        <div class="post-card-content">
-                            <!-- Search match indicator -->
-                            <div class="search-match-indicator hidden"></div>
-
-                            <!-- Título -->
-                            <h3 class="post-card-title"><a href="/post/{{ post.post_id }}">{{ post.title or 'Untitled Post' }}</a></h3>
-
-                            <!-- Fecha -->
-                            <div class="post-card-date">
-                                {{ post.post_metadata.published_date if post.post_metadata else 'N/A' }}
-                            </div>
-
-                            <!-- Iconos de métricas -->
-                            <div class="content-meta-icons">
+                            <div class="footer-meta-icons">
                                 <span class="meta-icon {% if img_count > 0 %}active{% endif %}" title="Images">
                                     <span class="icon">
                                         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -1002,6 +975,19 @@
                                     </span>
                                     <span class="count">{{ post.like_count if post.like_count else 0 }}</span>
                                 </span>
+                            </div>
+                        </div>
+
+                        <div class="post-card-content">
+                            <!-- Search match indicator -->
+                            <div class="search-match-indicator hidden"></div>
+
+                            <!-- Título -->
+                            <h3 class="post-card-title"><a href="/post/{{ post.post_id }}">{{ post.title or 'Untitled Post' }}</a></h3>
+
+                            <!-- Fecha -->
+                            <div class="post-card-date">
+                                {{ post.post_metadata.published_date if post.post_metadata else 'N/A' }}
                             </div>
 
                         {# Content preview: priority video > image > audio > text #}

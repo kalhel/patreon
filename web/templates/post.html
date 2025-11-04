@@ -262,9 +262,11 @@
         /* Comments */
         .comments-section {
             margin: 50px auto 0 auto;
-            padding: 30px 3rem 0 3rem;
-            border-top: 2px solid #e0e0e0;
+            padding: 30px 3rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 24px;
             max-width: 850px;
+            background: white;
         }
 
         .comments-toggle {
@@ -350,24 +352,11 @@
         }
 
         /* Tags */
-        .tags-section {
-            margin: 30px auto 0 auto;
-            padding: 20px 3rem;
-            background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 16px;
-            max-width: 850px;
-        }
-        .tags-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #2b2b2b;
-            margin: 0 0 12px 0;
-        }
         .tags-container {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
+            margin: 15px 0 25px 0;
         }
         .tag {
             display: inline-block;
@@ -446,7 +435,7 @@
                     <div class="meta-icon-pill {% if has_audio %}active{% endif %}" title="{{ audio_count }} audios">
                         <span class="icon" aria-hidden="true">
                             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 3v9.28c-.47-.17-.97-.28-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/>
+                                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
                             </svg>
                         </span>
                         <span class="count">{{ audio_count }}</span>
@@ -472,6 +461,7 @@
             <div class="post-content">
                 {% if post.content_blocks %}
                     {# First pass: show everything except comments #}
+                    {% set shown_tags = namespace(value=false) %}
                     {% for block in post.content_blocks | sort(attribute='order') %}
                         {% if block.type == 'comments_header' or block.type == 'comment' %}
                             {# Skip comments for now, will show them later #}
@@ -479,6 +469,16 @@
                             <div class="content-block heading-1">
                                 <h1>{{ block.text }}</h1>
                             </div>
+
+                            {# Show tags after first heading #}
+                            {% if not shown_tags.value and post.patreon_tags %}
+                                <div class="tags-container">
+                                    {% for tag in post.patreon_tags %}
+                                    <a href="/tag/{{ tag }}" class="tag">{{ tag }}</a>
+                                    {% endfor %}
+                                </div>
+                                {% set shown_tags.value = true %}
+                            {% endif %}
 
                         {% elif block.type == 'heading_2' %}
                             <div class="content-block heading-2">
@@ -625,18 +625,6 @@
                     {% endif %}
                 {% endif %}
             </div>
-
-            <!-- Tags -->
-            {% if post.patreon_tags %}
-            <div class="tags-section">
-                <h3 class="tags-title">Tags</h3>
-                <div class="tags-container">
-                    {% for tag in post.patreon_tags %}
-                    <a href="/tag/{{ tag }}" class="tag">{{ tag }}</a>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
 
             <!-- Comments section - second pass -->
             {% if post.content_blocks %}
