@@ -206,159 +206,78 @@
 
         .posts-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 2rem;
             margin-bottom: 4rem;
         }
 
         @media (min-width: 1200px) {
             .posts-grid {
-                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
             }
         }
 
         @media (min-width: 1600px) {
             .posts-grid {
-                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
             }
         }
 
         .post-card-compact {
-            background:
-                radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.8) 0%, transparent 50%),
-                linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
-            border: 1px solid transparent;
-            background-clip: padding-box;
-            border-radius: 12px;
-            padding: 2rem;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             flex-direction: column;
             height: 100%;
             position: relative;
             cursor: pointer;
-            box-shadow:
-                0 1px 3px rgba(0, 0, 0, 0.06),
-                0 1px 2px rgba(0, 0, 0, 0.04);
             overflow: hidden;
-        }
-
-        .post-card-compact::before {
-            content: '';
-            position: absolute;
-            top: -2px;
-            left: -2px;
-            right: -2px;
-            bottom: -2px;
-            background: linear-gradient(45deg,
-                #e0e0e0 0%,
-                #f0f0f0 25%,
-                #e0e0e0 50%,
-                #f0f0f0 75%,
-                #e0e0e0 100%);
-            border-radius: 12px;
-            z-index: -1;
-            opacity: 1;
-            transition: all 0.4s ease;
-        }
-
-        .post-card-compact::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg,
-                transparent 0%,
-                rgba(255, 255, 255, 0.3) 50%,
-                transparent 100%);
-            transition: left 0.6s ease;
-            pointer-events: none;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
         }
 
         .post-card-compact:hover {
-            background:
-                radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 1) 0%, transparent 50%),
-                linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
-            box-shadow:
-                0 10px 30px rgba(0, 0, 0, 0.08),
-                0 4px 12px rgba(0, 0, 0, 0.06),
-                inset 0 0 60px rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
             transform: translateY(-4px);
         }
 
-        .post-card-compact:hover::before {
-            background: linear-gradient(45deg,
-                #d0d0d0 0%,
-                #e0e0e0 25%,
-                #d0d0d0 50%,
-                #e0e0e0 75%,
-                #d0d0d0 100%);
+        .post-card-content {
+            background: #ffffff;
+            padding: 2rem;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            border-radius: 16px 16px 0 0;
         }
 
-        .post-card-compact:hover::after {
-            left: 100%;
-        }
-
-        .post-card-compact .creator-badge {
-            color: #666666;
-            font-size: 0.6875rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 1.25rem;
-            display: inline-flex;
+        .post-card-footer-black {
+            background: #1a1a1a;
+            padding: 1rem 1.5rem;
+            display: flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.25rem 0;
-            background: transparent;
-            border-left: none;
-            transition: all 0.3s ease;
+            gap: 1rem;
+            border-radius: 0 0 16px 16px;
+            border-top: 3px solid #000000;
         }
 
-        .post-card-compact .creator-badge .creator-avatar-small {
-            width: 20px;
-            height: 20px;
-            border-radius: 4px;
-            object-fit: cover;
-            border: 1px solid #e0e0e0;
-            flex-shrink: 0;
-        }
-
-        .post-card-compact:hover .creator-badge {
-            color: #1a1a1a;
-            background: transparent;
-        }
-
-        .post-card-compact:hover .creator-badge .creator-avatar-small {
-            border-color: #1a1a1a;
-        }
-
-        .post-card-compact h3 {
-            font-size: 1.125rem;
+        .post-card-title {
+            font-size: 1.25rem;
             font-weight: 600;
-            margin-bottom: 1.5rem;
+            margin: 0 0 0.75rem 0;
             color: #1a1a1a;
-            line-height: 1.6;
-            flex-grow: 0;
-            min-height: 3em;
+            line-height: 1.4;
         }
 
-        .post-card-compact h3 a {
+        .post-card-title a {
             color: #1a1a1a;
             text-decoration: none;
-            transition: all 0.3s ease;
-            background-image: linear-gradient(90deg,
-                transparent 0%,
-                rgba(26, 26, 26, 0.1) 50%,
-                transparent 100%);
-            background-size: 0% 100%;
-            background-repeat: no-repeat;
-            background-position: center;
+            transition: color 0.2s ease;
         }
 
-        .post-card-compact h3 a::after {
+        .post-card-title a:hover {
+            color: #666666;
+        }
+
+        .post-card-title a::after {
             content: '';
             position: absolute;
             top: 0;
@@ -366,180 +285,52 @@
             right: 0;
             bottom: 0;
             z-index: 1;
-            pointer-events: auto;
+        }
+
+        .post-card-date {
+            font-size: 0.8125rem;
+            color: #999999;
+            margin-bottom: 1.5rem;
+            font-family: 'Georgia', serif;
+        }
+
+        .footer-creator-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex: 1;
+        }
+
+        .footer-creator-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            object-fit: cover;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            flex-shrink: 0;
+        }
+
+        .footer-creator-name {
+            color: #ffffff;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .footer-meta-icons {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
         }
 
         /* Ensure media elements are above the link overlay */
         .content-preview {
             position: relative;
             z-index: 5;
-        }
-
-        .post-card-compact:hover h3 a {
-            background-size: 100% 100%;
-            letter-spacing: 0.3px;
-        }
-
-        .post-stats {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-            padding: 1.5rem 0;
-            border-top: 1px solid transparent;
-            border-bottom: 1px solid transparent;
-            background-image:
-                linear-gradient(white, white),
-                linear-gradient(90deg, transparent 0%, #e0e0e0 50%, transparent 100%);
-            background-clip: padding-box, border-box;
-            background-origin: padding-box, border-box;
-            position: relative;
-        }
-
-        .stat-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem;
-            border-radius: 4px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .stat-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 50%;
-            width: 0;
-            height: 100%;
-            background: linear-gradient(90deg,
-                transparent 0%,
-                rgba(26, 26, 26, 0.03) 50%,
-                transparent 100%);
-            transform: translateX(-50%);
-            transition: width 0.4s ease;
-        }
-
-        .post-card-compact:hover .stat-item::before {
-            width: 100%;
-        }
-
-        .post-card-compact:hover .stat-item {
-            transform: translateY(-2px);
-            background: rgba(255, 255, 255, 0.5);
-        }
-
-        .stat-item .label {
-            font-size: 0.6875rem;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            color: #999999;
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
-
-        .post-card-compact:hover .stat-item .label {
-            color: #666666;
-        }
-
-        .stat-item .value {
-            font-weight: 700;
-            color: #1a1a1a;
-            font-size: 1.25rem;
-            font-family: 'Georgia', serif;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .post-card-compact:hover .stat-item .value {
-            transform: scale(1.1);
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .post-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.8125rem;
-            color: #666666;
-            margin-top: auto;
-            padding-top: 1.25rem;
-            position: relative;
-        }
-
-        .post-footer::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg,
-                transparent 0%,
-                #e0e0e0 10%,
-                #e0e0e0 90%,
-                transparent 100%);
-        }
-
-        .post-date {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-weight: 400;
-            font-family: 'Georgia', serif;
-            padding: 0.25rem 0.75rem;
-            background: linear-gradient(90deg,
-                rgba(0, 0, 0, 0.02) 0%,
-                transparent 100%);
-            border-left: 2px solid #f0f0f0;
-            transition: all 0.3s ease;
-        }
-
-        .post-card-compact:hover .post-date {
-            border-left-color: #d0d0d0;
-            background: linear-gradient(90deg,
-                rgba(0, 0, 0, 0.04) 0%,
-                transparent 100%);
+            margin-bottom: auto;
         }
 
 
-        .post-likes {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-weight: 600;
-            color: #1a1a1a;
-            padding: 0.25rem 0.75rem;
-            background: linear-gradient(-90deg,
-                rgba(0, 0, 0, 0.02) 0%,
-                transparent 100%);
-            border-right: 2px solid #f0f0f0;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .post-likes::before {
-            content: '♥';
-            color: #d0d0d0;
-            font-size: 0.875rem;
-            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        }
-
-        .post-card-compact:hover .post-likes {
-            border-right-color: #cc6666;
-            background: linear-gradient(-90deg,
-                rgba(204, 102, 102, 0.05) 0%,
-                transparent 100%);
-        }
-
-        .post-card-compact:hover .post-likes::before {
-            color: #cc6666;
-            transform: scale(1.3);
-            filter: drop-shadow(0 0 3px rgba(204, 102, 102, 0.4));
-        }
 
         /* Content preview */
         .content-preview {
@@ -637,29 +428,33 @@
             fill: currentColor;
         }
 
-        .meta-icon:not(.active),
-        .meta-icon-with-count:not(.active) {
-            opacity: 0.25;
-            filter: grayscale(100%);
+        .footer-meta-icons .meta-icon,
+        .footer-meta-icons .meta-icon-with-count {
+            color: rgba(255, 255, 255, 0.85);
         }
 
-        .meta-icon.active,
-        .meta-icon-with-count.active {
+        .footer-meta-icons .meta-icon:not(.active),
+        .footer-meta-icons .meta-icon-with-count:not(.active) {
+            opacity: 0.3;
+        }
+
+        .footer-meta-icons .meta-icon.active,
+        .footer-meta-icons .meta-icon-with-count.active {
             opacity: 1;
         }
 
-        .meta-icon-with-count .count {
+        .footer-meta-icons .meta-icon-with-count .count {
             font-size: 0.75rem;
             font-weight: 600;
-            color: #666666;
+            color: rgba(255, 255, 255, 0.85);
         }
 
-        .meta-icon-with-count.like .icon svg {
-            fill: #cc6666;
+        .footer-meta-icons .meta-icon-with-count.like .icon svg {
+            fill: #ff6b6b;
         }
 
-        .post-card-compact:hover .meta-icon.active,
-        .post-card-compact:hover .meta-icon-with-count.active {
+        .post-card-compact:hover .footer-meta-icons .meta-icon.active,
+        .post-card-compact:hover .footer-meta-icons .meta-icon-with-count.active {
             transform: scale(1.1);
         }
 
@@ -997,8 +792,9 @@
                 grid-template-columns: 1fr;
             }
 
-            .post-stats {
-                grid-template-columns: repeat(2, 1fr);
+            .posts-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
             }
 
             .creator-section-title {
@@ -1105,21 +901,18 @@
                          data-has-images="{{ 'true' if img_count > 0 else 'false' }}"
                          data-has-videos="{{ 'true' if vid_count > 0 else 'false' }}"
                          data-has-audio="{{ 'true' if aud_count > 0 else 'false' }}">
-                        <div class="creator-badge">
-                            {% if post.creator_id == 'headonhistory' %}
-                                <img src="{{ url_for('static', filename='headonhistory.jpg') }}" alt="{{ post.creator_id | creator_name }}" class="creator-avatar-small">
-                            {% elif post.creator_id == 'horoiproject' %}
-                                <img src="{{ url_for('static', filename='horoiproject.jpg') }}" alt="{{ post.creator_id | creator_name }}" class="creator-avatar-small">
-                            {% elif post.creator_id == 'astrobymax' %}
-                                <img src="{{ url_for('static', filename='astrobymax.jpg') }}" alt="{{ post.creator_id | creator_name }}" class="creator-avatar-small">
-                            {% endif %}
-                            {{ post.creator_id | creator_name }}
-                        </div>
 
-                        <!-- Search match indicator -->
-                        <div class="search-match-indicator hidden"></div>
+                        <div class="post-card-content">
+                            <!-- Search match indicator -->
+                            <div class="search-match-indicator hidden"></div>
 
-                        <h3><a href="/post/{{ post.post_id }}">{{ post.title or 'Untitled Post' }}</a></h3>
+                            <!-- Título -->
+                            <h3 class="post-card-title"><a href="/post/{{ post.post_id }}">{{ post.title or 'Untitled Post' }}</a></h3>
+
+                            <!-- Fecha -->
+                            <div class="post-card-date">
+                                {{ post.post_metadata.published_date if post.post_metadata else 'N/A' }}
+                            </div>
 
                         {# Content preview: priority video > image > audio > text #}
                         {% set preview_shown = namespace(value=false) %}
@@ -1193,12 +986,21 @@
                                 <p>{{ post.full_content[:200] }}{% if post.full_content|length > 200 %}...{% endif %}</p>
                             </div>
                         {% endif %}
+                        </div>
 
-                        <div class="post-footer">
-                            <div class="post-date">
-                                {{ post.post_metadata.published_date if post.post_metadata else 'N/A' }}
+                        <!-- Footer Negro -->
+                        <div class="post-card-footer-black">
+                            <div class="footer-creator-info">
+                                {% if post.creator_id == 'headonhistory' %}
+                                    <img src="{{ url_for('static', filename='headonhistory.jpg') }}" alt="{{ post.creator_id | creator_name }}" class="footer-creator-avatar">
+                                {% elif post.creator_id == 'horoiproject' %}
+                                    <img src="{{ url_for('static', filename='horoiproject.jpg') }}" alt="{{ post.creator_id | creator_name }}" class="footer-creator-avatar">
+                                {% elif post.creator_id == 'astrobymax' %}
+                                    <img src="{{ url_for('static', filename='astrobymax.jpg') }}" alt="{{ post.creator_id | creator_name }}" class="footer-creator-avatar">
+                                {% endif %}
+                                <span class="footer-creator-name">{{ post.creator_id | creator_name }}</span>
                             </div>
-                            <div class="post-meta-icons">
+                            <div class="footer-meta-icons">
                                 <span class="meta-icon {% if img_count > 0 %}active{% endif %}" title="Images">
                                     <span class="icon">
                                         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
