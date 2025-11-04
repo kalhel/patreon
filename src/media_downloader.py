@@ -484,6 +484,13 @@ class MediaDownloader:
         downloaded = []
         relatives = []
 
+        # Define variables at the beginning
+        creator_dir = self.videos_dir / creator_id
+        creator_dir.mkdir(exist_ok=True)
+        post_id = post.get('post_id', 'unknown')
+        video_extensions = {'.mp4', '.m4v', '.mov', '.webm', '.mkv'}
+        successful_downloads = 0
+
         preferred_downloads = self._flatten_urls(post.get('video_downloads'))
         fallback_videos = self._flatten_urls(post.get('videos'))
         stream_only_urls = self._flatten_urls(post.get('video_streams'))
@@ -562,16 +569,6 @@ class MediaDownloader:
                         return {'absolute': downloaded, 'relative': relatives}
 
             return {'absolute': [], 'relative': []}
-
-        # Create creator subdirectory
-        creator_dir = self.videos_dir / creator_id
-        creator_dir.mkdir(exist_ok=True)
-
-        post_id = post.get('post_id', 'unknown')
-
-        video_extensions = {'.mp4', '.m4v', '.mov', '.webm', '.mkv'}
-
-        successful_downloads = 0
 
         encountered_blob_only = True
 
@@ -679,8 +676,13 @@ class MediaDownloader:
                                 relatives.append(output_path.relative_to(self.output_dir).as_posix())
                             except ValueError:
                                 relatives.append(abs_path)
+                            successful_downloads += 1
 
                         self.stats['videos']['total'] += 1
+
+                        # Stop if we've reached expected count
+                        if expected_count and successful_downloads >= expected_count:
+                            break
 
                 if downloaded:
                     logger.info("✓ Stream-only video captured via yt-dlp")
