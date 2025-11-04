@@ -1272,16 +1272,17 @@
                     });
 
                     // Update match indicator (order: Title → Text → Tags)
-                    matchIndicator.innerHTML = '';
+                    const badges = [];
                     if (matchLocations.has('title')) {
-                        matchIndicator.innerHTML += '<span class="match-badge title">Title</span>';
+                        badges.push('<span class="match-badge title">Title</span>');
                     }
                     if (matchLocations.has('content')) {
-                        matchIndicator.innerHTML += '<span class="match-badge content">Text</span>';
+                        badges.push('<span class="match-badge content">Text</span>');
                     }
                     if (matchLocations.has('tags')) {
-                        matchIndicator.innerHTML += '<span class="match-badge tags">Tags</span>';
+                        badges.push('<span class="match-badge tags">Tags</span>');
                     }
+                    matchIndicator.innerHTML = badges.join('');
                     matchIndicator.classList.remove('hidden');
                 } else {
                     matchIndicator.classList.add('hidden');
