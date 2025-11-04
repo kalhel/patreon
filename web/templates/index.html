@@ -317,10 +317,50 @@
             letter-spacing: 0.5px;
         }
 
-        .footer-meta-icons {
+        .content-meta-icons {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .content-meta-icons .meta-icon,
+        .content-meta-icons .meta-icon-with-count {
+            color: #666666;
+            font-size: 1.125rem;
+        }
+
+        .content-meta-icons .meta-icon .icon,
+        .content-meta-icons .meta-icon-with-count .icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        .content-meta-icons .meta-icon:not(.active),
+        .content-meta-icons .meta-icon-with-count:not(.active) {
+            opacity: 0.3;
+        }
+
+        .content-meta-icons .meta-icon.active,
+        .content-meta-icons .meta-icon-with-count.active {
+            opacity: 1;
+        }
+
+        .content-meta-icons .meta-icon-with-count .count {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #666666;
+        }
+
+        .content-meta-icons .meta-icon-with-count.like .icon svg {
+            fill: #ff6b6b;
+        }
+
+        .post-card-compact:hover .content-meta-icons .meta-icon.active,
+        .post-card-compact:hover .content-meta-icons .meta-icon-with-count.active {
+            transform: scale(1.1);
         }
 
         /* Ensure media elements are above the link overlay */
@@ -914,6 +954,42 @@
                                 {{ post.post_metadata.published_date if post.post_metadata else 'N/A' }}
                             </div>
 
+                            <!-- Iconos de métricas -->
+                            <div class="content-meta-icons">
+                                <span class="meta-icon {% if img_count > 0 %}active{% endif %}" title="Images">
+                                    <span class="icon">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                                        </svg>
+                                    </span>
+                                </span>
+                                <span class="meta-icon {% if vid_count > 0 %}active{% endif %}" title="Videos">
+                                    <span class="icon">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+                                        </svg>
+                                    </span>
+                                </span>
+                                <span class="meta-icon {% if aud_count > 0 %}active{% endif %}" title="Audio">
+                                    <span class="icon">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M12 3v9.28c-.47-.17-.97-.28-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/>
+                                        </svg>
+                                    </span>
+                                </span>
+                                <span class="meta-icon-with-count {% if com_count > 0 %}active{% endif %}" title="Comments">
+                                    💬 <span class="count">{{ com_count }}</span>
+                                </span>
+                                <span class="meta-icon-with-count like active" title="Likes">
+                                    <span class="icon">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                                        </svg>
+                                    </span>
+                                    <span class="count">{{ post.like_count if post.like_count else 0 }}</span>
+                                </span>
+                            </div>
+
                         {# Content preview: priority video > image > audio > text #}
                         {% set preview_shown = namespace(value=false) %}
 
@@ -999,40 +1075,6 @@
                                     <img src="{{ url_for('static', filename='astrobymax.jpg') }}" alt="{{ post.creator_id | creator_name }}" class="footer-creator-avatar">
                                 {% endif %}
                                 <span class="footer-creator-name">{{ post.creator_id | creator_name }}</span>
-                            </div>
-                            <div class="footer-meta-icons">
-                                <span class="meta-icon {% if img_count > 0 %}active{% endif %}" title="Images">
-                                    <span class="icon">
-                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
-                                        </svg>
-                                    </span>
-                                </span>
-                                <span class="meta-icon {% if vid_count > 0 %}active{% endif %}" title="Videos">
-                                    <span class="icon">
-                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
-                                        </svg>
-                                    </span>
-                                </span>
-                                <span class="meta-icon {% if aud_count > 0 %}active{% endif %}" title="Audio">
-                                    <span class="icon">
-                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M12 3v9.28c-.47-.17-.97-.28-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/>
-                                        </svg>
-                                    </span>
-                                </span>
-                                <span class="meta-icon-with-count {% if com_count > 0 %}active{% endif %}" title="Comments">
-                                    💬 <span class="count">{{ com_count }}</span>
-                                </span>
-                                <span class="meta-icon-with-count like active" title="Likes">
-                                    <span class="icon">
-                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                                        </svg>
-                                    </span>
-                                    <span class="count">{{ post.like_count if post.like_count else 0 }}</span>
-                                </span>
                             </div>
                         </div>
                     </div>
