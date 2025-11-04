@@ -707,7 +707,6 @@
             display: flex;
             gap: 0.5rem;
             margin-bottom: 1rem;
-            flex-wrap: wrap;
             align-items: center;
             min-height: 32px;
         }
@@ -726,10 +725,12 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
             line-height: 20px;
-            display: inline-block;
-            white-space: nowrap;
             height: 20px;
-            vertical-align: middle;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
         }
 
         .match-badge.title {
