@@ -394,6 +394,22 @@
             display: block;
         }
 
+        .content-preview.video-preview {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            position: relative;
+            overflow: hidden;
+            background: #000;
+        }
+
+        .content-preview.video-preview video {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            z-index: 10;
+            pointer-events: auto;
+        }
+
         .content-preview.youtube-preview {
             width: 100%;
             aspect-ratio: 16 / 9;
@@ -1016,11 +1032,23 @@
                                 {{ post.post_metadata.published_date if post.post_metadata else 'N/A' }}
                             </div>
 
-                        {# Content preview: priority video > image > audio > text #}
+                        {# Content preview: priority local video > youtube > image > audio > text #}
                         {% set preview_shown = namespace(value=false) %}
 
-                        {# 1. Check for YouTube/video #}
-                        {% if post.content_blocks %}
+                        {# 1. Check for local video #}
+                        {% if post.video_local_paths and post.video_local_paths|length > 0 and not preview_shown.value %}
+                            {% set first_video = post.video_local_paths[0] %}
+                            <div class="content-preview video-preview">
+                                <video controls preload="metadata">
+                                    <source src="{{ url_for('media_file', filename=first_video) }}" type="video/mp4">
+                                    Tu navegador no soporta el tag de video.
+                                </video>
+                            </div>
+                            {% set preview_shown.value = true %}
+                        {% endif %}
+
+                        {# 2. Check for YouTube/video #}
+                        {% if post.content_blocks and not preview_shown.value %}
                             {% for block in post.content_blocks %}
                                 {% if not preview_shown.value and block.type == 'youtube_embed' %}
                                     {% set video_id = block.url.split('v=')[1].split('&')[0] if 'v=' in block.url else block.url.split('/')[-1] %}
