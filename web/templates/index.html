@@ -709,15 +709,18 @@
             margin-bottom: 1rem;
             flex-wrap: wrap;
             align-items: center;
-            min-height: 20px;
+            min-height: 32px;
+            height: 32px;
         }
 
         .search-match-indicator.hidden {
             visibility: hidden;
+        }
+
+        .search-match-indicator:empty {
             height: 0;
-            margin-bottom: 0;
             min-height: 0;
-            overflow: hidden;
+            margin-bottom: 0;
         }
 
         .match-badge {
@@ -798,59 +801,24 @@
         .post-card-compact .audio-preview {
             width: 100%;
             margin-bottom: 1rem;
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-            border: none;
-            border-radius: 16px;
-            padding: 2rem;
+            background: #f8f8f8;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 1.25rem;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1.5rem;
         }
 
         .post-card-compact:hover .audio-preview {
-            background: linear-gradient(135deg, #2d2d2d 0%, #3d3d3d 100%);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-            transform: translateY(-2px);
-        }
-
-        .audio-preview-icon {
-            width: 80px;
-            height: 80px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(10px);
-        }
-
-        .audio-preview-icon svg {
-            width: 40px;
-            height: 40px;
-            fill: rgba(255, 255, 255, 0.9);
+            background: #f5f5f5;
+            border-color: #d0d0d0;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
         }
 
         .post-card-compact .audio-preview audio {
             width: 100%;
             height: 40px;
             outline: none;
-            border-radius: 20px;
-            overflow: hidden;
-        }
-
-        .post-card-compact .audio-preview audio::-webkit-media-controls-panel {
-            background-color: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-        }
-
-        .post-card-compact .audio-preview audio::-webkit-media-controls-play-button,
-        .post-card-compact .audio-preview audio::-webkit-media-controls-current-time-display,
-        .post-card-compact .audio-preview audio::-webkit-media-controls-time-remaining-display {
-            color: #ffffff;
-            filter: invert(1);
+            border-radius: 8px;
         }
 
         @media (max-width: 768px) {
@@ -1094,11 +1062,6 @@
                             {% for block in post.content_blocks %}
                                 {% if not preview_shown.value and block.type == 'audio' %}
                                     <div class="content-preview audio-preview">
-                                        <div class="audio-preview-icon">
-                                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-                                            </svg>
-                                        </div>
                                         <audio controls preload="metadata" src="{{ block.url }}"></audio>
                                     </div>
                                     {% set preview_shown.value = true %}
