@@ -696,10 +696,15 @@
             margin-bottom: 1rem;
             flex-wrap: wrap;
             align-items: center;
+            min-height: 20px;
         }
 
         .search-match-indicator.hidden {
-            display: none;
+            visibility: hidden;
+            height: 0;
+            margin-bottom: 0;
+            min-height: 0;
+            overflow: hidden;
         }
 
         .match-badge {
