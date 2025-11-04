@@ -108,7 +108,21 @@
         .meta-icon-group {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 1rem;
+        }
+
+        .nav-pills {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding-right: 1rem;
+            border-right: 2px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .content-pills {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
         }
 
         .meta-icon-pill {
@@ -123,11 +137,26 @@
             font-weight: 600;
             letter-spacing: 0.3px;
             transition: background 0.2s ease, transform 0.2s ease;
+            text-decoration: none;
+        }
+
+        .meta-icon-pill:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-1px);
         }
 
         .meta-icon-pill .icon {
-            font-size: 1rem;
-            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+        }
+
+        .meta-icon-pill .icon svg {
+            width: 100%;
+            height: 100%;
+            fill: currentColor;
         }
 
         .meta-icon-pill .count {
@@ -147,8 +176,8 @@
             font-size: 1rem;
         }
 
-        .meta-icon-pill.like .icon {
-            color: #ff6b6b;
+        .meta-icon-pill.like .icon svg {
+            fill: #ff6b6b;
         }
 
         @media (max-width: 768px) {
@@ -168,9 +197,24 @@
             }
 
             .meta-icon-group {
-                flex-wrap: wrap;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+                width: 100%;
+            }
+
+            .nav-pills {
+                border-right: none;
+                border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+                padding-right: 0;
+                padding-bottom: 0.75rem;
+                width: 100%;
                 justify-content: flex-start;
-                gap: 0.5rem;
+            }
+
+            .content-pills {
+                flex-wrap: wrap;
+                width: 100%;
             }
         }
 
@@ -400,25 +444,62 @@
                 </div>
             </div>
             <div class="meta-icon-group">
-                <div class="meta-icon-pill {% if has_images %}active{% endif %}">
-                    <span class="icon" aria-hidden="true">🖼️</span>
-                    <span class="count">{{ image_count }}</span>
+                <!-- Navigation pills -->
+                <div class="nav-pills">
+                    <a href="/" class="meta-icon-pill active" title="Volver al inicio">
+                        <span class="icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                            </svg>
+                        </span>
+                    </a>
+                    <a href="https://www.patreon.com/posts/{{ post.post_id }}" target="_blank" rel="noopener" class="meta-icon-pill active" title="Ver post original en Patreon">
+                        <span class="icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
+                            </svg>
+                        </span>
+                    </a>
                 </div>
-                <div class="meta-icon-pill {% if has_videos %}active{% endif %}">
-                    <span class="icon" aria-hidden="true">🎥</span>
-                    <span class="count">{{ video_count }}</span>
-                </div>
-                <div class="meta-icon-pill {% if has_audio %}active{% endif %}">
-                    <span class="icon" aria-hidden="true">🎵</span>
-                    <span class="count">{{ audio_count }}</span>
-                </div>
-                <div class="meta-icon-pill emoji {% if comments_count %}active{% endif %}">
-                    <span class="icon" aria-hidden="true">💬</span>
-                    <span class="count">{{ comments_count }}</span>
-                </div>
-                <div class="meta-icon-pill emoji like">
-                    <span class="icon" aria-hidden="true">❤️</span>
-                    <span class="count">{{ likes_count }}</span>
+
+                <!-- Content pills -->
+                <div class="content-pills">
+                    <div class="meta-icon-pill {% if has_images %}active{% endif %}" title="{{ image_count }} imágenes">
+                        <span class="icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                            </svg>
+                        </span>
+                        <span class="count">{{ image_count }}</span>
+                    </div>
+                    <div class="meta-icon-pill {% if has_videos %}active{% endif %}" title="{{ video_count }} videos">
+                        <span class="icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+                            </svg>
+                        </span>
+                        <span class="count">{{ video_count }}</span>
+                    </div>
+                    <div class="meta-icon-pill {% if has_audio %}active{% endif %}" title="{{ audio_count }} audios">
+                        <span class="icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 3v9.28c-.47-.17-.97-.28-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/>
+                            </svg>
+                        </span>
+                        <span class="count">{{ audio_count }}</span>
+                    </div>
+                    <div class="meta-icon-pill emoji {% if comments_count %}active{% endif %}" title="{{ comments_count }} comentarios">
+                        <span class="icon" aria-hidden="true">💬</span>
+                        <span class="count">{{ comments_count }}</span>
+                    </div>
+                    <div class="meta-icon-pill like active" title="{{ likes_count }} likes">
+                        <span class="icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                            </svg>
+                        </span>
+                        <span class="count">{{ likes_count }}</span>
+                    </div>
                 </div>
             </div>
         </div>
