@@ -246,7 +246,7 @@
             flex-grow: 1;
             display: flex;
             flex-direction: column;
-            border-radius: 16px 16px 0 0;
+            border-radius: 0 0 16px 16px;
         }
 
         .post-card-footer-black {
@@ -255,8 +255,8 @@
             display: flex;
             align-items: center;
             gap: 1rem;
-            border-radius: 0 0 16px 16px;
-            border-top: 3px solid #000000;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 3px solid #000000;
         }
 
         .post-card-title {
@@ -334,8 +334,8 @@
 
         .content-meta-icons .meta-icon .icon,
         .content-meta-icons .meta-icon-with-count .icon {
-            width: 20px;
-            height: 20px;
+            width: 24px;
+            height: 24px;
         }
 
         .content-meta-icons .meta-icon:not(.active),
@@ -942,6 +942,20 @@
                          data-has-videos="{{ 'true' if vid_count > 0 else 'false' }}"
                          data-has-audio="{{ 'true' if aud_count > 0 else 'false' }}">
 
+                        <!-- Header Negro -->
+                        <div class="post-card-footer-black">
+                            <div class="footer-creator-info">
+                                {% if post.creator_id == 'headonhistory' %}
+                                    <img src="{{ url_for('static', filename='headonhistory.jpg') }}" alt="{{ post.creator_id | creator_name }}" class="footer-creator-avatar">
+                                {% elif post.creator_id == 'horoiproject' %}
+                                    <img src="{{ url_for('static', filename='horoiproject.jpg') }}" alt="{{ post.creator_id | creator_name }}" class="footer-creator-avatar">
+                                {% elif post.creator_id == 'astrobymax' %}
+                                    <img src="{{ url_for('static', filename='astrobymax.jpg') }}" alt="{{ post.creator_id | creator_name }}" class="footer-creator-avatar">
+                                {% endif %}
+                                <span class="footer-creator-name">{{ post.creator_id | creator_name }}</span>
+                            </div>
+                        </div>
+
                         <div class="post-card-content">
                             <!-- Search match indicator -->
                             <div class="search-match-indicator hidden"></div>
@@ -973,7 +987,7 @@
                                 <span class="meta-icon {% if aud_count > 0 %}active{% endif %}" title="Audio">
                                     <span class="icon">
                                         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M12 3v9.28c-.47-.17-.97-.28-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/>
+                                            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
                                         </svg>
                                     </span>
                                 </span>
@@ -1062,20 +1076,6 @@
                                 <p>{{ post.full_content[:200] }}{% if post.full_content|length > 200 %}...{% endif %}</p>
                             </div>
                         {% endif %}
-                        </div>
-
-                        <!-- Footer Negro -->
-                        <div class="post-card-footer-black">
-                            <div class="footer-creator-info">
-                                {% if post.creator_id == 'headonhistory' %}
-                                    <img src="{{ url_for('static', filename='headonhistory.jpg') }}" alt="{{ post.creator_id | creator_name }}" class="footer-creator-avatar">
-                                {% elif post.creator_id == 'horoiproject' %}
-                                    <img src="{{ url_for('static', filename='horoiproject.jpg') }}" alt="{{ post.creator_id | creator_name }}" class="footer-creator-avatar">
-                                {% elif post.creator_id == 'astrobymax' %}
-                                    <img src="{{ url_for('static', filename='astrobymax.jpg') }}" alt="{{ post.creator_id | creator_name }}" class="footer-creator-avatar">
-                                {% endif %}
-                                <span class="footer-creator-name">{{ post.creator_id | creator_name }}</span>
-                            </div>
                         </div>
                     </div>
                     {% endfor %}
