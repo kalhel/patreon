@@ -1719,13 +1719,17 @@
                 if (waveformData && waveformData.data) {
                     config.peaks = [waveformData.data];
                     config.duration = waveformData.length / waveformData.sample_rate;
-                    config.url = audioSrc;
+                    // Don't set URL in config when using peaks - load on demand
                 } else {
                     config.url = audioSrc;
                 }
 
                 wavesurfersPreview[postId] = WaveSurfer.create(config);
                 speedsPreview[postId] = 1;
+
+                // Store whether audio has been loaded
+                wavesurfersPreview[postId]._audioLoaded = !waveformData;
+                wavesurfersPreview[postId]._audioSrc = audioSrc;
 
                 // When audio is ready, update the duration
                 wavesurfersPreview[postId].on('ready', () => {
@@ -1770,12 +1774,26 @@
 
         function playPausePreview(postId) {
             const button = event.target;
-            if (wavesurfersPreview[postId].isPlaying()) {
-                wavesurfersPreview[postId].pause();
+            const ws = wavesurfersPreview[postId];
+
+            if (ws.isPlaying()) {
+                ws.pause();
                 button.textContent = '▶';
             } else {
-                wavesurfersPreview[postId].play();
-                button.textContent = '⏸';
+                // If audio hasn't been loaded yet (using JSON peaks), load it now
+                if (!ws._audioLoaded && ws._audioSrc) {
+                    button.textContent = '⏳';
+                    button.disabled = true;
+                    ws.load(ws._audioSrc).then(() => {
+                        ws._audioLoaded = true;
+                        ws.play();
+                        button.textContent = '⏸';
+                        button.disabled = false;
+                    });
+                } else {
+                    ws.play();
+                    button.textContent = '⏸';
+                }
             }
         }
 

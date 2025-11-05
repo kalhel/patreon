@@ -843,13 +843,17 @@
                 if (waveformData && waveformData.data) {
                     config.peaks = [waveformData.data];
                     config.duration = waveformData.length / waveformData.sample_rate;
-                    config.url = audioSrc; // Still need URL for playback
+                    // Don't set URL in config when using peaks - load on demand
                 } else {
                     config.url = audioSrc;
                 }
 
                 wavesurfers[id] = WaveSurfer.create(config);
                 speeds[id] = 1;
+
+                // Store whether audio has been loaded
+                wavesurfers[id]._audioLoaded = !waveformData;
+                wavesurfers[id]._audioSrc = audioSrc;
 
                 // When audio is ready, update the duration
                 wavesurfers[id].on('ready', () => {
@@ -890,12 +894,26 @@
 
         function playPause(id) {
             const button = event.target;
-            if (wavesurfers[id].isPlaying()) {
-                wavesurfers[id].pause();
+            const ws = wavesurfers[id];
+
+            if (ws.isPlaying()) {
+                ws.pause();
                 button.textContent = '▶';
             } else {
-                wavesurfers[id].play();
-                button.textContent = '⏸';
+                // If audio hasn't been loaded yet (using JSON peaks), load it now
+                if (!ws._audioLoaded && ws._audioSrc) {
+                    button.textContent = '⏳';
+                    button.disabled = true;
+                    ws.load(ws._audioSrc).then(() => {
+                        ws._audioLoaded = true;
+                        ws.play();
+                        button.textContent = '⏸';
+                        button.disabled = false;
+                    });
+                } else {
+                    ws.play();
+                    button.textContent = '⏸';
+                }
             }
         }
 
