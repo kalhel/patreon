@@ -526,8 +526,16 @@ class MediaDownloader:
                 if not url:
                     continue
                 lower = url.lower()
-                if any(lower.endswith(ext) for ext in video_extensions) or 'm3u8' in lower or 'stream.mux.com' in lower:
+
+                # Rechazar archivos que NO son videos
+                if any(reject in lower for reject in ['.vtt', '.json', '/text/', '/thumbnail', '/storyboard', 'thumbnail.jpg', 'thumbnail.png']):
+                    logger.info(f"  ⚠️  [VIDEO DL] RECHAZADO (no es video): {url[:80]}...")
+                    continue
+
+                # Aceptar solo videos reales o streams HLS
+                if any(lower.endswith(ext) for ext in video_extensions) or '.m3u8' in lower:
                     filtered.append(url)
+                    logger.info(f"  ✓ [VIDEO DL] ACEPTADO: {url[:80]}...")
             return filtered
 
         video_urls = preferred_downloads if preferred_downloads else fallback_videos
