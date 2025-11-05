@@ -419,13 +419,89 @@
         .content-preview.audio-preview {
             position: relative;
             z-index: 10;
+            padding: 0;
         }
 
-        .content-preview.audio-preview audio {
-            width: 100%;
+        /* Compact audio player for previews */
+        .audio-player-container {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 18px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.06);
             position: relative;
             z-index: 10;
             pointer-events: auto;
+        }
+        .audio-player-container .audio-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            object-fit: cover;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+        }
+        .audio-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: none;
+            background: #1a1a1a;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding-left: 3px;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            flex-shrink: 0;
+            pointer-events: auto;
+        }
+        .audio-btn:hover {
+            transform: scale(1.05);
+            background: #2b2b2b;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        }
+        .audio-btn:active {
+            transform: scale(0.95);
+        }
+        .audio-player-main {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .audio-time {
+            font-size: 12px;
+            color: #666;
+            font-family: monospace;
+            white-space: nowrap;
+            flex-shrink: 0;
+            min-width: 85px;
+        }
+        .audio-speed {
+            background: #f5f5f5;
+            border: 1px solid #e0e0e0;
+            color: #1a1a1a;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            flex-shrink: 0;
+            pointer-events: auto;
+        }
+        .audio-speed:hover {
+            background: #e0e0e0;
+            border-color: #c0c0c0;
         }
 
         .content-preview.text-preview {
@@ -646,16 +722,26 @@
                         {% endfor %}
                     {% endif %}
 
-                    {# 4. Check for audio #}
-                    {% if post.content_blocks and not preview_shown.value %}
-                        {% for block in post.content_blocks %}
-                            {% if not preview_shown.value and block.type == 'audio' %}
-                                <div class="content-preview audio-preview">
-                                    <audio controls preload="metadata" src="{{ block.url }}"></audio>
+                    {# 4. Check for audio - use local files #}
+                    {% set local_audios = post.audio_local_paths if post.audio_local_paths is defined and post.audio_local_paths else [] %}
+                    {% if local_audios and not preview_shown.value %}
+                        {% set audio_path = local_audios[0] %}
+                        <div class="content-preview audio-preview">
+                            <div class="audio-player-container">
+                                {% if post.collections and post.collections|length > 0 and post.collections[0].collection_image_local %}
+                                    <img src="{{ url_for('media_file', filename=post.collections[0].collection_image_local) }}" alt="{{ post.collections[0].collection_name }}" class="audio-avatar">
+                                {% elif creator_avatars.get(post.creator_id) %}
+                                    <img src="{{ creator_avatars[post.creator_id] }}" alt="Audio" class="audio-avatar">
+                                {% endif %}
+                                <div class="audio-player-main">
+                                    <button class="audio-btn" onclick="playPausePreview('{{ post.post_id }}')">▶</button>
+                                    <div id="waveform-{{ post.post_id }}" data-audio-src="{{ url_for('media_file', filename=audio_path) }}" style="flex: 1; min-width: 0;"></div>
+                                    <span class="audio-time" id="time-{{ post.post_id }}">0:00 / 0:00</span>
+                                    <button class="audio-speed" onclick="changeSpeedPreview('{{ post.post_id }}')">1x</button>
                                 </div>
-                                {% set preview_shown.value = true %}
-                            {% endif %}
-                        {% endfor %}
+                            </div>
+                        </div>
+                        {% set preview_shown.value = true %}
                     {% endif %}
 
                     {# 5. Show first paragraph as fallback #}
@@ -702,5 +788,93 @@
             {% endfor %}
         </div>
     </div>
+
+    <!-- WaveSurfer JS for audio previews -->
+    <script src="https://unpkg.com/wavesurfer.js@7"></script>
+    <script>
+        // WaveSurfer instances for audio previews
+        const wavesurfersPreview = {};
+        const speedsPreview = {};
+
+        // Initialize WaveSurfer for each audio preview
+        document.addEventListener('DOMContentLoaded', function() {
+            const waveformDivs = document.querySelectorAll('[id^="waveform-"]');
+
+            waveformDivs.forEach(div => {
+                const postId = div.id.replace('waveform-', '');
+                const audioSrc = div.getAttribute('data-audio-src');
+
+                wavesurfersPreview[postId] = WaveSurfer.create({
+                    container: '#waveform-' + postId,
+                    waveColor: '#e0e0e0',
+                    progressColor: '#1a1a1a',
+                    cursorColor: '#1a1a1a',
+                    barWidth: 2,
+                    barRadius: 3,
+                    cursorWidth: 2,
+                    height: 50,
+                    barGap: 2,
+                    url: audioSrc,
+                    normalize: true,
+                    backend: 'WebAudio'
+                });
+
+                speedsPreview[postId] = 1;
+
+                // When audio is ready, update the duration
+                wavesurfersPreview[postId].on('ready', () => {
+                    const duration = wavesurfersPreview[postId].getDuration();
+                    const timeEl = document.getElementById('time-' + postId);
+                    if (timeEl) {
+                        timeEl.textContent = '0:00 / ' + formatTimePreview(duration);
+                    }
+                });
+
+                // Update time display
+                wavesurfersPreview[postId].on('timeupdate', (currentTime) => {
+                    const duration = wavesurfersPreview[postId].getDuration();
+                    const timeEl = document.getElementById('time-' + postId);
+                    if (timeEl) {
+                        timeEl.textContent = formatTimePreview(currentTime) + ' / ' + formatTimePreview(duration);
+                    }
+                });
+
+                // Update button when playback ends
+                wavesurfersPreview[postId].on('finish', () => {
+                    const btn = document.querySelector(`button[onclick="playPausePreview('${postId}')"]`);
+                    if (btn) btn.textContent = '▶';
+                });
+            });
+        });
+
+        function formatTimePreview(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return minutes + ':' + (secs < 10 ? '0' : '') + secs;
+        }
+
+        function playPausePreview(postId) {
+            const button = event.target;
+            if (wavesurfersPreview[postId].isPlaying()) {
+                wavesurfersPreview[postId].pause();
+                button.textContent = '▶';
+            } else {
+                wavesurfersPreview[postId].play();
+                button.textContent = '⏸';
+            }
+        }
+
+        function changeSpeedPreview(postId) {
+            const button = event.target;
+            const speedOptions = [1, 1.25, 1.5, 1.75, 2];
+            const currentIndex = speedOptions.indexOf(speedsPreview[postId]);
+            const nextIndex = (currentIndex + 1) % speedOptions.length;
+            const newSpeed = speedOptions[nextIndex];
+
+            wavesurfersPreview[postId].setPlaybackRate(newSpeed);
+            speedsPreview[postId] = newSpeed;
+            button.textContent = newSpeed + 'x';
+        }
+    </script>
 </body>
 </html>

@@ -819,10 +819,18 @@
                     height: 70,
                     barGap: 3,
                     url: audioSrc,
-                    normalize: true
+                    normalize: true,
+                    backend: 'WebAudio'
                 });
 
                 speeds[id] = 1;
+
+                // When audio is ready, update the duration
+                wavesurfers[id].on('ready', () => {
+                    const duration = wavesurfers[id].getDuration();
+                    document.getElementById('time-' + id).textContent =
+                        '0:00 / ' + formatTime(duration);
+                });
 
                 // Update time display
                 wavesurfers[id].on('timeupdate', (currentTime) => {
