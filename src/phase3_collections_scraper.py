@@ -8,6 +8,7 @@ import json
 import argparse
 import logging
 import time
+import requests
 from pathlib import Path
 from typing import List, Dict, Optional
 from datetime import datetime
@@ -71,6 +72,57 @@ def authenticate(config, headless=True):
     logger.info("✅ Authentication successful!")
 
     return auth
+
+
+def download_collection_image(image_url: str, creator_id: str, collection_id: str) -> Optional[str]:
+    """
+    Download collection image and save locally
+
+    Args:
+        image_url: URL of the collection image
+        creator_id: Creator identifier
+        collection_id: Collection identifier
+
+    Returns:
+        Relative path to saved image or None if failed
+    """
+    if not image_url:
+        return None
+
+    try:
+        # Create directory structure
+        images_dir = Path("data/media/collections") / creator_id
+        images_dir.mkdir(parents=True, exist_ok=True)
+
+        # Determine file extension from URL
+        ext = ".jpg"  # Default
+        if ".png" in image_url.lower():
+            ext = ".png"
+        elif ".jpeg" in image_url.lower() or ".jpg" in image_url.lower():
+            ext = ".jpg"
+        elif ".webp" in image_url.lower():
+            ext = ".webp"
+
+        # Save as collection_{id}{ext}
+        filename = f"collection_{collection_id}{ext}"
+        output_path = images_dir / filename
+
+        # Download image
+        response = requests.get(image_url, timeout=30)
+        response.raise_for_status()
+
+        # Save to file
+        output_path.write_bytes(response.content)
+
+        # Return relative path for JSON storage
+        relative_path = f"collections/{creator_id}/{filename}"
+        logger.info(f"    💾 Downloaded collection image: {relative_path}")
+
+        return relative_path
+
+    except Exception as e:
+        logger.error(f"    ❌ Failed to download collection image: {e}")
+        return None
 
 
 def extract_collection_data(driver, collection_element) -> Optional[Dict]:
@@ -312,13 +364,26 @@ def scrape_collections_for_creator(
             if collections_data:
                 logger.info(f"\n  📊 Extracted metadata for {len(collections_data)} collections")
 
-                # PHASE 2: Now visit each collection to extract post IDs
-                logger.info(f"  🔄 Now extracting post IDs from each collection...\n")
+                # PHASE 2: Now visit each collection to extract post IDs and download images
+                logger.info(f"  🔄 Now extracting post IDs and downloading images...\n")
                 for i, collection_data in enumerate(collections_data, 1):
                     logger.info(f"  [{i}/{len(collections_data)}] Processing: {collection_data['collection_name']}")
+
+                    # Extract post IDs
                     post_ids = extract_post_ids_from_collection(driver, collection_data['collection_url'])
                     collection_data['post_ids'] = post_ids
                     collection_data['post_count'] = len(post_ids)  # Update with actual count
+
+                    # Download collection image locally
+                    if collection_data.get('collection_image'):
+                        local_path = download_collection_image(
+                            collection_data['collection_image'],
+                            creator_id,
+                            collection_data['collection_id']
+                        )
+                        collection_data['collection_image_local'] = local_path
+                    else:
+                        collection_data['collection_image_local'] = None
 
                 break
 
