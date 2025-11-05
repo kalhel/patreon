@@ -1206,8 +1206,11 @@ class MediaDownloader:
                                 relatives_subtitles.append(abs_sub_path)
                 else:
                     logger.warning(f"  ⚠️  [YOUTUBE] Download failed for {video_id}")
+                    logger.warning(f"  Return code: {result.returncode}")
                     if result.stderr:
-                        logger.debug(f"  Error: {result.stderr[:200]}")
+                        logger.warning(f"  Error output: {result.stderr[:500]}")
+                    if result.stdout:
+                        logger.warning(f"  Stdout: {result.stdout[:500]}")
 
             except subprocess.TimeoutExpired:
                 logger.error(f"  ❌ [YOUTUBE] Download timeout for {video_id}")
