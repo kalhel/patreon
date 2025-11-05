@@ -1661,7 +1661,7 @@
             });
         }
 
-        // Create a collection card
+        // Create a collection card (same design as post cards)
         function createCollectionCard(collection) {
             const card = document.createElement('article');
             card.className = 'post-card post-card-compact collection-card';
@@ -1673,22 +1673,21 @@
                 ? `/media/${collection.collection_image_local}`
                 : '/static/placeholder-collection.png';
 
+            // Get creator avatar
+            const creatorCard = document.querySelector(`[data-creator-id="${collection.creator_id}"]`);
+            const creatorAvatar = creatorCard ? creatorCard.querySelector('img')?.src : '';
+
             card.innerHTML = `
                 <a href="/collection/${collection.creator_id}/${collection.collection_id}" class="post-card-link">
+                    <div class="post-card-header">
+                        ${creatorAvatar ? `<img src="${creatorAvatar}" alt="${collection.creator_name}" class="creator-avatar-small">` : ''}
+                        <div class="creator-name-compact" style="color: ${creatorColor}">
+                            ${collection.creator_name || collection.creator_id}
+                        </div>
+                    </div>
                     <div class="post-card-image" style="background-image: url('${imageUrl}')"></div>
                     <div class="post-card-content">
-                        <div class="post-card-creator" style="color: ${creatorColor}">
-                            📚 ${collection.creator_name || collection.creator_id}
-                        </div>
                         <h3 class="post-card-title">${collection.collection_name}</h3>
-                        <div class="post-card-date">${collection.latest_post_date || 'N/A'}</div>
-                        <div class="post-card-stats">
-                            <span title="Posts in collection">📄 ${collection.post_count}</span>
-                            <span title="Total Likes">❤️ ${collection.total_likes}</span>
-                            <span title="Total Comments">💬 ${collection.total_comments}</span>
-                            ${collection.total_videos > 0 ? `<span title="Total Videos">🎬 ${collection.total_videos}</span>` : ''}
-                            ${collection.total_audios > 0 ? `<span title="Total Audios">🎵 ${collection.total_audios}</span>` : ''}
-                        </div>
                     </div>
                 </a>
             `;
