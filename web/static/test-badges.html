@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Badge Alignment Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            padding: 40px;
+            background: #f5f5f5;
+        }
+
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+        }
+
+        h3 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        /* EXACT CSS from index.html */
+        .search-indicator-v2 {
+            display: flex;
+            gap: 0.4rem;
+            margin-bottom: 0.75rem;
+            align-items: center;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: visible;
+            min-height: 24px;
+            background: #f0f0f0;
+            padding: 10px;
+        }
+
+        .search-badge-v2 {
+            background: #1a1a1a;
+            color: #ffffff;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.625rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            line-height: 1;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            flex-shrink: 0;
+            height: 20px;
+            vertical-align: middle;
+        }
+
+        .search-badge-v2.title {
+            background: #10b981;
+        }
+
+        .search-badge-v2.text {
+            background: #3b82f6;
+        }
+
+        .search-badge-v2.tags {
+            background: #ef4444;
+        }
+
+        .search-badge-v2.comments {
+            background: #f59e0b;
+        }
+
+        .search-badge-v2.subtitles {
+            background: #8b5cf6;
+        }
+
+        /* Alternative attempts */
+        .attempt-1 .search-badge-v2 {
+            display: flex;
+        }
+
+        .attempt-2 .search-badge-v2 {
+            display: inline-block;
+            line-height: 20px;
+        }
+
+        .attempt-3 .search-badge-v2 {
+            display: inline-flex;
+            align-items: baseline;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Badge Alignment Diagnosis</h1>
+
+    <div class="test-section">
+        <h3>Test 1: Current Implementation (inline-flex + align-items: center)</h3>
+        <div class="search-indicator-v2">
+            <span class="search-badge-v2 title">📌 Title</span>
+            <span class="search-badge-v2 text">📄 Text</span>
+            <span class="search-badge-v2 tags">🏷️ Tags</span>
+            <span class="search-badge-v2 comments">💬 Comments</span>
+            <span class="search-badge-v2 subtitles">🎬 Video</span>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 2: With display: flex</h3>
+        <div class="search-indicator-v2 attempt-1">
+            <span class="search-badge-v2 title">📌 Title</span>
+            <span class="search-badge-v2 text">📄 Text</span>
+            <span class="search-badge-v2 tags">🏷️ Tags</span>
+            <span class="search-badge-v2 comments">💬 Comments</span>
+            <span class="search-badge-v2 subtitles">🎬 Video</span>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 3: With display: inline-block</h3>
+        <div class="search-indicator-v2 attempt-2">
+            <span class="search-badge-v2 title">📌 Title</span>
+            <span class="search-badge-v2 text">📄 Text</span>
+            <span class="search-badge-v2 tags">🏷️ Tags</span>
+            <span class="search-badge-v2 comments">💬 Comments</span>
+            <span class="search-badge-v2 subtitles">🎬 Video</span>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 4: With align-items: baseline</h3>
+        <div class="search-indicator-v2 attempt-3">
+            <span class="search-badge-v2 title">📌 Title</span>
+            <span class="search-badge-v2 text">📄 Text</span>
+            <span class="search-badge-v2 tags">🏷️ Tags</span>
+            <span class="search-badge-v2 comments">💬 Comments</span>
+            <span class="search-badge-v2 subtitles">🎬 Video</span>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 5: Plain text without emojis</h3>
+        <div class="search-indicator-v2">
+            <span class="search-badge-v2 title">Title</span>
+            <span class="search-badge-v2 text">Text</span>
+            <span class="search-badge-v2 tags">Tags</span>
+            <span class="search-badge-v2 comments">Comments</span>
+            <span class="search-badge-v2 subtitles">Video</span>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 6: Only the problematic emoji 🏷️</h3>
+        <div class="search-indicator-v2">
+            <span class="search-badge-v2 tags">🏷️ Tags</span>
+            <span class="search-badge-v2 tags">🏷️ Tags</span>
+            <span class="search-badge-v2 tags">🏷️ Tags</span>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 7: Different emoji for tags</h3>
+        <div class="search-indicator-v2">
+            <span class="search-badge-v2 title">📌 Title</span>
+            <span class="search-badge-v2 text">📄 Text</span>
+            <span class="search-badge-v2 tags">🔖 Tags</span>
+            <span class="search-badge-v2 comments">💬 Comments</span>
+            <span class="search-badge-v2 subtitles">🎬 Video</span>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 8: Without gap</h3>
+        <div class="search-indicator-v2" style="gap: 0;">
+            <span class="search-badge-v2 title" style="margin-right: 4px;">📌 Title</span>
+            <span class="search-badge-v2 text" style="margin-right: 4px;">📄 Text</span>
+            <span class="search-badge-v2 tags" style="margin-right: 4px;">🏷️ Tags</span>
+            <span class="search-badge-v2 comments" style="margin-right: 4px;">💬 Comments</span>
+            <span class="search-badge-v2 subtitles">🎬 Video</span>
+        </div>
+    </div>
+
+    <hr>
+
+    <h2>📸 Por favor toma screenshot y muéstrame cuál test se ve bien</h2>
+    <p>O dime el número del test que se ve correctamente alineado</p>
+
+</body>
+</html>
