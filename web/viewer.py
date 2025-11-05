@@ -124,9 +124,15 @@ def load_all_posts():
             try:
                 with open(json_file, 'r', encoding='utf-8') as f:
                     posts = json.load(f)
+                    print(f"DEBUG: Loaded {len(posts)} posts from {json_file.name}")
+                    if posts:
+                        sample_creator = posts[0].get('creator_id', 'unknown')
+                        print(f"       Sample creator_id: {sample_creator}")
                     all_posts.extend(posts)
             except Exception as e:
                 print(f"Error loading {json_file}: {e}")
+    else:
+        print(f"DEBUG: RAW_DATA_DIR does not exist: {RAW_DATA_DIR}")
 
     # Then try processed directory
     if PROCESSED_DATA_DIR.exists():
@@ -134,9 +140,17 @@ def load_all_posts():
             try:
                 with open(json_file, 'r', encoding='utf-8') as f:
                     posts = json.load(f)
+                    print(f"DEBUG: Loaded {len(posts)} posts from {json_file.name}")
+                    if posts:
+                        sample_creator = posts[0].get('creator_id', 'unknown')
+                        print(f"       Sample creator_id: {sample_creator}")
                     all_posts.extend(posts)
             except Exception as e:
                 print(f"Error loading {json_file}: {e}")
+    else:
+        print(f"DEBUG: PROCESSED_DATA_DIR does not exist: {PROCESSED_DATA_DIR}")
+
+    print(f"DEBUG: Total posts loaded: {len(all_posts)}")
 
     # Sort by post_id (newest first)
     all_posts.sort(key=lambda x: x.get('post_id', ''), reverse=True)
@@ -198,6 +212,12 @@ def index():
                 creator_avatars[creator_id] = f"/static/{CREATOR_AVATARS[creator_id]}"
             elif post.get('creator_avatar'):
                 creator_avatars[creator_id] = post['creator_avatar']
+
+    # DEBUG: Print creator post counts
+    print("\n=== DEBUG: Creator Post Counts ===")
+    for creator_id, creator_posts in creators.items():
+        print(f"{creator_id}: {len(creator_posts)} posts")
+    print("===================================\n")
 
     # Load creator colors from config
     creators_config = load_creators_config()
