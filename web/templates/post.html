@@ -566,8 +566,11 @@
                                 {% for audio_path in local_audios %}
                                     <div class="content-block audio">
                                         <div class="audio-player-container">
-                                            {% if creator_avatar %}
-                                            <img src="{{ creator_avatar }}" alt="Audio thumbnail" class="audio-avatar">
+                                            {# Use collection image if post belongs to a collection, otherwise use creator avatar #}
+                                            {% if post.collections and post.collections|length > 0 and post.collections[0].collection_image_local %}
+                                                <img src="{{ url_for('media_file', filename=post.collections[0].collection_image_local) }}" alt="{{ post.collections[0].collection_name }}" class="audio-avatar">
+                                            {% elif creator_avatar %}
+                                                <img src="{{ creator_avatar }}" alt="Audio thumbnail" class="audio-avatar">
                                             {% endif %}
                                             <div class="audio-player-main">
                                                 <audio controls src="{{ url_for('media_file', filename=audio_path) }}" id="audio-{{ loop.index }}"></audio>
