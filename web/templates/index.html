@@ -1691,7 +1691,12 @@
                 const tags = card.dataset.tags || '';
                 const content = card.dataset.content || '';
                 const creatorId = card.dataset.creatorId || '';
-                const postId = card.querySelector('.post-card-title a').href.split('/post/')[1];
+
+                // Extract post_id correctly (remove query params if present)
+                const href = card.querySelector('.post-card-title a').href;
+                const postIdMatch = href.match(/\/post\/([^?#]+)/);
+                const postId = postIdMatch ? postIdMatch[1] : '';
+
                 const hasImages = card.dataset.hasImages === 'true';
                 const hasVideos = card.dataset.hasVideos === 'true';
                 const hasAudio = card.dataset.hasAudio === 'true';

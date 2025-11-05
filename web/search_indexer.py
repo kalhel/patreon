@@ -351,7 +351,8 @@ class SearchIndexer:
                 f.post_id,
                 f.creator_id,
                 f.title,
-                snippet(posts_fts, 1, '<mark>', '</mark>', '...', 30) as content_snippet,
+                snippet(posts_fts, 2, '<mark>', '</mark>', '...', 30) as title_snippet,
+                snippet(posts_fts, 3, '<mark>', '</mark>', '...', 30) as content_snippet,
                 snippet(posts_fts, 4, '<mark>', '</mark>', '...', 30) as tags_snippet,
                 snippet(posts_fts, 5, '<mark>', '</mark>', '...', 30) as comments_snippet,
                 snippet(posts_fts, 6, '<mark>', '</mark>', '...', 30) as subtitles_snippet,
@@ -390,7 +391,10 @@ class SearchIndexer:
                 # Determine which fields matched
                 matched_in = []
 
-                # Check if there are highlights in each field
+                # Check if there are highlights in each field (with snippet)
+                # Order matters: title, content, tags, comments, subtitles
+                if '<mark>' in (row['title_snippet'] or ''):
+                    matched_in.append('title')
                 if '<mark>' in (row['content_snippet'] or ''):
                     matched_in.append('content')
                 if '<mark>' in (row['tags_snippet'] or ''):
@@ -400,10 +404,20 @@ class SearchIndexer:
                 if '<mark>' in (row['subtitles_snippet'] or ''):
                     matched_in.append('subtitles')
 
-                # Also check title (not in snippet but we can check manually)
-                title_lower = (row['title'] or '').lower()
-                if any(term.lower() in title_lower for term in search_terms):
-                    matched_in.insert(0, 'title')  # Title first
+                # Fallback: if no matches detected but post was returned, check manually
+                if not matched_in:
+                    title_lower = (row['title'] or '').lower()
+                    content_snippet_lower = (row['content_snippet'] or '').lower()
+                    tags_snippet_lower = (row['tags_snippet'] or '').lower()
+
+                    for term in search_terms:
+                        term_lower = term.lower().rstrip('*')  # Remove trailing *
+                        if term_lower in title_lower and 'title' not in matched_in:
+                            matched_in.append('title')
+                        if term_lower in content_snippet_lower and 'content' not in matched_in:
+                            matched_in.append('content')
+                        if term_lower in tags_snippet_lower and 'tags' not in matched_in:
+                            matched_in.append('tags')
 
                 result = {
                     'post_id': row['post_id'],
@@ -413,6 +427,7 @@ class SearchIndexer:
                     'rank': row['rank'],
                     'matched_in': matched_in,
                     'snippets': {
+                        'title': row['title_snippet'],
                         'content': row['content_snippet'],
                         'tags': row['tags_snippet'],
                         'comments': row['comments_snippet'],
