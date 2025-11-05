@@ -38,21 +38,36 @@
         }
 
         .back-button {
-            display: inline-block;
-            color: #1a1a1a;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #ffffff;
+            background: #1a1a1a;
             text-decoration: none;
             font-size: 0.875rem;
-            font-weight: 500;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            border-bottom: 1px solid #1a1a1a;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
             margin-bottom: 3rem;
             transition: all 0.2s;
+            border: 2px solid #1a1a1a;
         }
 
         .back-button:hover {
-            color: #666666;
-            border-bottom-color: #666666;
+            background: #ffffff;
+            color: #1a1a1a;
+            transform: translateX(-4px);
+        }
+
+        .back-button::before {
+            content: '←';
+            font-size: 1.2rem;
+            transition: transform 0.2s;
+        }
+
+        .back-button:hover::before {
+            transform: translateX(-2px);
         }
 
         .wide-container {
@@ -248,6 +263,88 @@
             font-family: 'Georgia', serif;
         }
 
+        /* Content preview */
+        .content-preview {
+            margin-bottom: 1.5rem;
+            border-radius: 4px;
+            overflow: hidden;
+            width: 100%;
+            position: relative;
+            z-index: 5;
+        }
+
+        .content-preview.image-preview {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+        }
+
+        .content-preview.image-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .content-preview.video-preview {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            position: relative;
+            overflow: hidden;
+            background: #000;
+        }
+
+        .content-preview.video-preview video {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            z-index: 10;
+            pointer-events: auto;
+        }
+
+        .content-preview.youtube-preview {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .content-preview.youtube-preview iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            z-index: 10;
+            pointer-events: auto;
+        }
+
+        .content-preview.audio-preview {
+            position: relative;
+            z-index: 10;
+        }
+
+        .content-preview.audio-preview audio {
+            width: 100%;
+            position: relative;
+            z-index: 10;
+            pointer-events: auto;
+        }
+
+        .content-preview.text-preview {
+            padding: 1rem 1.25rem;
+            background: #f5f5f5;
+            border-left: 3px solid #e0e0e0;
+            min-height: 80px;
+        }
+
+        .content-preview.text-preview p {
+            margin: 0;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            color: #666666;
+        }
+
         @media (max-width: 768px) {
             .header {
                 padding: 2rem 1rem;
@@ -276,7 +373,7 @@
     </div>
 
     <div class="wide-container">
-        <a href="/" class="back-button">← Back to Library</a>
+        <a href="/" class="back-button">Back to Library</a>
 
         <div class="posts-grid">
             {% for post in posts %}
@@ -349,8 +446,110 @@
                     </div>
 
                     <div class="post-card-date">
-                        {{ post.published_at | date_eu }}
+                        {% if post.post_metadata and post.post_metadata.published_date %}
+                            {{ post.post_metadata.published_date }}
+                        {% elif post.published_at %}
+                            {{ post.published_at | date_eu }}
+                        {% elif post.created_at %}
+                            {{ post.created_at | date_eu }}
+                        {% else %}
+                            N/A
+                        {% endif %}
                     </div>
+
+                    {# Content preview: priority local video > youtube > image > audio > text #}
+                    {% set preview_shown = namespace(value=false) %}
+
+                    {# 1. Check for local video #}
+                    {% if post.video_local_paths and post.video_local_paths|length > 0 and not preview_shown.value %}
+                        {% set first_video = post.video_local_paths[0] %}
+                        {% set local_subtitles = post.video_subtitles_relative if post.video_subtitles_relative is defined and post.video_subtitles_relative else [] %}
+                        <div class="content-preview video-preview">
+                            <video controls preload="metadata">
+                                <source src="{{ url_for('media_file', filename=first_video) }}" type="video/mp4">
+                                {% if local_subtitles %}
+                                    {% for subtitle in local_subtitles %}
+                                        <track kind="subtitles" src="{{ url_for('media_file', filename=subtitle) }}" srclang="en" label="Subtítulos">
+                                    {% endfor %}
+                                {% endif %}
+                                Tu navegador no soporta el tag de video.
+                            </video>
+                        </div>
+                        {% set preview_shown.value = true %}
+                    {% endif %}
+
+                    {# 2. Check for YouTube #}
+                    {% if post.content_blocks and not preview_shown.value %}
+                        {% for block in post.content_blocks %}
+                            {% if not preview_shown.value and block.type == 'youtube_embed' %}
+                                {% set video_id = block.url.split('v=')[1].split('&')[0] if 'v=' in block.url else block.url.split('/')[-1] %}
+                                <div class="content-preview youtube-preview">
+                                    <iframe
+                                        src="https://www.youtube.com/embed/{{ video_id }}"
+                                        frameborder="0"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        allowfullscreen>
+                                    </iframe>
+                                </div>
+                                {% set preview_shown.value = true %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+
+                    {# 3. Check for image (skip Patreon thumbnails) #}
+                    {% if post.content_blocks and not preview_shown.value %}
+                        {% for block in post.content_blocks %}
+                            {% if not preview_shown.value and block.type == 'image' %}
+                                {# Skip Patreon thumbnail images #}
+                                {% set skip_image = false %}
+                                {% set url_lower = block.url.lower() %}
+                                {% if 'patreonusercontent.com' in url_lower and ('/1.png' in url_lower or '/2.png' in url_lower or '/3.png' in url_lower) %}
+                                    {% set skip_image = true %}
+                                {% endif %}
+
+                                {% if not skip_image %}
+                                <div class="content-preview image-preview">
+                                    <img src="{{ block.url }}" alt="{{ block.caption or '' }}" loading="lazy">
+                                </div>
+                                {% set preview_shown.value = true %}
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+
+                    {# 4. Check for audio #}
+                    {% if post.content_blocks and not preview_shown.value %}
+                        {% for block in post.content_blocks %}
+                            {% if not preview_shown.value and block.type == 'audio' %}
+                                <div class="content-preview audio-preview">
+                                    <audio controls preload="metadata" src="{{ block.url }}"></audio>
+                                </div>
+                                {% set preview_shown.value = true %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+
+                    {# 5. Show first paragraph as fallback #}
+                    {% if not preview_shown.value and post.content_blocks %}
+                        {% set text_to_show = namespace(value='') %}
+                        {% for block in post.content_blocks %}
+                            {% if not text_to_show.value and block.type == 'paragraph' and block.text and block.text|length > 30 %}
+                                {% set is_date = (block.text|length < 50 and block.text[0:1]|int(-1) >= 0) %}
+                                {% if not is_date %}
+                                    {% set text_to_show.value = block.text %}
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                        {% if text_to_show.value %}
+                            <div class="content-preview text-preview">
+                                <p>{{ text_to_show.value[:200] }}{% if text_to_show.value|length > 200 %}...{% endif %}</p>
+                            </div>
+                        {% elif post.full_content and post.full_content|length > 30 %}
+                            <div class="content-preview text-preview">
+                                <p>{{ post.full_content[:200] }}{% if post.full_content|length > 200 %}...{% endif %}</p>
+                            </div>
+                        {% endif %}
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}
