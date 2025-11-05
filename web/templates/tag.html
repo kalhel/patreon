@@ -142,7 +142,7 @@
             align-items: center;
             gap: 0.5rem;
             width: 100%;
-            min-height: 1.5rem;
+            min-height: 2rem;
         }
 
         .collection-info.empty {
@@ -150,11 +150,21 @@
             opacity: 0;
         }
 
+        .collection-thumbnail {
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            object-fit: cover;
+            flex-shrink: 0;
+            border: 1px solid #dee2e6;
+        }
+
         .collection-icon {
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
             fill: #6c757d;
             flex-shrink: 0;
+            margin-left: 0.25rem;
         }
 
         .collection-name {
@@ -164,6 +174,10 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+
+        .post-card-compact:hover .collection-thumbnail {
+            border-color: #adb5bd;
         }
 
         .post-card-compact:hover .collection-icon {
@@ -622,11 +636,13 @@
                 <!-- Collections Section (reserved space for all cards) -->
                 <div class="post-card-collection">
                     {% if post.collections and post.collections|length > 0 %}
+                        {% set collection = post.collections[0] %}
                         <div class="collection-info">
+                            <img src="{{ collection.collection_image }}" alt="{{ collection.collection_name }}" class="collection-thumbnail" loading="lazy">
                             <svg class="collection-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M18.785 16.895c.434 0 .706.055.87.218.162.163.217.434.217.869 0 .434-.055.706-.218.869-.163.163-.434.218-.869.218H5.215c-.435 0-.706-.055-.87-.218-.162-.163-.217-.435-.217-.87 0-.434.055-.705.218-.869.163-.162.434-.217.869-.217zM4.241 5.529c.488-.353 1.462.217 3.41 1.358 2.4 1.407 3.601 2.115 3.602 2.823 0 .708-1.201 1.417-3.603 2.824-1.947 1.141-2.921 1.711-3.409 1.359-.487-.353-.488-1.63-.488-4.183 0-2.552 0-3.828.488-4.181m14.544 6.294c.435 0 .706.054.87.217.162.164.217.435.217.87 0 .434-.055.706-.218.869-.163.163-.434.217-.869.217h-4.722c-.435 0-.707-.054-.87-.217-.163-.163-.217-.435-.217-.87 0-.434.054-.706.217-.869.164-.163.435-.217.87-.217zm0-5.073c.435 0 .706.055.87.218.162.163.217.435.217.87 0 .434-.055.705-.218.868-.163.163-.434.218-.869.218h-2.898c-.435 0-.706-.055-.87-.218-.162-.163-.217-.434-.217-.869 0-.434.054-.706.218-.869.163-.163.434-.218.869-.218z"/>
                             </svg>
-                            <span class="collection-name">{{ post.collections[0].collection_name }}</span>
+                            <span class="collection-name">{{ collection.collection_name }}</span>
                         </div>
                     {% else %}
                         <div class="collection-info empty">
