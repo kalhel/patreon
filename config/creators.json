@@ -7,7 +7,7 @@
       "collections_url": "https://www.patreon.com/cw/astrobymax/collections",
       "avatar": "astrobymax.jpg",
       "collections_enabled": true,
-      "preview_color": "#4db8a0"
+      "preview_color": "#52bca3"
     },
     {
       "creator_id": "horoiproject",
@@ -16,7 +16,7 @@
       "collections_url": "https://www.patreon.com/cw/horoiproject/collections",
       "avatar": "horoiproject.jpg",
       "collections_enabled": true,
-      "preview_color": "#ec4899"
+      "preview_color": "#9f7766"
     },
     {
       "creator_id": "headonhistory",
@@ -25,7 +25,7 @@
       "collections_url": "https://www.patreon.com/cw/headonhistory/collections",
       "avatar": "headonhistory.jpg",
       "collections_enabled": true,
-      "preview_color": "#6366f1"
+      "preview_color": "#4ba3e8"
     }
   ]
 }
