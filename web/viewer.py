@@ -127,6 +127,33 @@ def index():
     """Homepage showing all posts"""
     posts = load_all_posts()
 
+    def ensure_list(value):
+        if not value:
+            return []
+        if isinstance(value, list):
+            return value
+        return [value]
+
+    def filter_by_extension(values, extensions):
+        if not values:
+            return []
+        cleaned = []
+        for entry in ensure_list(values):
+            if not entry:
+                continue
+            entry_str = str(entry).replace('\\', '/')
+            if not extensions or any(entry_str.lower().endswith(ext) for ext in extensions):
+                cleaned.append(entry_str)
+        return cleaned
+
+    # Process each post to filter video and audio paths
+    for post in posts:
+        local_video_paths = filter_by_extension(post.get('video_local_paths'), {'.mp4', '.m4v', '.mov', '.webm', '.mkv'})
+        local_audio_paths = filter_by_extension(post.get('audio_local_paths'), {'.mp3', '.m4a', '.aac', '.wav', '.flac', '.ogg', '.opus'})
+
+        post['video_local_paths'] = local_video_paths
+        post['audio_local_paths'] = local_audio_paths
+
     # Group by creator
     creators = {}
     creator_avatars = {}
