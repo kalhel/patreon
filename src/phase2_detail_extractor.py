@@ -116,6 +116,10 @@ def extract_post_details(
             **post_detail  # New scraped details
         }
 
+        # CRITICAL: Always preserve the creator_id from Firebase (line 95)
+        # The scraper might extract incorrect creator info from page HTML
+        full_post_data['creator_id'] = creator_id
+
         # Ensure Patreon session cookies are available for authenticated media URLs
         media_downloader.sync_cookies_from_driver(scraper.driver)
 
