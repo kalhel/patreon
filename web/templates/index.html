@@ -491,6 +491,11 @@
             display: block;
         }
 
+        /* Center subtitles at the bottom */
+        .content-preview.video-preview video::cue {
+            text-align: center;
+        }
+
         .content-preview.youtube-preview {
             width: 100%;
             aspect-ratio: 16 / 9;
@@ -1338,14 +1343,30 @@
                         <!-- DEBUG: video_local_paths = {{ post.video_local_paths if post.video_local_paths is defined else 'NOT DEFINED' }} -->
                         {% if post.video_local_paths and post.video_local_paths|length > 0 and not preview_shown.value %}
                             {% set first_video = post.video_local_paths[0] %}
+
+                            {# Auto-detect subtitle file next to video (same name, .vtt extension) #}
+                            {% set video_base = first_video.rsplit('.', 1)[0] %}
+                            {% set auto_subtitle = video_base ~ '.vtt' %}
+
+                            {# Combine auto-detected subtitle with any explicitly listed subtitles #}
                             {% set local_subtitles = post.video_subtitles_relative if post.video_subtitles_relative is defined and post.video_subtitles_relative else [] %}
+
+                            {# Build deduplicated subtitle list #}
+                            {% set all_subtitles = [auto_subtitle] %}
+                            {% for sub in local_subtitles %}
+                                {% if sub != auto_subtitle and sub not in all_subtitles %}
+                                    {% set _ = all_subtitles.append(sub) %}
+                                {% endif %}
+                            {% endfor %}
+
                             <!-- DEBUG INDEX: first_video = {{ first_video }} -->
-                            <!-- DEBUG SUBTITLES: local_subtitles = {{ local_subtitles }} (count: {{ local_subtitles|length }}) -->
+                            <!-- DEBUG AUTO SUBTITLE: {{ auto_subtitle }} -->
+                            <!-- DEBUG ALL SUBTITLES: all_subtitles = {{ all_subtitles }} (count: {{ all_subtitles|length }}) -->
                             <div class="content-preview video-preview">
                                 <video controls preload="metadata">
                                     <source src="{{ url_for('media_file', filename=first_video) }}" type="video/mp4">
-                                    {% if local_subtitles and local_subtitles|length > 0 %}
-                                        {% for subtitle_path in local_subtitles %}
+                                    {% if all_subtitles and all_subtitles|length > 0 %}
+                                        {% for subtitle_path in all_subtitles %}
                                             {# Detect language from filename #}
                                             {% set filename_lower = subtitle_path.lower() %}
                                             {% set lang_code = 'xx' %}
