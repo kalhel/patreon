@@ -488,7 +488,8 @@ def update_posts_with_collections(creator_id: str):
                 post_collections_map[post_id] = []
             post_collections_map[post_id].append({
                 "collection_id": collection['collection_id'],
-                "collection_name": collection['collection_name']
+                "collection_name": collection['collection_name'],
+                "collection_image_local": collection.get('collection_image_local')
             })
 
     # Update posts
