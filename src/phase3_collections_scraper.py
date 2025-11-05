@@ -301,23 +301,25 @@ def scrape_collections_for_creator(
                 logger.warning(f"  ⚠️  No collection elements found")
                 continue
 
-            # Extract data from each collection
+            # PHASE 1: Extract basic metadata from all collections WITHOUT navigating away
+            # This prevents stale element references
             for element in collection_elements:
                 collection_data = extract_collection_data(driver, element)
                 if collection_data:
-                    # Extract post IDs by visiting the collection
+                    collections_data.append(collection_data)
+
+            # If we found collections, break (don't try other URL format)
+            if collections_data:
+                logger.info(f"\n  📊 Extracted metadata for {len(collections_data)} collections")
+
+                # PHASE 2: Now visit each collection to extract post IDs
+                logger.info(f"  🔄 Now extracting post IDs from each collection...\n")
+                for i, collection_data in enumerate(collections_data, 1):
+                    logger.info(f"  [{i}/{len(collections_data)}] Processing: {collection_data['collection_name']}")
                     post_ids = extract_post_ids_from_collection(driver, collection_data['collection_url'])
                     collection_data['post_ids'] = post_ids
                     collection_data['post_count'] = len(post_ids)  # Update with actual count
 
-                    collections_data.append(collection_data)
-
-                    # Return to collections page
-                    driver.get(collections_url)
-                    time.sleep(2)
-
-            # If we found collections, break (don't try other URL format)
-            if collections_data:
                 break
 
         except Exception as e:
