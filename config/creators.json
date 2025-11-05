@@ -4,6 +4,7 @@
       "creator_id": "astrobymax",
       "name": "AstroByMax",
       "url": "https://www.patreon.com/astrobymax",
+      "collections_url": "https://www.patreon.com/cw/astrobymax/collections",
       "avatar": "astrobymax.jpg",
       "collections_enabled": true
     },
@@ -11,6 +12,7 @@
       "creator_id": "horoiproject",
       "name": "HOROI Project",
       "url": "https://www.patreon.com/horoiproject",
+      "collections_url": "https://www.patreon.com/cw/horoiproject/collections",
       "avatar": "horoiproject.jpg",
       "collections_enabled": true
     },
@@ -18,6 +20,7 @@
       "creator_id": "headonhistory",
       "name": "Ali A Olomi",
       "url": "https://www.patreon.com/headonhistory",
+      "collections_url": "https://www.patreon.com/cw/headonhistory/collections",
       "avatar": "headonhistory.jpg",
       "collections_enabled": true
     }

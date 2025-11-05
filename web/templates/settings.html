@@ -360,8 +360,12 @@
                         <div class="url-display">{{ creator.creator_id }}</div>
                     </div>
                     <div class="form-group">
-                        <label>Patreon URL</label>
+                        <label>Patreon URL (Posts)</label>
                         <div class="url-display">{{ creator.url }}</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Collections URL</label>
+                        <div class="url-display">{{ creator.collections_url if creator.collections_url else 'https://www.patreon.com/cw/' + creator.creator_id + '/collections' }}</div>
                     </div>
                     <div class="form-group">
                         <label>Collections Enabled</label>
