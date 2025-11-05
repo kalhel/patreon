@@ -808,18 +808,22 @@ class MediaDownloader:
         creator_dir.mkdir(parents=True, exist_ok=True)
         post_id = post.get('post_id', 'unknown')
 
-        for i, url in enumerate(vtt_urls):
-            filename = f"{post_id}_{i:02d}.vtt"
-            output_path = creator_dir / filename
+        # Use a counter that only increments for valid saved files
+        saved_count = 0
 
+        for i, url in enumerate(vtt_urls):
             try:
                 response = self.session.get(url, headers={'Referer': referer}, timeout=30)
                 response.raise_for_status()
 
                 # Validate that this is a real subtitle file, not a storyboard
                 if not self._validate_vtt_subtitle(response.content):
-                    logger.info(f"  ⚠️  [SUBTITLES] Skipped storyboard file: {filename}")
+                    logger.info(f"  ⚠️  [SUBTITLES] Skipped storyboard file (would be #{i})")
                     continue
+
+                # Use saved_count for filename, not the loop index
+                filename = f"{post_id}_{saved_count:02d}.vtt"
+                output_path = creator_dir / filename
 
                 output_path.write_bytes(response.content)
                 abs_path = str(output_path)
@@ -831,6 +835,7 @@ class MediaDownloader:
                     relatives.append(abs_path)
 
                 logger.info(f"  ✓ [SUBTITLES] Descargado: {filename}")
+                saved_count += 1
 
             except Exception as e:
                 logger.warning(f"  ⚠️  [SUBTITLES] Error descargando {url[:50]}: {e}")
