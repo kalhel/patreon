@@ -971,6 +971,171 @@ class MediaDownloader:
 
         return {'absolute': downloaded, 'relative': relatives}
 
+    def download_youtube_videos_from_post(self, post: Dict, creator_id: str) -> Dict[str, List[str]]:
+        """
+        Download YouTube videos from youtube_embed blocks
+
+        Args:
+            post: Post dictionary with content_blocks
+            creator_id: Creator identifier
+
+        Returns:
+            Dict with 'absolute' and 'relative' lists of downloaded video/subtitle paths
+        """
+        downloaded_videos = []
+        downloaded_subtitles = []
+        relatives_videos = []
+        relatives_subtitles = []
+
+        # Find youtube_embed blocks
+        youtube_blocks = []
+        content_blocks = post.get('content_blocks', [])
+
+        for block in content_blocks:
+            if isinstance(block, dict) and block.get('type') == 'youtube_embed':
+                url = block.get('url', '')
+                if url:
+                    youtube_blocks.append(block)
+
+        if not youtube_blocks:
+            return {
+                'absolute': [],
+                'relative': [],
+                'subtitles_absolute': [],
+                'subtitles_relative': []
+            }
+
+        logger.info(f"  🎬 [YOUTUBE] Found {len(youtube_blocks)} YouTube video(s) to download")
+
+        # Create creator subdirectory
+        creator_dir = self.videos_dir / creator_id
+        creator_dir.mkdir(parents=True, exist_ok=True)
+
+        post_id = post.get('post_id', 'unknown')
+
+        # Find yt-dlp executable
+        yt_dlp_executable = shutil.which("yt-dlp")
+        if not yt_dlp_executable:
+            python_exe = shutil.which("python3") or shutil.which("python")
+            if python_exe:
+                base_command = [python_exe, "-m", "yt_dlp"]
+            else:
+                logger.warning("  ⚠️  [YOUTUBE] yt-dlp not found - skipping YouTube downloads")
+                return {
+                    'absolute': [],
+                    'relative': [],
+                    'subtitles_absolute': [],
+                    'subtitles_relative': []
+                }
+        else:
+            base_command = [yt_dlp_executable]
+
+        for idx, block in enumerate(youtube_blocks):
+            url = block.get('url', '')
+
+            # Extract video ID from URL
+            video_id = None
+            if 'youtube.com' in url:
+                if 'v=' in url:
+                    video_id = url.split('v=')[1].split('&')[0]
+                elif 'embed/' in url:
+                    video_id = url.split('embed/')[1].split('?')[0]
+            elif 'youtu.be' in url:
+                video_id = url.split('youtu.be/')[1].split('?')[0]
+
+            if not video_id:
+                logger.warning(f"  ⚠️  [YOUTUBE] Could not extract video ID from: {url}")
+                continue
+
+            logger.info(f"  📥 [YOUTUBE] Downloading video {idx+1}/{len(youtube_blocks)}: {video_id}")
+
+            # Output filename pattern
+            filename_base = f"{post_id}_yt{idx:02d}"
+
+            # yt-dlp command with best quality and subtitles
+            command = base_command + [
+                '--format', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+                '--merge-output-format', 'mp4',
+                '--write-subs',           # Manual subtitles
+                '--write-auto-subs',      # Auto-generated subtitles
+                '--sub-langs', 'es,en',   # Spanish and English only
+                '--sub-format', 'vtt',    # VTT format (compatible with HTML5)
+                '--convert-subs', 'vtt',  # Convert to VTT if needed
+                '--no-mtime',
+                '--no-warnings',
+                '-o', str(creator_dir / f'{filename_base}.%(ext)s'),
+                url
+            ]
+
+            try:
+                logger.info(f"  🔄 [YOUTUBE] Running yt-dlp for video {video_id}...")
+                result = subprocess.run(
+                    command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False,
+                    text=True,
+                    timeout=600  # 10 minute timeout per video
+                )
+
+                if result.returncode == 0:
+                    # Check for downloaded video file
+                    video_path = creator_dir / f'{filename_base}.mp4'
+                    if video_path.exists():
+                        file_size = video_path.stat().st_size
+                        logger.info(f"  ✓ [YOUTUBE] Downloaded video: {video_path.name} ({self._format_size(file_size)})")
+
+                        abs_path = str(video_path)
+                        downloaded_videos.append(abs_path)
+                        try:
+                            relatives_videos.append(video_path.relative_to(self.output_dir).as_posix())
+                        except ValueError:
+                            relatives_videos.append(abs_path)
+
+                        self.stats['videos']['downloaded'] += 1
+                        self.stats['videos']['total'] += 1
+
+                        # Update the content block to be a video block instead of youtube_embed
+                        block['type'] = 'video'
+                        block['youtube_downloaded'] = True
+                        block['youtube_video_id'] = video_id
+                    else:
+                        logger.warning(f"  ⚠️  [YOUTUBE] Video file not found after download: {video_path}")
+
+                    # Check for subtitle files (es, en, or auto-generated)
+                    for lang in ['es', 'en']:
+                        for suffix in [f'.{lang}', f'.{lang}-orig']:
+                            subtitle_path = creator_dir / f'{filename_base}{suffix}.vtt'
+                            if subtitle_path.exists():
+                                logger.info(f"  ✓ [YOUTUBE] Found subtitle: {subtitle_path.name}")
+                                abs_sub_path = str(subtitle_path)
+                                downloaded_subtitles.append(abs_sub_path)
+                                try:
+                                    relatives_subtitles.append(subtitle_path.relative_to(self.output_dir).as_posix())
+                                except ValueError:
+                                    relatives_subtitles.append(abs_sub_path)
+                else:
+                    logger.warning(f"  ⚠️  [YOUTUBE] Download failed for {video_id}")
+                    if result.stderr:
+                        logger.debug(f"  Error: {result.stderr[:200]}")
+
+            except subprocess.TimeoutExpired:
+                logger.error(f"  ❌ [YOUTUBE] Download timeout for {video_id}")
+            except Exception as e:
+                logger.error(f"  ❌ [YOUTUBE] Error downloading {video_id}: {e}")
+
+            # Small delay between downloads
+            time.sleep(1)
+
+        logger.info(f"  ✓ [YOUTUBE] Downloaded {len(downloaded_videos)} video(s), {len(downloaded_subtitles)} subtitle(s)")
+
+        return {
+            'absolute': downloaded_videos,
+            'relative': relatives_videos,
+            'subtitles_absolute': downloaded_subtitles,
+            'subtitles_relative': relatives_subtitles
+        }
+
     def download_all_from_post(self, post: Dict, creator_id: str) -> Dict:
         """
         Download all media from a post
@@ -1025,6 +1190,16 @@ class MediaDownloader:
         audios = self.download_audios_from_post(post, creator_id, referer)
         result['audios'] = audios['absolute']
         result['audios_relative'] = audios['relative']
+
+        # Download YouTube videos (if any youtube_embed blocks exist)
+        youtube_result = self.download_youtube_videos_from_post(post, creator_id)
+        if youtube_result['absolute']:
+            # Add YouTube videos to the main video lists
+            result['videos'].extend(youtube_result['absolute'])
+            result['videos_relative'].extend(youtube_result['relative'])
+            # Add YouTube subtitles to the subtitles lists
+            result['video_subtitles'].extend(youtube_result['subtitles_absolute'])
+            result['video_subtitles_relative'].extend(youtube_result['subtitles_relative'])
 
         total_downloaded = len(result['images']) + len(result['videos']) + len(result['audios'])
         logger.info(f"  ✓ Downloaded {total_downloaded} files")
