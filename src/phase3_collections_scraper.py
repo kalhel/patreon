@@ -433,7 +433,7 @@ def main():
         return 1
 
     # Determine which creators to process
-    creators = config.get('creators', [])
+    creators = config['patreon']['creators']
     if args.creator:
         creators = [c for c in creators if c['creator_id'] == args.creator]
         if not creators:
