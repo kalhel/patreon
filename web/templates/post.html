@@ -220,89 +220,87 @@
             margin: 25px 0;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
-        /* Compact audio player */
+        /* Clean audio player - no container */
         .audio-player-container {
             display: flex;
             align-items: center;
             gap: 16px;
-            padding: 12px 16px;
-            background: linear-gradient(135deg, #f5f7fa 0%, #e8ebf0 100%);
-            border-radius: 16px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            border: 1px solid rgba(0, 0, 0, 0.06);
-            transition: all 0.3s ease;
-        }
-        .audio-player-container:hover {
-            background: linear-gradient(135deg, #fff 0%, #f5f7fa 100%);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-            border-color: rgba(0, 0, 0, 0.1);
+            padding: 0;
+            background: transparent;
+            margin: 20px 0;
         }
         .audio-player-container .audio-avatar {
-            width: 60px;
-            height: 60px;
-            border-radius: 10px;
+            width: 70px;
+            height: 70px;
+            border-radius: 12px;
             object-fit: cover;
             flex-shrink: 0;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
         }
         .audio-player-main {
             flex: 1;
             display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* Waveform container */
+        #waveform {
+            width: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        /* Audio controls */
+        .audio-controls {
+            display: flex;
             align-items: center;
             gap: 12px;
         }
-        .audio-player-main audio {
-            flex: 1;
-            height: 36px;
-            outline: none;
-        }
-
-        /* Styled audio controls */
-        audio::-webkit-media-controls-panel {
-            background: transparent;
-        }
-        audio::-webkit-media-controls-play-button,
-        audio::-webkit-media-controls-mute-button {
-            background-color: rgba(0, 0, 0, 0.05);
+        .audio-btn {
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
-        }
-        audio::-webkit-media-controls-play-button:hover,
-        audio::-webkit-media-controls-mute-button:hover {
-            background-color: rgba(0, 0, 0, 0.1);
-        }
-        audio::-webkit-media-controls-timeline {
-            background: rgba(0, 0, 0, 0.06);
-            border-radius: 4px;
-        }
-        audio::-webkit-media-controls-current-time-display,
-        audio::-webkit-media-controls-time-remaining-display {
-            color: #666;
-            font-size: 12px;
-        }
-
-        .speed-control-compact {
-            background: linear-gradient(135deg, #00aeff 0%, #0088cc 100%);
             border: none;
+            background: linear-gradient(135deg, #00aeff 0%, #0088cc 100%);
             color: white;
-            padding: 8px 14px;
-            border-radius: 12px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0, 174, 255, 0.3);
+        }
+        .audio-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0, 174, 255, 0.4);
+        }
+        .audio-btn:active {
+            transform: scale(0.95);
+        }
+        .audio-time {
+            font-size: 13px;
+            color: #666;
+            font-family: monospace;
+            min-width: 100px;
+        }
+        .audio-speed {
+            background: rgba(0, 174, 255, 0.1);
+            border: 1px solid rgba(0, 174, 255, 0.3);
+            color: #00aeff;
+            padding: 6px 12px;
+            border-radius: 20px;
             font-size: 12px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
-            user-select: none;
-            min-width: 48px;
+            min-width: 45px;
             text-align: center;
-            box-shadow: 0 2px 6px rgba(0, 174, 255, 0.3);
         }
-        .speed-control-compact:hover {
-            background: linear-gradient(135deg, #00c3ff 0%, #00aeff 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 174, 255, 0.4);
-        }
-        .speed-control-compact:active {
-            transform: translateY(0);
-            box-shadow: 0 2px 4px rgba(0, 174, 255, 0.3);
+        .audio-speed:hover {
+            background: rgba(0, 174, 255, 0.2);
+            border-color: rgba(0, 174, 255, 0.5);
         }
 
         /* Collections */
@@ -615,8 +613,12 @@
                                                 <img src="{{ creator_avatar }}" alt="Audio thumbnail" class="audio-avatar">
                                             {% endif %}
                                             <div class="audio-player-main">
-                                                <audio controls src="{{ url_for('media_file', filename=audio_path) }}" id="audio-{{ loop.index }}"></audio>
-                                                <button class="speed-control-compact" onclick="changeSpeed({{ loop.index }})">1x</button>
+                                                <div id="waveform-{{ loop.index }}" data-audio-src="{{ url_for('media_file', filename=audio_path) }}"></div>
+                                                <div class="audio-controls">
+                                                    <button class="audio-btn" onclick="playPause({{ loop.index }})">▶</button>
+                                                    <span class="audio-time" id="time-{{ loop.index }}">0:00 / 0:00</span>
+                                                    <button class="audio-speed" onclick="changeSpeed({{ loop.index }})">1x</button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -800,25 +802,79 @@
         </div>
     </div>
 
+    <!-- WaveSurfer JS -->
+    <script src="https://unpkg.com/wavesurfer.js@7"></script>
+
     <script>
-        // Speed control for audio players
+        // WaveSurfer instances
+        const wavesurfers = {};
         const speeds = {};
 
-        function changeSpeed(audioId) {
-            const audio = document.getElementById('audio-' + audioId);
+        // Initialize WaveSurfer for each audio
+        document.addEventListener('DOMContentLoaded', function() {
+            const waveformDivs = document.querySelectorAll('[id^="waveform-"]');
+
+            waveformDivs.forEach(div => {
+                const id = div.id.replace('waveform-', '');
+                const audioSrc = div.getAttribute('data-audio-src');
+
+                wavesurfers[id] = WaveSurfer.create({
+                    container: '#waveform-' + id,
+                    waveColor: '#e0e0e0',
+                    progressColor: '#00aeff',
+                    cursorColor: '#00aeff',
+                    barWidth: 2,
+                    barRadius: 3,
+                    cursorWidth: 2,
+                    height: 60,
+                    barGap: 3,
+                    url: audioSrc,
+                    normalize: true
+                });
+
+                speeds[id] = 1;
+
+                // Update time display
+                wavesurfers[id].on('timeupdate', (currentTime) => {
+                    const duration = wavesurfers[id].getDuration();
+                    document.getElementById('time-' + id).textContent =
+                        formatTime(currentTime) + ' / ' + formatTime(duration);
+                });
+
+                // Update button when playback ends
+                wavesurfers[id].on('finish', () => {
+                    const btn = document.querySelector(`button[onclick="playPause(${id})"]`);
+                    if (btn) btn.textContent = '▶';
+                });
+            });
+        });
+
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return minutes + ':' + (secs < 10 ? '0' : '') + secs;
+        }
+
+        function playPause(id) {
             const button = event.target;
-
-            if (!speeds[audioId]) {
-                speeds[audioId] = 1;
+            if (wavesurfers[id].isPlaying()) {
+                wavesurfers[id].pause();
+                button.textContent = '▶';
+            } else {
+                wavesurfers[id].play();
+                button.textContent = '⏸';
             }
+        }
 
+        function changeSpeed(id) {
+            const button = event.target;
             const speedOptions = [1, 1.25, 1.5, 1.75, 2];
-            const currentIndex = speedOptions.indexOf(speeds[audioId]);
+            const currentIndex = speedOptions.indexOf(speeds[id]);
             const nextIndex = (currentIndex + 1) % speedOptions.length;
             const newSpeed = speedOptions[nextIndex];
 
-            audio.playbackRate = newSpeed;
-            speeds[audioId] = newSpeed;
+            wavesurfers[id].setPlaybackRate(newSpeed);
+            speeds[id] = newSpeed;
             button.textContent = newSpeed + 'x';
         }
 
