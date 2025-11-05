@@ -1661,35 +1661,54 @@
             });
         }
 
-        // Create a collection card (same design as post cards)
+        // Create a collection card (EXACT same design as post cards)
         function createCollectionCard(collection) {
-            const card = document.createElement('article');
-            card.className = 'post-card post-card-compact collection-card';
+            const card = document.createElement('div');
+            card.className = 'post-card-compact';
             card.dataset.creatorId = collection.creator_id;
 
             const creatorColor = document.querySelector(`[data-creator-id="${collection.creator_id}"]`)?.dataset.color || '#4db8a0';
 
             const imageUrl = collection.collection_image_local
                 ? `/media/${collection.collection_image_local}`
-                : '/static/placeholder-collection.png';
+                : '';
 
             // Get creator avatar
             const creatorCard = document.querySelector(`[data-creator-id="${collection.creator_id}"]`);
             const creatorAvatar = creatorCard ? creatorCard.querySelector('img')?.src : '';
 
             card.innerHTML = `
-                <a href="/collection/${collection.creator_id}/${collection.collection_id}" class="post-card-link">
-                    <div class="post-card-header">
-                        ${creatorAvatar ? `<img src="${creatorAvatar}" alt="${collection.creator_name}" class="creator-avatar-small">` : ''}
-                        <div class="creator-name-compact" style="color: ${creatorColor}">
-                            ${collection.creator_name || collection.creator_id}
-                        </div>
+                <!-- Header Negro (igual que posts) -->
+                <div class="post-card-footer-black">
+                    <div class="footer-creator-info">
+                        ${creatorAvatar ? `<img src="${creatorAvatar}" alt="${collection.creator_name}" class="footer-creator-avatar">` : ''}
+                        <span class="footer-creator-name">${collection.creator_name || collection.creator_id}</span>
                     </div>
-                    <div class="post-card-image" style="background-image: url('${imageUrl}')"></div>
-                    <div class="post-card-content">
-                        <h3 class="post-card-title">${collection.collection_name}</h3>
+                    <div class="footer-meta-icons">
+                        <!-- Empty, collections don't show media icons -->
                     </div>
-                </a>
+                </div>
+
+                <div class="post-card-content">
+                    <!-- Título -->
+                    <h3 class="post-card-title">
+                        <a href="/collection/${collection.creator_id}/${collection.collection_id}">
+                            ${collection.collection_name}
+                        </a>
+                    </h3>
+
+                    <!-- Fecha del último post -->
+                    <div class="post-card-date">
+                        ${collection.latest_post_date || 'N/A'}
+                    </div>
+
+                    ${imageUrl ? `
+                    <!-- Imagen de preview -->
+                    <div class="content-preview image-preview">
+                        <img src="/media/${collection.collection_image_local}" alt="${collection.collection_name}">
+                    </div>
+                    ` : ''}
+                </div>
             `;
 
             return card;
