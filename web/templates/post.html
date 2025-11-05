@@ -501,7 +501,7 @@
                                 <!-- DEBUG: primary_video = {{ primary_video }} -->
                                 <!-- DEBUG: video URL = {{ url_for('media_file', filename=primary_video) }} -->
                                 <div class="content-block video">
-                                    <video controls preload="metadata" id="main-video">
+                                    <video controls preload="metadata" crossorigin="anonymous" id="main-video">
                                         <source src="{{ url_for('media_file', filename=primary_video) }}" type="video/mp4">
                                         {% if local_subtitles %}
                                             {% for subtitle in local_subtitles %}

@@ -356,7 +356,13 @@ def media_file(filename):
     if not safe_path.exists() or MEDIA_ROOT not in safe_path.parents and safe_path != MEDIA_ROOT:
         return "File not found", 404
     relative = safe_path.relative_to(MEDIA_ROOT)
-    return send_from_directory(MEDIA_ROOT, str(relative))
+
+    # Set correct MIME type for VTT subtitle files
+    mimetype = None
+    if filename.lower().endswith('.vtt'):
+        mimetype = 'text/vtt'
+
+    return send_from_directory(MEDIA_ROOT, str(relative), mimetype=mimetype)
 
 
 if __name__ == '__main__':

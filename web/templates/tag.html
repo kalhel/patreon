@@ -481,7 +481,7 @@
                         {% set first_video = post.video_local_paths[0] %}
                         {% set local_subtitles = post.video_subtitles_relative if post.video_subtitles_relative is defined and post.video_subtitles_relative else [] %}
                         <div class="content-preview video-preview">
-                            <video controls preload="metadata">
+                            <video controls preload="metadata" crossorigin="anonymous">
                                 <source src="{{ url_for('media_file', filename=first_video) }}" type="video/mp4">
                                 {% if local_subtitles %}
                                     {% for subtitle in local_subtitles %}
