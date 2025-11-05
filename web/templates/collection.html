@@ -501,6 +501,18 @@
                             {% endfor %}
                         {% endif %}
 
+                        {# Audio files - MOVED UP TO HAVE PRIORITY OVER IMAGES #}
+                        {% if not preview_shown.value and post.audio_local_paths and post.audio_local_paths|length > 0 %}
+                            {% set first_audio = post.audio_local_paths[0] %}
+                            <div class="content-preview audio-preview">
+                                <audio controls preload="metadata">
+                                    <source src="{{ url_for('media_file', filename=first_audio) }}">
+                                    Tu navegador no soporta el elemento de audio.
+                                </audio>
+                            </div>
+                            {% set preview_shown.value = true %}
+                        {% endif %}
+
                         {# Check for first image #}
                         {% if post.content_blocks and not preview_shown.value %}
                             {% for block in post.content_blocks %}
@@ -511,18 +523,6 @@
                                     {% set preview_shown.value = true %}
                                 {% endif %}
                             {% endfor %}
-                        {% endif %}
-
-                        {# Audio files #}
-                        {% if not preview_shown.value and post.audio_local_paths and post.audio_local_paths|length > 0 %}
-                            {% set first_audio = post.audio_local_paths[0] %}
-                            <div class="content-preview audio-preview">
-                                <audio controls preload="metadata">
-                                    <source src="{{ url_for('media_file', filename=first_audio) }}">
-                                    Tu navegador no soporta el elemento de audio.
-                                </audio>
-                            </div>
-                            {% set preview_shown.value = true %}
                         {% endif %}
 
                         {# Show first paragraph as fallback #}
