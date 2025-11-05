@@ -608,6 +608,34 @@
             border-color: #c0c0c0;
         }
 
+        /* Simple waveform visualization (static bars from JSON) */
+        .audio-player-container audio {
+            display: none;
+        }
+        .simple-waveform {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 50px;
+            gap: 2px;
+            padding: 0 10px;
+        }
+        .simple-waveform-bar {
+            flex: 1;
+            background: #e0e0e0;
+            border-radius: 2px;
+            min-width: 2px;
+            transition: background 0.2s;
+        }
+        .simple-waveform-bar.played {
+            background: #1a1a1a;
+        }
+        .simple-waveform.loading {
+            justify-content: center;
+            color: #999;
+            font-size: 12px;
+        }
+
         .content-preview.text-preview {
             padding: 2rem 1.5rem;
             border-radius: 8px;
@@ -1328,7 +1356,7 @@
                             {% endfor %}
                         {% endif %}
 
-                        {# 3. Check for audio - use local files #}
+                        {# 3. Check for audio - use lightweight player for previews #}
                         {% set local_audios = post.audio_local_paths if post.audio_local_paths is defined and post.audio_local_paths else [] %}
                         {% if local_audios and not preview_shown.value %}
                             {% set audio_path = local_audios[0] %}
@@ -1340,14 +1368,12 @@
                                         <img src="{{ creator_avatars[post.creator_id] }}" alt="Audio" class="audio-avatar">
                                     {% endif %}
                                     <div class="audio-player-main">
-                                        <button class="audio-btn" onclick="playPausePreview('{{ post.post_id }}')">▶</button>
-                                        <div id="waveform-{{ post.post_id }}"
-                                             data-audio-src="{{ url_for('media_file', filename=audio_path) }}"
-                                             data-waveform-src="{{ url_for('media_file', filename=audio_path|replace('.mp3', '.json')) }}"
-                                             style="flex: 1; min-width: 0;"></div>
-                                        <span class="audio-time" id="time-{{ post.post_id }}">0:00 / 0:00</span>
-                                        <button class="audio-speed" onclick="changeSpeedPreview('{{ post.post_id }}')">1x</button>
+                                        <button class="audio-btn" onclick="playPauseSimple('{{ post.post_id }}')">▶</button>
+                                        <div class="simple-waveform" id="waveform-{{ post.post_id }}" data-waveform-src="{{ url_for('media_file', filename=audio_path|replace('.mp3', '.json')) }}" style="flex: 1; min-width: 0;"></div>
+                                        <span class="audio-time" id="time-{{ post.post_id }}">--:--</span>
+                                        <button class="audio-speed" onclick="changeSpeedSimple('{{ post.post_id }}')">1x</button>
                                     </div>
+                                    <audio id="audio-{{ post.post_id }}" src="{{ url_for('media_file', filename=audio_path) }}" preload="none"></audio>
                                 </div>
                             </div>
                             {% set preview_shown.value = true %}
@@ -1673,140 +1699,136 @@
         searchInput.addEventListener('input', filterPosts);
     </script>
 
-    <!-- WaveSurfer JS for audio previews -->
-    <script src="https://unpkg.com/wavesurfer.js@7"></script>
+    <!-- Simple audio player for previews (no WaveSurfer) -->
     <script>
-        // WaveSurfer instances for audio previews
-        const wavesurfersPreview = {};
-        const speedsPreview = {};
+        // Simple player speeds
+        const audioSpeeds = {};
 
-        // Initialize WaveSurfer for each audio preview
+        // Load waveform visualizations from JSON
         document.addEventListener('DOMContentLoaded', function() {
-            const waveformDivs = document.querySelectorAll('[id^="waveform-"]');
+            const waveformDivs = document.querySelectorAll('.simple-waveform');
 
             waveformDivs.forEach(async (div) => {
                 const postId = div.id.replace('waveform-', '');
-                const audioSrc = div.getAttribute('data-audio-src');
                 const waveformSrc = div.getAttribute('data-waveform-src');
+                const audioEl = document.getElementById('audio-' + postId);
 
-                // Try to load pre-generated waveform JSON first
-                let waveformData = null;
+                audioSpeeds[postId] = 1;
+
+                // Try to load waveform JSON
                 try {
                     const response = await fetch(waveformSrc);
                     if (response.ok) {
-                        waveformData = await response.json();
+                        const waveformData = await response.json();
+                        renderStaticWaveform(div, waveformData.data, postId);
+                    } else {
+                        div.classList.add('loading');
+                        div.textContent = '♪';
                     }
                 } catch (e) {
-                    // Silently fall back to loading from audio
+                    div.classList.add('loading');
+                    div.textContent = '♪';
                 }
 
-                // Create WaveSurfer instance
-                const config = {
-                    container: '#waveform-' + postId,
-                    waveColor: '#e0e0e0',
-                    progressColor: '#1a1a1a',
-                    cursorColor: '#1a1a1a',
-                    barWidth: 2,
-                    barRadius: 3,
-                    cursorWidth: 2,
-                    height: 50,
-                    barGap: 2,
-                    normalize: true
-                };
+                // Setup audio events
+                if (audioEl) {
+                    audioEl.addEventListener('loadedmetadata', () => {
+                        updateTimeDisplay(postId, 0, audioEl.duration);
+                    });
 
-                // Use peaks if we have waveform data, otherwise load from URL
-                if (waveformData && waveformData.data) {
-                    config.peaks = [waveformData.data];
-                    config.duration = waveformData.length / waveformData.sample_rate;
-                    config.backend = 'MediaElement'; // Use MediaElement for faster streaming playback
-                    // Don't set URL in config when using peaks - load on demand
-                } else {
-                    config.url = audioSrc;
-                    config.backend = 'WebAudio'; // WebAudio for better waveform generation
+                    audioEl.addEventListener('timeupdate', () => {
+                        updateTimeDisplay(postId, audioEl.currentTime, audioEl.duration);
+                        updateWaveformProgress(postId, audioEl.currentTime, audioEl.duration);
+                    });
+
+                    audioEl.addEventListener('ended', () => {
+                        const btn = document.querySelector(`button[onclick="playPauseSimple('${postId}')"]`);
+                        if (btn) btn.textContent = '▶';
+                    });
                 }
-
-                wavesurfersPreview[postId] = WaveSurfer.create(config);
-                speedsPreview[postId] = 1;
-
-                // Store whether audio has been loaded
-                wavesurfersPreview[postId]._audioLoaded = !waveformData;
-                wavesurfersPreview[postId]._audioSrc = audioSrc;
-
-                // When audio is ready, update the duration
-                wavesurfersPreview[postId].on('ready', () => {
-                    const duration = wavesurfersPreview[postId].getDuration();
-                    const timeEl = document.getElementById('time-' + postId);
-                    if (timeEl) {
-                        timeEl.textContent = '0:00 / ' + formatTimePreview(duration);
-                    }
-                });
-
-                // Update time display
-                wavesurfersPreview[postId].on('timeupdate', (currentTime) => {
-                    const duration = wavesurfersPreview[postId].getDuration();
-                    const timeEl = document.getElementById('time-' + postId);
-                    if (timeEl) {
-                        timeEl.textContent = formatTimePreview(currentTime) + ' / ' + formatTimePreview(duration);
-                    }
-                });
-
-                // Update button when playback ends
-                wavesurfersPreview[postId].on('finish', () => {
-                    const btn = document.querySelector(`button[onclick="playPausePreview('${postId}')"]`);
-                    if (btn) btn.textContent = '▶';
-                });
             });
         });
 
-        function formatTimePreview(seconds) {
+        function renderStaticWaveform(container, peaks, postId) {
+            container.innerHTML = '';
+            // Sample every Nth peak for ~100 bars
+            const step = Math.ceil(peaks.length / 100);
+            for (let i = 0; i < peaks.length; i += step) {
+                const bar = document.createElement('div');
+                bar.className = 'simple-waveform-bar';
+                const height = Math.max(2, peaks[i] * 100);
+                bar.style.height = height + '%';
+                bar.dataset.index = i;
+                container.appendChild(bar);
+            }
+        }
+
+        function updateWaveformProgress(postId, currentTime, duration) {
+            const waveform = document.getElementById('waveform-' + postId);
+            if (!waveform) return;
+
+            const bars = waveform.querySelectorAll('.simple-waveform-bar');
+            const progress = currentTime / duration;
+            const playedBars = Math.floor(bars.length * progress);
+
+            bars.forEach((bar, index) => {
+                if (index < playedBars) {
+                    bar.classList.add('played');
+                } else {
+                    bar.classList.remove('played');
+                }
+            });
+        }
+
+        function updateTimeDisplay(postId, current, total) {
+            const timeEl = document.getElementById('time-' + postId);
+            if (timeEl) {
+                timeEl.textContent = formatTime(current) + ' / ' + formatTime(total);
+            }
+        }
+
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '--:--';
             if (seconds >= 3600) {
-                // Format as H:MM:SS for durations >= 1 hour
                 const hours = Math.floor(seconds / 3600);
                 const minutes = Math.floor((seconds % 3600) / 60);
                 const secs = Math.floor(seconds % 60);
                 return hours + ':' + (minutes < 10 ? '0' : '') + minutes + ':' + (secs < 10 ? '0' : '') + secs;
             } else {
-                // Format as MM:SS for durations < 1 hour
                 const minutes = Math.floor(seconds / 60);
                 const secs = Math.floor(seconds % 60);
                 return minutes + ':' + (secs < 10 ? '0' : '') + secs;
             }
         }
 
-        function playPausePreview(postId) {
+        function playPauseSimple(postId) {
+            const audio = document.getElementById('audio-' + postId);
             const button = event.target;
-            const ws = wavesurfersPreview[postId];
 
-            if (ws.isPlaying()) {
-                ws.pause();
-                button.textContent = '▶';
+            if (!audio) return;
+
+            if (audio.paused) {
+                audio.play();
+                button.textContent = '⏸';
             } else {
-                // If audio hasn't been loaded yet (using JSON peaks), load it now
-                if (!ws._audioLoaded && ws._audioSrc) {
-                    button.textContent = '⏳';
-                    button.disabled = true;
-                    ws.load(ws._audioSrc).then(() => {
-                        ws._audioLoaded = true;
-                        ws.play();
-                        button.textContent = '⏸';
-                        button.disabled = false;
-                    });
-                } else {
-                    ws.play();
-                    button.textContent = '⏸';
-                }
+                audio.pause();
+                button.textContent = '▶';
             }
         }
 
-        function changeSpeedPreview(postId) {
+        function changeSpeedSimple(postId) {
+            const audio = document.getElementById('audio-' + postId);
             const button = event.target;
+
+            if (!audio) return;
+
             const speedOptions = [1, 1.25, 1.5, 1.75, 2];
-            const currentIndex = speedOptions.indexOf(speedsPreview[postId]);
+            const currentIndex = speedOptions.indexOf(audioSpeeds[postId]);
             const nextIndex = (currentIndex + 1) % speedOptions.length;
             const newSpeed = speedOptions[nextIndex];
 
-            wavesurfersPreview[postId].setPlaybackRate(newSpeed);
-            speedsPreview[postId] = newSpeed;
+            audio.playbackRate = newSpeed;
+            audioSpeeds[postId] = newSpeed;
             button.textContent = newSpeed + 'x';
         }
     </script>
