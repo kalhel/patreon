@@ -212,65 +212,41 @@
             display: block;
         }
 
-        /* Audio player - Dark professional style */
-        .content-block.audio {
-            background: #2d3748;
-            border-radius: 12px;
-            padding: 20px;
-            margin: 25px 0;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-        /* Clean audio player - no container */
+        /* Compact single-line audio player with white background */
         .audio-player-container {
             display: flex;
             align-items: center;
-            gap: 16px;
-            padding: 0;
-            background: transparent;
+            gap: 14px;
+            padding: 14px 18px;
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
             margin: 20px 0;
+            border: 1px solid rgba(0, 0, 0, 0.06);
         }
         .audio-player-container .audio-avatar {
-            width: 70px;
-            height: 70px;
-            border-radius: 12px;
+            width: 56px;
+            height: 56px;
+            border-radius: 10px;
             object-fit: cover;
             flex-shrink: 0;
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-        }
-        .audio-player-main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        /* Waveform container */
-        #waveform {
-            width: 100%;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        /* Audio controls */
-        .audio-controls {
-            display: flex;
-            align-items: center;
-            gap: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
         }
         .audio-btn {
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
             border: none;
             background: linear-gradient(135deg, #00aeff 0%, #0088cc 100%);
             color: white;
-            font-size: 14px;
+            font-size: 16px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.2s;
             box-shadow: 0 2px 8px rgba(0, 174, 255, 0.3);
+            flex-shrink: 0;
         }
         .audio-btn:hover {
             transform: scale(1.05);
@@ -279,24 +255,40 @@
         .audio-btn:active {
             transform: scale(0.95);
         }
+        .audio-player-main {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Waveform container */
+        .waveform-wrapper {
+            flex: 1;
+            min-width: 0;
+        }
+
         .audio-time {
             font-size: 13px;
             color: #666;
             font-family: monospace;
-            min-width: 100px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            min-width: 90px;
         }
         .audio-speed {
             background: rgba(0, 174, 255, 0.1);
             border: 1px solid rgba(0, 174, 255, 0.3);
             color: #00aeff;
-            padding: 6px 12px;
+            padding: 7px 13px;
             border-radius: 20px;
             font-size: 12px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
-            min-width: 45px;
-            text-align: center;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
         .audio-speed:hover {
             background: rgba(0, 174, 255, 0.2);
@@ -604,22 +596,18 @@
                             {% set local_audios = post.audio_local_paths if post.audio_local_paths is defined and post.audio_local_paths else [] %}
                             {% if local_audios %}
                                 {% for audio_path in local_audios %}
-                                    <div class="content-block audio">
-                                        <div class="audio-player-container">
-                                            {# Use collection image if post belongs to a collection, otherwise use creator avatar #}
-                                            {% if post.collections and post.collections|length > 0 and post.collections[0].collection_image_local %}
-                                                <img src="{{ url_for('media_file', filename=post.collections[0].collection_image_local) }}" alt="{{ post.collections[0].collection_name }}" class="audio-avatar">
-                                            {% elif creator_avatar %}
-                                                <img src="{{ creator_avatar }}" alt="Audio thumbnail" class="audio-avatar">
-                                            {% endif %}
-                                            <div class="audio-player-main">
-                                                <div id="waveform-{{ loop.index }}" data-audio-src="{{ url_for('media_file', filename=audio_path) }}"></div>
-                                                <div class="audio-controls">
-                                                    <button class="audio-btn" onclick="playPause({{ loop.index }})">▶</button>
-                                                    <span class="audio-time" id="time-{{ loop.index }}">0:00 / 0:00</span>
-                                                    <button class="audio-speed" onclick="changeSpeed({{ loop.index }})">1x</button>
-                                                </div>
-                                            </div>
+                                    <div class="audio-player-container">
+                                        {# Use collection image if post belongs to a collection, otherwise use creator avatar #}
+                                        {% if post.collections and post.collections|length > 0 and post.collections[0].collection_image_local %}
+                                            <img src="{{ url_for('media_file', filename=post.collections[0].collection_image_local) }}" alt="{{ post.collections[0].collection_name }}" class="audio-avatar">
+                                        {% elif creator_avatar %}
+                                            <img src="{{ creator_avatar }}" alt="Audio thumbnail" class="audio-avatar">
+                                        {% endif %}
+                                        <div class="audio-player-main">
+                                            <button class="audio-btn" onclick="playPause({{ loop.index }})">▶</button>
+                                            <div id="waveform-{{ loop.index }}" data-audio-src="{{ url_for('media_file', filename=audio_path) }}" style="flex: 1; min-width: 0;"></div>
+                                            <span class="audio-time" id="time-{{ loop.index }}">0:00 / 0:00</span>
+                                            <button class="audio-speed" onclick="changeSpeed({{ loop.index }})">1x</button>
                                         </div>
                                     </div>
                                 {% endfor %}
