@@ -350,14 +350,16 @@ def scrape_collections_for_creator(
                 collection_elements = []
                 for link in collection_links:
                     # Navigate up to find the parent container with all collection data
-                    # Usually 4-5 levels up
+                    # We need to go up until we find a parent that contains BOTH thumbnail and title
                     parent = link
-                    for _ in range(6):
+                    for level in range(10):  # Increased range to go higher
                         parent = parent.find_element(By.XPATH, '..')
-                        # Check if this parent contains all the data-tags we need
+                        # Check if this parent contains BOTH the title AND thumbnail
                         try:
                             parent.find_element(By.CSS_SELECTOR, '[data-tag="box-collection-title"]')
+                            parent.find_element(By.CSS_SELECTOR, '[data-tag="box-collection-thumbnail"]')
                             collection_elements.append(parent)
+                            logger.debug(f"  ✓ Found complete collection container at level {level}")
                             break
                         except NoSuchElementException:
                             continue
