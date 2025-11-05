@@ -808,7 +808,12 @@ def media_file(filename):
     if filename.lower().endswith('.vtt'):
         mimetype = 'text/vtt'
 
-    return send_from_directory(MEDIA_ROOT, str(relative), mimetype=mimetype)
+    response = send_from_directory(MEDIA_ROOT, str(relative), mimetype=mimetype)
+
+    # Add CORS headers for subtitle files to work properly
+    response.headers['Access-Control-Allow-Origin'] = '*'
+
+    return response
 
 
 if __name__ == '__main__':
