@@ -39,20 +39,23 @@ class MediaDownloader:
         Initialize downloader
 
         Args:
-            output_dir: Base directory for media downloads
+            output_dir: Base directory for media downloads (data/media)
             cookies_path: Optional path to Patreon cookies captured by Selenium
+
+        New structure (v2):
+            data/media/{creator_id}/{post_id}/video_00.mp4
+            data/media/{creator_id}/{post_id}/subtitle_00.vtt
+
+        Legacy structure (v1, still supported for reading):
+            data/media/videos/{creator_id}/{post_id}_00_file.mp4
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        # Create subdirectories
+        # Legacy directories (for backward compatibility, not created anymore)
         self.images_dir = self.output_dir / "images"
         self.videos_dir = self.output_dir / "videos"
         self.audio_dir = self.output_dir / "audio"
-
-        self.images_dir.mkdir(exist_ok=True)
-        self.videos_dir.mkdir(exist_ok=True)
-        self.audio_dir.mkdir(exist_ok=True)
 
         # Session for downloads
         self.session = requests.Session()
@@ -74,6 +77,24 @@ class MediaDownloader:
             'audios': {'total': 0, 'downloaded': 0, 'failed': 0, 'skipped': 0}
         }
         self.min_video_size_bytes = 15 * 1024 * 1024  # 15 MB threshold to detect previews
+
+    def _get_post_directory(self, creator_id: str, post_id: str) -> Path:
+        """
+        Get (and create) the directory for a specific post using new structure.
+
+        New structure: data/media/{creator_id}/{post_id}/
+        This keeps all media for a post together (videos, images, audio, subtitles).
+
+        Args:
+            creator_id: Creator identifier
+            post_id: Post identifier
+
+        Returns:
+            Path to post directory
+        """
+        post_dir = self.output_dir / creator_id / post_id
+        post_dir.mkdir(parents=True, exist_ok=True)
+        return post_dir
 
     def _load_cookies_from_file(self, path: Path):
         """Load Patreon cookies exported by Selenium"""
@@ -410,13 +431,15 @@ class MediaDownloader:
         """
         Download all images from a post
 
+        New structure: data/media/{creator_id}/{post_id}/image_00.jpg
+
         Args:
             post: Post dictionary
             creator_id: Creator identifier
             referer: HTTP referer for authenticated asset requests
 
         Returns:
-            List of downloaded file paths
+            Dict with 'absolute' and 'relative' lists of downloaded file paths
         """
         downloaded = []
         relatives = []
@@ -431,23 +454,20 @@ class MediaDownloader:
         if not image_urls:
             return {'absolute': [], 'relative': []}
 
-        # Create creator subdirectory
-        creator_dir = self.images_dir / creator_id
-        creator_dir.mkdir(exist_ok=True)
+        # Get post directory (new structure)
+        post_id = post.get('post_id', 'unknown')
+        post_dir = self._get_post_directory(creator_id, post_id)
 
         # Download each image
-        post_id = post.get('post_id', 'unknown')
-
         for i, url in enumerate(image_urls):
             self.stats['images']['total'] += 1
 
-            # Generate filename
-            filename = self._get_filename_from_url(url, '.jpg')
+            # Generate clean filename
+            original_filename = self._get_filename_from_url(url, '.jpg')
+            ext = Path(original_filename).suffix or '.jpg'
+            filename = f"image_{i:02d}{ext}"
 
-            # Add post_id prefix to avoid conflicts
-            filename = f"{post_id}_{i:02d}_{filename}"
-
-            output_path = creator_dir / filename
+            output_path = post_dir / filename
 
             if self.download_file(url, output_path, 'image', referer=referer):
                 abs_path = str(output_path)
@@ -485,9 +505,8 @@ class MediaDownloader:
         relatives = []
 
         # Define variables at the beginning
-        creator_dir = self.videos_dir / creator_id
-        creator_dir.mkdir(exist_ok=True)
         post_id = post.get('post_id', 'unknown')
+        post_dir = self._get_post_directory(creator_id, post_id)
         video_extensions = {'.mp4', '.m4v', '.mov', '.webm', '.mkv'}
         successful_downloads = 0
 
@@ -559,12 +578,13 @@ class MediaDownloader:
 
                 for idx, stream_url in enumerate(stream_only_urls):
                     logger.info(f"  🎬 [VIDEO DL] Procesando stream HLS #{idx+1}: {stream_url[:80]}...")
-                    filename = self._get_filename_from_url(stream_url, '.mp4')
-                    if Path(filename).suffix.lower() not in video_extensions:
-                        filename = f"{Path(filename).stem}.mp4"
+                    original_filename = self._get_filename_from_url(stream_url, '.mp4')
+                    ext = Path(original_filename).suffix.lower()
+                    if ext not in video_extensions:
+                        ext = '.mp4'
 
-                    filename = f"{post_id}_{idx:02d}_{filename}"
-                    output_path = creator_dir / filename
+                    filename = f"video_{idx:02d}{ext}"
+                    output_path = post_dir / filename
                     logger.info(f"  💾 [VIDEO DL] Descargando a: {output_path}")
 
                     if self._download_with_ytdlp([stream_url], output_path, referer):
@@ -601,10 +621,11 @@ class MediaDownloader:
 
             self.stats['videos']['total'] += 1
 
-            filename = self._get_filename_from_url(url, '.mp4')
-            filename = f"{post_id}_{i:02d}_{filename}"
+            original_filename = self._get_filename_from_url(url, '.mp4')
+            ext = Path(original_filename).suffix or '.mp4'
+            filename = f"video_{i:02d}{ext}"
 
-            output_path = creator_dir / filename
+            output_path = post_dir / filename
             suffix = Path(filename).suffix.lower()
 
             candidate_urls = self._expand_mux_variants(url) if suffix in video_extensions else [url]
@@ -680,12 +701,12 @@ class MediaDownloader:
                 logger.info("No direct video download succeeded. Attempting yt-dlp fallback for stream sources.")
 
                 for idx, stream_url in enumerate(candidates):
-                    filename = self._get_filename_from_url(stream_url, '.mp4')
-                    suffix = Path(filename).suffix.lower()
-                    if suffix not in video_extensions:
-                        filename = f"{Path(filename).stem}.mp4"
-                    filename = f"{post_id}_stream_{idx:02d}_{filename}"
-                    output_path = creator_dir / filename
+                    original_filename = self._get_filename_from_url(stream_url, '.mp4')
+                    ext = Path(original_filename).suffix.lower()
+                    if ext not in video_extensions:
+                        ext = '.mp4'
+                    filename = f"video_{idx:02d}{ext}"
+                    output_path = post_dir / filename
 
                     if self._download_with_ytdlp([stream_url], output_path, referer):
                         abs_path = str(output_path)
@@ -716,6 +737,8 @@ class MediaDownloader:
         """
         Download subtitle files (.vtt) from a post
 
+        New structure: data/media/{creator_id}/{post_id}/subtitle_00.vtt
+
         Args:
             post: Post dictionary
             creator_id: Creator identifier
@@ -739,14 +762,12 @@ class MediaDownloader:
 
         logger.info(f"  📝 [SUBTITLES] Encontrados {len(vtt_urls)} archivos de subtítulos")
 
-        creator_dir = self.videos_dir / creator_id
-        creator_dir.mkdir(exist_ok=True)
         post_id = post.get('post_id', 'unknown')
+        post_dir = self._get_post_directory(creator_id, post_id)
 
         for i, url in enumerate(vtt_urls):
-            filename = self._get_filename_from_url(url, '.vtt')
-            filename = f"{post_id}_{i:02d}_{filename}"
-            output_path = creator_dir / filename
+            filename = f"subtitle_{i:02d}.vtt"
+            output_path = post_dir / filename
 
             try:
                 response = self.session.get(url, headers={'Referer': referer}, timeout=30)
@@ -772,13 +793,15 @@ class MediaDownloader:
         """
         Download all audio files from a post
 
+        New structure: data/media/{creator_id}/{post_id}/audio_00.mp3
+
         Args:
             post: Post dictionary
             creator_id: Creator identifier
             referer: HTTP referer for authenticated asset requests
 
         Returns:
-            List of downloaded file paths
+            Dict with 'absolute' and 'relative' lists of downloaded audio paths
         """
         downloaded = []
         relatives = []
@@ -791,19 +814,17 @@ class MediaDownloader:
         if not audio_urls:
             return {'absolute': [], 'relative': []}
 
-        # Create creator subdirectory
-        creator_dir = self.audio_dir / creator_id
-        creator_dir.mkdir(exist_ok=True)
-
         post_id = post.get('post_id', 'unknown')
+        post_dir = self._get_post_directory(creator_id, post_id)
 
         for i, url in enumerate(audio_urls):
             self.stats['audios']['total'] += 1
 
-            filename = self._get_filename_from_url(url, '.mp3')
-            filename = f"{post_id}_{i:02d}_{filename}"
+            original_filename = self._get_filename_from_url(url, '.mp3')
+            ext = Path(original_filename).suffix or '.mp3'
+            filename = f"audio_{i:02d}{ext}"
 
-            output_path = creator_dir / filename
+            output_path = post_dir / filename
 
             if self.download_file(url, output_path, 'audio', referer=referer):
                 abs_path = str(output_path)
