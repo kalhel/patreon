@@ -609,22 +609,35 @@
         }
 
         /* Simple waveform visualization (static bars from JSON) */
+        .audio-player-container {
+            margin-bottom: 1.5rem;
+        }
         .audio-player-container audio {
             display: none;
         }
-        .simple-waveform {
+        .audio-player-main {
+            flex: 1;
+            min-width: 0;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            gap: 10px;
+        }
+        .simple-waveform {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
             height: 50px;
             gap: 2px;
-            padding: 0 10px;
+            padding: 0 5px;
+            min-width: 0;
         }
         .simple-waveform-bar {
-            flex: 1;
+            flex: 1 1 0;
             background: #e0e0e0;
             border-radius: 2px;
-            min-width: 2px;
+            min-width: 1px;
+            max-width: 4px;
             transition: background 0.2s;
         }
         .simple-waveform-bar.played {
@@ -1360,21 +1373,19 @@
                         {% set local_audios = post.audio_local_paths if post.audio_local_paths is defined and post.audio_local_paths else [] %}
                         {% if local_audios and not preview_shown.value %}
                             {% set audio_path = local_audios[0] %}
-                            <div class="content-preview audio-preview">
-                                <div class="audio-player-container">
-                                    {% if post.collections and post.collections|length > 0 and post.collections[0].collection_image_local %}
-                                        <img src="{{ url_for('media_file', filename=post.collections[0].collection_image_local) }}" alt="{{ post.collections[0].collection_name }}" class="audio-avatar">
-                                    {% elif creator_avatars.get(post.creator_id) %}
-                                        <img src="{{ creator_avatars[post.creator_id] }}" alt="Audio" class="audio-avatar">
-                                    {% endif %}
-                                    <div class="audio-player-main">
-                                        <button class="audio-btn" onclick="playPauseSimple('{{ post.post_id }}')">▶</button>
-                                        <div class="simple-waveform" id="waveform-{{ post.post_id }}" data-waveform-src="{{ url_for('media_file', filename=audio_path|replace('.mp3', '.json')) }}" style="flex: 1; min-width: 0;"></div>
-                                        <span class="audio-time" id="time-{{ post.post_id }}">--:--</span>
-                                        <button class="audio-speed" onclick="changeSpeedSimple('{{ post.post_id }}')">1x</button>
-                                    </div>
-                                    <audio id="audio-{{ post.post_id }}" src="{{ url_for('media_file', filename=audio_path) }}" preload="none"></audio>
+                            <div class="audio-player-container">
+                                {% if post.collections and post.collections|length > 0 and post.collections[0].collection_image_local %}
+                                    <img src="{{ url_for('media_file', filename=post.collections[0].collection_image_local) }}" alt="{{ post.collections[0].collection_name }}" class="audio-avatar">
+                                {% elif creator_avatars.get(post.creator_id) %}
+                                    <img src="{{ creator_avatars[post.creator_id] }}" alt="Audio" class="audio-avatar">
+                                {% endif %}
+                                <div class="audio-player-main">
+                                    <button class="audio-btn" onclick="playPauseSimple('{{ post.post_id }}')">▶</button>
+                                    <div class="simple-waveform" id="waveform-{{ post.post_id }}" data-waveform-src="{{ url_for('media_file', filename=audio_path|replace('.mp3', '.json')) }}"></div>
+                                    <span class="audio-time" id="time-{{ post.post_id }}">--:--</span>
+                                    <button class="audio-speed" onclick="changeSpeedSimple('{{ post.post_id }}')">1x</button>
                                 </div>
+                                <audio id="audio-{{ post.post_id }}" src="{{ url_for('media_file', filename=audio_path) }}" preload="none"></audio>
                             </div>
                             {% set preview_shown.value = true %}
                         {% endif %}
