@@ -410,6 +410,12 @@
             pointer-events: auto;
         }
 
+        /* Position subtitles at the bottom */
+        .content-preview.video-preview video::cue {
+            bottom: 5%;
+            position: relative;
+        }
+
         .content-preview.youtube-preview {
             width: 100%;
             aspect-ratio: 16 / 9;
@@ -1089,10 +1095,8 @@
                             <div class="content-preview video-preview">
                                 <video controls preload="metadata" crossorigin="anonymous">
                                     <source src="{{ url_for('media_file', filename=first_video) }}" type="video/mp4">
-                                    {% if local_subtitles %}
-                                        {% for subtitle in local_subtitles %}
-                                            <track kind="subtitles" src="{{ url_for('media_file', filename=subtitle) }}" srclang="es" label="Español" default>
-                                        {% endfor %}
+                                    {% if local_subtitles and local_subtitles|length > 0 %}
+                                        <track kind="subtitles" src="{{ url_for('media_file', filename=local_subtitles[0]) }}" default>
                                     {% endif %}
                                     Tu navegador no soporta el tag de video.
                                 </video>

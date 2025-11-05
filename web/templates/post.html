@@ -503,10 +503,8 @@
                                 <div class="content-block video">
                                     <video controls preload="metadata" crossorigin="anonymous" id="main-video">
                                         <source src="{{ url_for('media_file', filename=primary_video) }}" type="video/mp4">
-                                        {% if local_subtitles %}
-                                            {% for subtitle in local_subtitles %}
-                                                <track kind="subtitles" src="{{ url_for('media_file', filename=subtitle) }}" srclang="es" label="Español" default>
-                                            {% endfor %}
+                                        {% if local_subtitles and local_subtitles|length > 0 %}
+                                            <track kind="subtitles" src="{{ url_for('media_file', filename=local_subtitles[0]) }}" default>
                                         {% endif %}
                                         Your browser does not support the video tag.
                                     </video>

@@ -631,11 +631,7 @@ class MediaDownloader:
 
                 for idx, stream_url in enumerate(stream_only_urls):
                     logger.info(f"  🎬 [VIDEO DL] Procesando stream HLS #{idx+1}: {stream_url[:80]}...")
-                    filename = self._get_filename_from_url(stream_url, '.mp4')
-                    if Path(filename).suffix.lower() not in video_extensions:
-                        filename = f"{Path(filename).stem}.mp4"
-
-                    filename = f"{post_id}_{idx:02d}_{filename}"
+                    filename = f"{post_id}_{idx:02d}.mp4"
                     output_path = creator_dir / filename
                     logger.info(f"  💾 [VIDEO DL] Descargando a: {output_path}")
 
@@ -673,8 +669,9 @@ class MediaDownloader:
 
             self.stats['videos']['total'] += 1
 
-            filename = self._get_filename_from_url(url, '.mp4')
-            filename = f"{post_id}_{i:02d}_{filename}"
+            # Use clean filename: {post_id}_00.mp4
+            ext = Path(urlparse(url).path).suffix or '.mp4'
+            filename = f"{post_id}_{i:02d}{ext}"
 
             output_path = creator_dir / filename
             suffix = Path(filename).suffix.lower()
@@ -752,11 +749,7 @@ class MediaDownloader:
                 logger.info("No direct video download succeeded. Attempting yt-dlp fallback for stream sources.")
 
                 for idx, stream_url in enumerate(candidates):
-                    filename = self._get_filename_from_url(stream_url, '.mp4')
-                    suffix = Path(filename).suffix.lower()
-                    if suffix not in video_extensions:
-                        filename = f"{Path(filename).stem}.mp4"
-                    filename = f"{post_id}_stream_{idx:02d}_{filename}"
+                    filename = f"{post_id}_{idx:02d}.mp4"
                     output_path = creator_dir / filename
 
                     if self._download_with_ytdlp([stream_url], output_path, referer):
@@ -816,8 +809,7 @@ class MediaDownloader:
         post_id = post.get('post_id', 'unknown')
 
         for i, url in enumerate(vtt_urls):
-            filename = self._get_filename_from_url(url, '.vtt')
-            filename = f"{post_id}_{i:02d}_{filename}"
+            filename = f"{post_id}_{i:02d}.vtt"
             output_path = creator_dir / filename
 
             try:
