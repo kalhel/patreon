@@ -1697,15 +1697,10 @@
                         </a>
                     </h3>
 
-                    <!-- Fecha del último post -->
-                    <div class="post-card-date">
-                        ${collection.latest_post_date || 'N/A'}
-                    </div>
-
                     ${imageUrl ? `
-                    <!-- Imagen de preview -->
-                    <div class="content-preview image-preview">
-                        <img src="/media/${collection.collection_image_local}" alt="${collection.collection_name}">
+                    <!-- Imagen de preview más pequeña -->
+                    <div class="content-preview image-preview" style="max-height: 200px; overflow: hidden;">
+                        <img src="/media/${collection.collection_image_local}" alt="${collection.collection_name}" style="width: 100%; height: auto; object-fit: cover; max-height: 200px;">
                     </div>
                     ` : ''}
                 </div>

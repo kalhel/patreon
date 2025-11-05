@@ -184,31 +184,24 @@ def index():
             creator_display_name = creator_id or "Unknown Creator"
         post['display_creator_name'] = creator_display_name
 
-    # Load creator colors from config FIRST
-    creators_config = load_creators_config()
-    creator_colors = {c['creator_id']: c.get('preview_color', '#4db8a0') for c in creators_config}
-
-    # Initialize creators dict with ALL creators from config (even if no posts)
+    # Group by creator (original logic - DO NOT CHANGE)
     creators = {}
     creator_avatars = {}
-    for creator_config in creators_config:
-        creator_id = creator_config['creator_id']
-        creators[creator_id] = []  # Start with empty list
-
-        # Set avatar from static files or config
-        if creator_id in CREATOR_AVATARS:
-            creator_avatars[creator_id] = f"/static/{CREATOR_AVATARS[creator_id]}"
-
-    # Now add posts to their respective creators
     for post in posts:
         creator_id = post.get('creator_id', 'unknown')
         if creator_id not in creators:
             creators[creator_id] = []
         creators[creator_id].append(post)
 
-        # Update avatar from post if available and not already set
-        if creator_id not in creator_avatars and post.get('creator_avatar'):
-            creator_avatars[creator_id] = post['creator_avatar']
+        if creator_id not in creator_avatars:
+            if creator_id in CREATOR_AVATARS:
+                creator_avatars[creator_id] = f"/static/{CREATOR_AVATARS[creator_id]}"
+            elif post.get('creator_avatar'):
+                creator_avatars[creator_id] = post['creator_avatar']
+
+    # Load creator colors from config
+    creators_config = load_creators_config()
+    creator_colors = {c['creator_id']: c.get('preview_color', '#4db8a0') for c in creators_config}
 
     return render_template('index.html',
                           creators=creators,
