@@ -61,8 +61,9 @@
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
         }
 
-        .collection-title {
-            color: #ffffff;
+        .header .collection-title,
+        h1.collection-title {
+            color: #ffffff !important;
             font-size: 2.5rem;
             font-weight: 400;
             margin: 0;
@@ -72,7 +73,7 @@
         }
 
         .collection-subtitle {
-            color: #e0e0e0;
+            color: #e0e0e0 !important;
             font-size: 1.1rem;
             font-weight: 400;
             letter-spacing: 0.5px;
@@ -116,14 +117,20 @@
 
         .posts-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 2rem;
             margin-top: 2rem;
         }
 
         @media (min-width: 1200px) {
             .posts-grid {
-                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+            }
+        }
+
+        @media (min-width: 1600px) {
+            .posts-grid {
+                grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
             }
         }
 
@@ -283,12 +290,39 @@
         .content-preview.video-preview {
             width: 100%;
             aspect-ratio: 16 / 9;
+            background: #000;
         }
 
         .content-preview.video-preview video {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
+            display: block;
+            background: #000;
+        }
+
+        .content-preview.audio-preview {
+            width: 100%;
+            padding: 1.5rem;
+            background: #2d3748;
+            border-radius: 8px;
+        }
+
+        .content-preview.audio-preview audio {
+            width: 100%;
+            height: 40px;
+        }
+
+        .content-preview.youtube-preview {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: #000;
+        }
+
+        .content-preview.youtube-preview iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
             display: block;
         }
 
@@ -443,9 +477,28 @@
                             <div class="content-preview video-preview">
                                 <video controls preload="metadata">
                                     <source src="{{ url_for('media_file', filename=first_video) }}" type="video/mp4">
+                                    Tu navegador no soporta el tag de video.
                                 </video>
                             </div>
                             {% set preview_shown.value = true %}
+                        {% endif %}
+
+                        {# YouTube videos #}
+                        {% if post.content_blocks and not preview_shown.value %}
+                            {% for block in post.content_blocks %}
+                                {% if not preview_shown.value and block.type == 'youtube_embed' %}
+                                    {% set video_id = block.url.split('v=')[1].split('&')[0] if 'v=' in block.url else block.url.split('/')[-1] %}
+                                    <div class="content-preview youtube-preview">
+                                        <iframe
+                                            src="https://www.youtube.com/embed/{{ video_id }}"
+                                            frameborder="0"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                            allowfullscreen>
+                                        </iframe>
+                                    </div>
+                                    {% set preview_shown.value = true %}
+                                {% endif %}
+                            {% endfor %}
                         {% endif %}
 
                         {# Check for first image #}
@@ -458,6 +511,18 @@
                                     {% set preview_shown.value = true %}
                                 {% endif %}
                             {% endfor %}
+                        {% endif %}
+
+                        {# Audio files #}
+                        {% if not preview_shown.value and post.audio_local_paths and post.audio_local_paths|length > 0 %}
+                            {% set first_audio = post.audio_local_paths[0] %}
+                            <div class="content-preview audio-preview">
+                                <audio controls preload="metadata">
+                                    <source src="{{ url_for('media_file', filename=first_audio) }}">
+                                    Tu navegador no soporta el elemento de audio.
+                                </audio>
+                            </div>
+                            {% set preview_shown.value = true %}
                         {% endif %}
 
                         {# Show first paragraph as fallback #}
