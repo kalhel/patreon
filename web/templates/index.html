@@ -628,16 +628,16 @@
             align-items: center;
             justify-content: flex-start;
             height: 50px;
-            gap: 2px;
+            gap: 1px;
             padding: 0 5px;
             min-width: 0;
+            overflow: hidden;
         }
         .simple-waveform-bar {
-            flex: 1 1 0;
+            flex: 0 0 auto;
+            width: 2px;
             background: #e0e0e0;
-            border-radius: 2px;
-            min-width: 1px;
-            max-width: 4px;
+            border-radius: 1px;
             transition: background 0.2s;
         }
         .simple-waveform-bar.played {
