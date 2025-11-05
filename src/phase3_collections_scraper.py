@@ -470,6 +470,14 @@ def main():
             return 1
 
     # Scrape collections for each creator
+    summary = {
+        'total_creators': len(creators),
+        'creators_with_collections': 0,
+        'total_collections': 0,
+        'total_posts_in_collections': 0,
+        'details': []
+    }
+
     for creator in creators:
         try:
             collections_data = scrape_collections_for_creator(auth, creator)
@@ -477,11 +485,41 @@ def main():
             if collections_data:
                 save_collections_data(creator['creator_id'], collections_data)
 
+                # Track statistics
+                num_collections = len(collections_data['collections'])
+                total_posts = sum(len(c['post_ids']) for c in collections_data['collections'])
+
+                summary['creators_with_collections'] += 1
+                summary['total_collections'] += num_collections
+                summary['total_posts_in_collections'] += total_posts
+
+                creator_detail = {
+                    'creator_id': creator['creator_id'],
+                    'creator_name': creator['name'],
+                    'num_collections': num_collections,
+                    'total_posts': total_posts,
+                    'collections': [
+                        {
+                            'name': c['collection_name'],
+                            'id': c['collection_id'],
+                            'posts': len(c['post_ids'])
+                        } for c in collections_data['collections']
+                    ]
+                }
+                summary['details'].append(creator_detail)
+
                 # Update posts if requested
                 if args.update_posts:
                     update_posts_with_collections(creator['creator_id'])
             else:
                 logger.warning(f"No collections data to save for {creator['name']}")
+                summary['details'].append({
+                    'creator_id': creator['creator_id'],
+                    'creator_name': creator['name'],
+                    'num_collections': 0,
+                    'total_posts': 0,
+                    'collections': []
+                })
 
         except Exception as e:
             logger.error(f"❌ Error processing {creator['name']}: {e}")
@@ -490,9 +528,28 @@ def main():
     # Cleanup
     auth.close()
 
+    # Print summary
     logger.info("\n" + "="*60)
     logger.info("✅ Phase 3 Collections Scraping Complete!")
-    logger.info("="*60 + "\n")
+    logger.info("="*60)
+    logger.info(f"\n📊 SUMMARY:")
+    logger.info(f"  Creators processed: {summary['total_creators']}")
+    logger.info(f"  Creators with collections: {summary['creators_with_collections']}")
+    logger.info(f"  Total collections found: {summary['total_collections']}")
+    logger.info(f"  Total posts in collections: {summary['total_posts_in_collections']}")
+
+    if summary['details']:
+        logger.info(f"\n📋 DETAILS:")
+        for detail in summary['details']:
+            if detail['num_collections'] > 0:
+                logger.info(f"\n  🎨 {detail['creator_name']} ({detail['creator_id']})")
+                logger.info(f"     Collections: {detail['num_collections']}")
+                logger.info(f"     Total posts: {detail['total_posts']}")
+                logger.info(f"     Collections found:")
+                for col in detail['collections']:
+                    logger.info(f"       - {col['name']} (ID: {col['id']}): {col['posts']} posts")
+
+    logger.info("\n" + "="*60 + "\n")
 
     return 0
 
