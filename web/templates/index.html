@@ -1234,6 +1234,10 @@
                     <span class="icon">🏷️</span>
                     <span>Show Tags</span>
                 </button>
+                <button class="content-filter-btn" id="toggleCollections">
+                    <span class="icon">📚</span>
+                    <span>Show Collections</span>
+                </button>
             </div>
 
             <!-- Tags filter (hidden by default) -->
@@ -1534,6 +1538,7 @@
         const filterVideos = document.getElementById('filterVideos');
         const filterAudio = document.getElementById('filterAudio');
         const toggleTags = document.getElementById('toggleTags');
+        const toggleCollections = document.getElementById('toggleCollections');
         const tagsFilter = document.getElementById('tagsFilter');
         const tagsFilterScroll = document.getElementById('tagsFilterScroll');
         const loadMoreTags = document.getElementById('loadMoreTags');
@@ -1548,6 +1553,8 @@
         };
         let tagsVisible = false;
         let tagsExpanded = false;
+        let collectionsVisible = false;
+        let collectionsData = [];
 
         // Creator filter functionality
         creatorCards.forEach(card => {
@@ -1604,6 +1611,104 @@
                 tagsExpanded = false;
             }
         });
+
+        // Show/Hide collections toggle
+        toggleCollections.addEventListener('click', async function() {
+            collectionsVisible = !collectionsVisible;
+            if (collectionsVisible) {
+                this.classList.add('selected');
+                this.querySelector('span:last-child').textContent = 'Show Posts';
+                await loadAndShowCollections();
+            } else {
+                this.classList.remove('selected');
+                this.querySelector('span:last-child').textContent = 'Show Collections';
+                showPostsView();
+            }
+        });
+
+        // Load collections from API and display them
+        async function loadAndShowCollections() {
+            try {
+                // Build query string with creator filter if applicable
+                let url = '/api/collections';
+                if (selectedCreators.size > 0) {
+                    const creators = Array.from(selectedCreators);
+                    url += '?creator=' + creators.join(',');
+                }
+
+                const response = await fetch(url);
+                if (!response.ok) {
+                    console.error('Failed to load collections');
+                    return;
+                }
+
+                const data = await response.json();
+                collectionsData = data.collections || [];
+                renderCollections();
+            } catch (error) {
+                console.error('Error loading collections:', error);
+            }
+        }
+
+        // Render collections as cards
+        function renderCollections() {
+            const postsGrid = document.querySelector('.posts-grid');
+            postsGrid.innerHTML = '';
+
+            collectionsData.forEach(collection => {
+                const card = createCollectionCard(collection);
+                postsGrid.appendChild(card);
+            });
+        }
+
+        // Create a collection card
+        function createCollectionCard(collection) {
+            const card = document.createElement('article');
+            card.className = 'post-card post-card-compact collection-card';
+            card.dataset.creatorId = collection.creator_id;
+
+            const creatorColor = document.querySelector(`[data-creator-id="${collection.creator_id}"]`)?.dataset.color || '#4db8a0';
+
+            const imageUrl = collection.collection_image_local
+                ? `/media/${collection.collection_image_local}`
+                : '/static/placeholder-collection.png';
+
+            card.innerHTML = `
+                <a href="/collection/${collection.creator_id}/${collection.collection_id}" class="post-card-link">
+                    <div class="post-card-image" style="background-image: url('${imageUrl}')"></div>
+                    <div class="post-card-content">
+                        <div class="post-card-creator" style="color: ${creatorColor}">
+                            📚 ${collection.creator_name || collection.creator_id}
+                        </div>
+                        <h3 class="post-card-title">${collection.collection_name}</h3>
+                        <div class="post-card-date">${collection.latest_post_date || 'N/A'}</div>
+                        <div class="post-card-stats">
+                            <span title="Posts in collection">📄 ${collection.post_count}</span>
+                            <span title="Total Likes">❤️ ${collection.total_likes}</span>
+                            <span title="Total Comments">💬 ${collection.total_comments}</span>
+                            ${collection.total_videos > 0 ? `<span title="Total Videos">🎬 ${collection.total_videos}</span>` : ''}
+                            ${collection.total_audios > 0 ? `<span title="Total Audios">🎵 ${collection.total_audios}</span>` : ''}
+                        </div>
+                    </div>
+                </a>
+            `;
+
+            return card;
+        }
+
+        // Show posts view (restore original posts)
+        function showPostsView() {
+            const postsGrid = document.querySelector('.posts-grid');
+            postsGrid.innerHTML = '';
+
+            // Restore all post cards
+            postCards.forEach(card => {
+                postsGrid.appendChild(card);
+            });
+
+            // Re-apply current filters
+            filterPosts();
+        }
 
         // Load More tags button
         loadMoreTags.addEventListener('click', function() {

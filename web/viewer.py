@@ -697,6 +697,96 @@ def api_posts():
     return jsonify(posts)
 
 
+@app.route('/api/collections')
+def api_collections():
+    """
+    API endpoint to get collections with aggregated post stats
+    Query params:
+        creator: filter by creator_id (optional)
+    Returns collections with:
+        - collection metadata
+        - latest_post_date
+        - total likes, comments, videos, audios
+        - post count
+        - post_ids array
+    """
+    posts = load_all_posts()
+    creator_filter = request.args.get('creator')
+
+    # Filter by creator if specified
+    if creator_filter:
+        posts = [p for p in posts if p.get('creator_id') == creator_filter]
+
+    # Group posts by collection
+    collections_map = {}
+
+    for post in posts:
+        post_collections = post.get('collections', [])
+
+        # Skip posts without collections
+        if not post_collections:
+            continue
+
+        post_id = post.get('post_id')
+        published = post.get('published_date')
+        likes = post.get('likes_count', 0) or 0
+        comments = post.get('comments_count', 0) or 0
+
+        # Count media
+        videos_count = len(post.get('video_local_paths', []) or [])
+        audios_count = len(post.get('audio_local_paths', []) or [])
+        images_count = len(post.get('image_local_paths', []) or [])
+
+        for collection in post_collections:
+            coll_id = collection.get('collection_id')
+            if not coll_id:
+                continue
+
+            # Initialize collection if not exists
+            if coll_id not in collections_map:
+                collections_map[coll_id] = {
+                    'collection_id': coll_id,
+                    'collection_name': collection.get('collection_name', 'Unnamed Collection'),
+                    'collection_url': collection.get('collection_url'),
+                    'collection_image_local': collection.get('collection_image_local'),
+                    'creator_id': post.get('creator_id'),
+                    'creator_name': post.get('creator_name'),
+                    'post_ids': [],
+                    'post_count': 0,
+                    'total_likes': 0,
+                    'total_comments': 0,
+                    'total_videos': 0,
+                    'total_audios': 0,
+                    'total_images': 0,
+                    'latest_post_date': None
+                }
+
+            # Aggregate stats
+            coll = collections_map[coll_id]
+            if post_id not in coll['post_ids']:
+                coll['post_ids'].append(post_id)
+                coll['post_count'] += 1
+                coll['total_likes'] += likes
+                coll['total_comments'] += comments
+                coll['total_videos'] += videos_count
+                coll['total_audios'] += audios_count
+                coll['total_images'] += images_count
+
+                # Update latest date
+                if published:
+                    if not coll['latest_post_date'] or published > coll['latest_post_date']:
+                        coll['latest_post_date'] = published
+
+    # Convert to list and sort by latest_post_date
+    collections_list = list(collections_map.values())
+    collections_list.sort(key=lambda x: x.get('latest_post_date') or '', reverse=True)
+
+    return jsonify({
+        'total_collections': len(collections_list),
+        'collections': collections_list
+    })
+
+
 @app.route('/api/post/<post_id>')
 def api_post(post_id):
     """API endpoint to get single post"""
