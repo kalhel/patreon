@@ -495,6 +495,139 @@ def save_settings():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+@app.route('/api/creator/update', methods=['POST'])
+def update_creator():
+    """Update an existing creator in creators.json"""
+    try:
+        config_dir = Path(__file__).parent.parent / "config"
+        creators_file = config_dir / "creators.json"
+
+        # Load existing creators
+        with open(creators_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        creators_list = data.get('creators', [])
+        updated_creator = request.get_json()
+
+        # Find and update the creator
+        found = False
+        for i, creator in enumerate(creators_list):
+            if creator['creator_id'] == updated_creator['creator_id']:
+                creators_list[i] = updated_creator
+                found = True
+                break
+
+        if not found:
+            return jsonify({'success': False, 'message': 'Creator not found'}), 404
+
+        # Save back to file
+        data['creators'] = creators_list
+        with open(creators_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2)
+
+        return jsonify({'success': True, 'message': 'Creator updated successfully'})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/creator/add', methods=['POST'])
+def add_creator():
+    """Add a new creator to creators.json"""
+    try:
+        config_dir = Path(__file__).parent.parent / "config"
+        creators_file = config_dir / "creators.json"
+
+        # Load existing creators
+        with open(creators_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        creators_list = data.get('creators', [])
+        new_creator = request.get_json()
+
+        # Check if creator ID already exists
+        for creator in creators_list:
+            if creator['creator_id'] == new_creator['creator_id']:
+                return jsonify({'success': False, 'message': 'Creator ID already exists'}), 400
+
+        # Add new creator
+        creators_list.append(new_creator)
+
+        # Save back to file
+        data['creators'] = creators_list
+        with open(creators_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2)
+
+        return jsonify({'success': True, 'message': 'Creator added successfully'})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/creator/delete', methods=['POST'])
+def delete_creator():
+    """Delete a creator from creators.json"""
+    try:
+        config_dir = Path(__file__).parent.parent / "config"
+        creators_file = config_dir / "creators.json"
+
+        # Load existing creators
+        with open(creators_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        creators_list = data.get('creators', [])
+        creator_id_to_delete = request.get_json().get('creator_id')
+
+        # Remove the creator
+        creators_list = [c for c in creators_list if c['creator_id'] != creator_id_to_delete]
+
+        # Save back to file
+        data['creators'] = creators_list
+        with open(creators_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2)
+
+        return jsonify({'success': True, 'message': 'Creator deleted successfully'})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/creator/upload-avatar', methods=['POST'])
+def upload_avatar():
+    """Upload avatar image for a creator"""
+    try:
+        if 'avatar' not in request.files:
+            return jsonify({'success': False, 'message': 'No file uploaded'}), 400
+
+        file = request.files['avatar']
+        creator_id = request.form.get('creator_id')
+
+        if not creator_id:
+            return jsonify({'success': False, 'message': 'Creator ID is required'}), 400
+
+        if file.filename == '':
+            return jsonify({'success': False, 'message': 'No file selected'}), 400
+
+        # Get file extension
+        ext = Path(file.filename).suffix.lower()
+        if ext not in ['.jpg', '.jpeg', '.png', '.webp', '.gif']:
+            return jsonify({'success': False, 'message': 'Invalid file type. Use JPG, PNG, WebP, or GIF'}), 400
+
+        # Save to static directory
+        static_dir = Path(__file__).parent / "static"
+        static_dir.mkdir(exist_ok=True)
+
+        filename = f"{creator_id}{ext}"
+        filepath = static_dir / filename
+
+        file.save(str(filepath))
+
+        return jsonify({'success': True, 'avatar_filename': filename})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @app.route('/api/posts')
 def api_posts():
     """API endpoint to get all posts as JSON"""

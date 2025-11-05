@@ -285,6 +285,41 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .btn-edit {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+            color: white;
+        }
+
+        .btn-edit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #F44336 0%, #D32F2F 100%);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+        }
+
+        input[type="checkbox"] {
+            width: auto;
+            margin-right: 0.5rem;
+        }
     </style>
 </head>
 <body>
@@ -351,33 +386,147 @@
         <div class="section">
             <h2 class="section-title">Creators Configuration</h2>
 
-            {% if creators %}
-                {% for creator in creators %}
-                <div class="creator-item">
-                    <h3>{{ creator.name }}</h3>
-                    <div class="form-group">
-                        <label>Creator ID</label>
-                        <div class="url-display">{{ creator.creator_id }}</div>
+            <div id="creators-list">
+                {% if creators %}
+                    {% for creator in creators %}
+                    <div class="creator-item" data-creator-id="{{ creator.creator_id }}">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3 style="margin: 0;">{{ creator.name }}</h3>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button class="btn-small btn-edit" onclick="toggleEditCreator('{{ creator.creator_id }}')">✏️ Edit</button>
+                                <button class="btn-small btn-danger" onclick="deleteCreator('{{ creator.creator_id }}')">🗑️ Delete</button>
+                            </div>
+                        </div>
+
+                        <!-- View Mode -->
+                        <div class="view-mode">
+                            <div class="form-group">
+                                <label>Creator ID</label>
+                                <div class="url-display">{{ creator.creator_id }}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>Display Name</label>
+                                <div class="url-display">{{ creator.name }}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>Patreon URL (Posts)</label>
+                                <div class="url-display">{{ creator.url }}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>Collections URL</label>
+                                <div class="url-display">{{ creator.collections_url if creator.collections_url else 'https://www.patreon.com/cw/' + creator.creator_id + '/collections' }}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>Avatar</label>
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    {% if creator.avatar %}
+                                    <img src="{{ url_for('static', filename=creator.avatar) }}"
+                                         style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #333;">
+                                    {% endif %}
+                                    <div class="url-display">{{ creator.avatar if creator.avatar else 'No avatar' }}</div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Collections Enabled</label>
+                                <span class="status-badge {% if creator.collections_enabled %}success{% else %}danger{% endif %}">
+                                    {% if creator.collections_enabled %}✓ Enabled{% else %}✗ Disabled{% endif %}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Edit Mode (Hidden by default) -->
+                        <div class="edit-mode" style="display: none;">
+                            <div class="form-group">
+                                <label>Creator ID</label>
+                                <input type="text" class="edit-creator-id" value="{{ creator.creator_id }}" disabled>
+                                <small>Creator ID cannot be changed</small>
+                            </div>
+                            <div class="form-group">
+                                <label>Display Name</label>
+                                <input type="text" class="edit-name" value="{{ creator.name }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Patreon URL (Posts)</label>
+                                <input type="text" class="edit-url" value="{{ creator.url }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Collections URL</label>
+                                <input type="text" class="edit-collections-url" value="{{ creator.collections_url if creator.collections_url else 'https://www.patreon.com/cw/' + creator.creator_id + '/collections' }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Avatar Image</label>
+                                <div style="display: flex; gap: 1rem; align-items: center;">
+                                    <input type="file" class="edit-avatar" accept="image/*" onchange="previewAvatar(this, '{{ creator.creator_id }}')">
+                                    <div id="avatar-preview-{{ creator.creator_id }}" style="display: flex; align-items: center; gap: 0.5rem;">
+                                        {% if creator.avatar %}
+                                        <img src="{{ url_for('static', filename=creator.avatar) }}"
+                                             style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #333;">
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <small>Upload a new avatar image (JPG, PNG, WebP)</small>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" class="edit-collections-enabled" {% if creator.collections_enabled %}checked{% endif %}>
+                                    Enable Collections Scraping
+                                </label>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                                <button class="btn" onclick="saveCreator('{{ creator.creator_id }}')">💾 Save Changes</button>
+                                <button class="btn btn-secondary" onclick="toggleEditCreator('{{ creator.creator_id }}')">❌ Cancel</button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Patreon URL (Posts)</label>
-                        <div class="url-display">{{ creator.url }}</div>
-                    </div>
-                    <div class="form-group">
-                        <label>Collections URL</label>
-                        <div class="url-display">{{ creator.collections_url if creator.collections_url else 'https://www.patreon.com/cw/' + creator.creator_id + '/collections' }}</div>
-                    </div>
-                    <div class="form-group">
-                        <label>Collections Enabled</label>
-                        <span class="status-badge {% if creator.collections_enabled %}success{% else %}danger{% endif %}">
-                            {% if creator.collections_enabled %}✓ Enabled{% else %}✗ Disabled{% endif %}
-                        </span>
-                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p style="color: rgba(255, 255, 255, 0.5);">No creators configured yet.</p>
+                {% endif %}
+            </div>
+
+            <!-- Add New Creator Button -->
+            <button class="btn" onclick="showAddCreatorForm()" style="margin-top: 1rem;">
+                ➕ Add New Creator
+            </button>
+
+            <!-- Add New Creator Form (Hidden by default) -->
+            <div id="add-creator-form" class="creator-item" style="display: none; margin-top: 1rem; border: 2px solid #2196F3;">
+                <h3>Add New Creator</h3>
+                <div class="form-group">
+                    <label>Creator ID</label>
+                    <input type="text" id="new-creator-id" placeholder="astrobymax">
+                    <small>Unique identifier (lowercase, no spaces)</small>
                 </div>
-                {% endfor %}
-            {% else %}
-                <p style="color: rgba(255, 255, 255, 0.5);">No creators configured yet.</p>
-            {% endif %}
+                <div class="form-group">
+                    <label>Display Name</label>
+                    <input type="text" id="new-name" placeholder="AstroByMax">
+                </div>
+                <div class="form-group">
+                    <label>Patreon URL (Posts)</label>
+                    <input type="text" id="new-url" placeholder="https://www.patreon.com/astrobymax">
+                </div>
+                <div class="form-group">
+                    <label>Collections URL</label>
+                    <input type="text" id="new-collections-url" placeholder="https://www.patreon.com/cw/astrobymax/collections">
+                    <small>Leave empty to auto-generate from creator ID</small>
+                </div>
+                <div class="form-group">
+                    <label>Avatar Image</label>
+                    <input type="file" id="new-avatar" accept="image/*" onchange="previewAvatar(this, 'new')">
+                    <div id="avatar-preview-new"></div>
+                    <small>Upload avatar image (JPG, PNG, WebP)</small>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="new-collections-enabled" checked>
+                        Enable Collections Scraping
+                    </label>
+                </div>
+                <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                    <button class="btn" onclick="addNewCreator()">➕ Add Creator</button>
+                    <button class="btn btn-secondary" onclick="hideAddCreatorForm()">❌ Cancel</button>
+                </div>
+            </div>
 
             <div class="info-box">
                 <p>📁 Archivo: <span class="file-path">config/creators.json</span></p>
@@ -493,6 +642,205 @@
                 }
             } catch (error) {
                 alert('❌ Error saving configuration:\n' + error.message);
+            }
+        }
+
+        function toggleEditCreator(creatorId) {
+            const item = document.querySelector(`[data-creator-id="${creatorId}"]`);
+            const viewMode = item.querySelector('.view-mode');
+            const editMode = item.querySelector('.edit-mode');
+
+            if (viewMode.style.display === 'none') {
+                viewMode.style.display = 'block';
+                editMode.style.display = 'none';
+            } else {
+                viewMode.style.display = 'none';
+                editMode.style.display = 'block';
+            }
+        }
+
+        async function saveCreator(creatorId) {
+            try {
+                const item = document.querySelector(`[data-creator-id="${creatorId}"]`);
+
+                const creatorData = {
+                    creator_id: creatorId,
+                    name: item.querySelector('.edit-name').value,
+                    url: item.querySelector('.edit-url').value,
+                    collections_url: item.querySelector('.edit-collections-url').value,
+                    collections_enabled: item.querySelector('.edit-collections-enabled').checked
+                };
+
+                // Handle avatar upload if a file was selected
+                const avatarInput = item.querySelector('.edit-avatar');
+                if (avatarInput.files.length > 0) {
+                    const formData = new FormData();
+                    formData.append('avatar', avatarInput.files[0]);
+                    formData.append('creator_id', creatorId);
+
+                    const uploadResponse = await fetch('/api/creator/upload-avatar', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const uploadResult = await uploadResponse.json();
+                    if (uploadResult.success) {
+                        creatorData.avatar = uploadResult.avatar_filename;
+                    }
+                } else {
+                    // Keep existing avatar
+                    const currentAvatar = item.querySelector('.url-display').textContent;
+                    if (currentAvatar !== 'No avatar') {
+                        creatorData.avatar = currentAvatar;
+                    }
+                }
+
+                // Save creator data
+                const response = await fetch('/api/creator/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(creatorData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('✅ Creator updated successfully!');
+                    location.reload();
+                } else {
+                    alert('❌ Error updating creator:\n' + result.message);
+                }
+            } catch (error) {
+                alert('❌ Error updating creator:\n' + error.message);
+            }
+        }
+
+        async function deleteCreator(creatorId) {
+            if (!confirm(`Are you sure you want to delete creator "${creatorId}"?\n\nThis will remove the creator from configuration but will NOT delete any scraped data.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/creator/delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ creator_id: creatorId })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('✅ Creator deleted successfully!');
+                    location.reload();
+                } else {
+                    alert('❌ Error deleting creator:\n' + result.message);
+                }
+            } catch (error) {
+                alert('❌ Error deleting creator:\n' + error.message);
+            }
+        }
+
+        function showAddCreatorForm() {
+            document.getElementById('add-creator-form').style.display = 'block';
+        }
+
+        function hideAddCreatorForm() {
+            document.getElementById('add-creator-form').style.display = 'none';
+            // Clear form
+            document.getElementById('new-creator-id').value = '';
+            document.getElementById('new-name').value = '';
+            document.getElementById('new-url').value = '';
+            document.getElementById('new-collections-url').value = '';
+            document.getElementById('new-avatar').value = '';
+            document.getElementById('avatar-preview-new').innerHTML = '';
+        }
+
+        async function addNewCreator() {
+            try {
+                const creatorId = document.getElementById('new-creator-id').value.trim();
+                const name = document.getElementById('new-name').value.trim();
+                const url = document.getElementById('new-url').value.trim();
+                let collectionsUrl = document.getElementById('new-collections-url').value.trim();
+                const collectionsEnabled = document.getElementById('new-collections-enabled').checked;
+
+                // Validation
+                if (!creatorId || !name || !url) {
+                    alert('❌ Please fill in all required fields:\n- Creator ID\n- Display Name\n- Patreon URL');
+                    return;
+                }
+
+                // Auto-generate collections URL if not provided
+                if (!collectionsUrl) {
+                    collectionsUrl = `https://www.patreon.com/cw/${creatorId}/collections`;
+                }
+
+                const creatorData = {
+                    creator_id: creatorId,
+                    name: name,
+                    url: url,
+                    collections_url: collectionsUrl,
+                    collections_enabled: collectionsEnabled
+                };
+
+                // Handle avatar upload if a file was selected
+                const avatarInput = document.getElementById('new-avatar');
+                if (avatarInput.files.length > 0) {
+                    const formData = new FormData();
+                    formData.append('avatar', avatarInput.files[0]);
+                    formData.append('creator_id', creatorId);
+
+                    const uploadResponse = await fetch('/api/creator/upload-avatar', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const uploadResult = await uploadResponse.json();
+                    if (uploadResult.success) {
+                        creatorData.avatar = uploadResult.avatar_filename;
+                    }
+                }
+
+                // Add new creator
+                const response = await fetch('/api/creator/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(creatorData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('✅ Creator added successfully!');
+                    location.reload();
+                } else {
+                    alert('❌ Error adding creator:\n' + result.message);
+                }
+            } catch (error) {
+                alert('❌ Error adding creator:\n' + error.message);
+            }
+        }
+
+        function previewAvatar(input, creatorId) {
+            const previewDiv = document.getElementById(`avatar-preview-${creatorId}`);
+
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    previewDiv.innerHTML = `
+                        <img src="${e.target.result}"
+                             style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #2196F3;">
+                        <small style="color: #4CAF50;">New avatar ready to upload</small>
+                    `;
+                };
+
+                reader.readAsDataURL(input.files[0]);
             }
         }
 
