@@ -173,8 +173,12 @@ def extract_collection_data(driver, collection_element) -> Optional[Dict]:
         try:
             img_element = collection_element.find_element(By.CSS_SELECTOR, '[data-tag="box-collection-thumbnail"]')
             collection_image = img_element.get_attribute('imgurl')
+            if collection_image:
+                logger.info(f"  🖼️  Found image URL: {collection_image[:80]}...")
+            else:
+                logger.warning(f"  ⚠️  Found thumbnail element but imgurl attribute is empty")
         except NoSuchElementException:
-            logger.debug("  No image found for collection")
+            logger.warning(f"  ⚠️  No box-collection-thumbnail element found for collection")
 
         # Find post count using data-tag
         post_count = 0
