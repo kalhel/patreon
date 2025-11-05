@@ -87,12 +87,17 @@ def download_collection_image(image_url: str, creator_id: str, collection_id: st
         Relative path to saved image or None if failed
     """
     if not image_url:
+        logger.warning(f"    ⚠️  No image URL provided for collection {collection_id}")
         return None
+
+    logger.info(f"    📥 Attempting to download collection image from: {image_url[:80]}...")
 
     try:
         # Create directory structure
         images_dir = Path("data/media/collections") / creator_id
+        logger.info(f"    📁 Creating directory: {images_dir.absolute()}")
         images_dir.mkdir(parents=True, exist_ok=True)
+        logger.info(f"    ✅ Directory created/verified: {images_dir.absolute()}")
 
         # Determine file extension from URL
         ext = ".jpg"  # Default
@@ -106,17 +111,23 @@ def download_collection_image(image_url: str, creator_id: str, collection_id: st
         # Save as collection_{id}{ext}
         filename = f"collection_{collection_id}{ext}"
         output_path = images_dir / filename
+        logger.info(f"    💾 Saving to: {output_path.absolute()}")
 
         # Download image
+        logger.info(f"    🌐 Downloading from Patreon...")
         response = requests.get(image_url, timeout=30)
         response.raise_for_status()
 
+        image_size = len(response.content)
+        logger.info(f"    📦 Downloaded {image_size} bytes")
+
         # Save to file
         output_path.write_bytes(response.content)
+        logger.info(f"    ✅ File saved successfully")
 
         # Return relative path for JSON storage
         relative_path = f"collections/{creator_id}/{filename}"
-        logger.info(f"    💾 Downloaded collection image: {relative_path}")
+        logger.info(f"    💾 Collection image saved: {relative_path}")
 
         return relative_path
 
@@ -376,13 +387,19 @@ def scrape_collections_for_creator(
 
                     # Download collection image locally
                     if collection_data.get('collection_image'):
+                        logger.info(f"  📸 Downloading image for collection {collection_data['collection_id']}")
                         local_path = download_collection_image(
                             collection_data['collection_image'],
                             creator_id,
                             collection_data['collection_id']
                         )
                         collection_data['collection_image_local'] = local_path
+                        if local_path:
+                            logger.info(f"  ✅ Image saved: {local_path}")
+                        else:
+                            logger.warning(f"  ⚠️  Image download failed for collection {collection_data['collection_id']}")
                     else:
+                        logger.info(f"  ⚠️  No collection_image URL found for: {collection_data['collection_name']}")
                         collection_data['collection_image_local'] = None
 
                 break
