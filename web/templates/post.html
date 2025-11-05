@@ -542,12 +542,23 @@
                             {% endif %}
 
                         {% elif block.type == 'image' %}
+                            {# Skip Patreon thumbnail images (usually end with /1.png, /2.png, etc.) #}
+                            {% set skip_image = false %}
+                            {% set url_lower = block.url.lower() %}
+
+                            {# Check if it's a Patreon thumbnail pattern #}
+                            {% if 'patreonusercontent.com' in url_lower and ('/1.png' in url_lower or '/2.png' in url_lower or '/3.png' in url_lower) %}
+                                {% set skip_image = true %}
+                            {% endif %}
+
+                            {% if not skip_image %}
                             <div class="content-block image">
                                 <img src="{{ block.url }}" alt="{{ block.caption or '' }}" loading="lazy">
                                 {% if block.caption %}
                                 <div class="caption">{{ block.caption }}</div>
                                 {% endif %}
                             </div>
+                            {% endif %}
 
                         {% elif block.type == 'video' %}
                             {# SKIP - Videos se muestran desde video_local_paths más abajo #}
