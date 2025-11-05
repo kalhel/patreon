@@ -246,7 +246,54 @@
             flex-grow: 1;
             display: grid;
             grid-template-rows: auto auto auto 1fr;
+            border-radius: 0 0 0 0;
+        }
+
+        .post-card-collection {
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            padding: 0.75rem 2rem;
+            min-height: 2.5rem;
+            display: flex;
+            align-items: center;
             border-radius: 0 0 16px 16px;
+        }
+
+        .collection-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            width: 100%;
+            min-height: 1.5rem;
+        }
+
+        .collection-info.empty {
+            /* Empty space to maintain consistent card height */
+            opacity: 0;
+        }
+
+        .collection-icon {
+            width: 18px;
+            height: 18px;
+            fill: #6c757d;
+            flex-shrink: 0;
+        }
+
+        .collection-name {
+            font-size: 0.875rem;
+            color: #495057;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .post-card-compact:hover .collection-icon {
+            fill: #495057;
+        }
+
+        .post-card-compact:hover .collection-name {
+            color: #212529;
         }
 
         .post-card-footer-black {
@@ -1183,6 +1230,23 @@
                             </div>
                         {% endif %}
                         </div>
+
+                        <!-- Collections Section (reserved space for all cards) -->
+                        <div class="post-card-collection">
+                            {% if post.collections and post.collections|length > 0 %}
+                                <div class="collection-info">
+                                    <svg class="collection-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M18.785 16.895c.434 0 .706.055.87.218.162.163.217.434.217.869 0 .434-.055.706-.218.869-.163.163-.434.218-.869.218H5.215c-.435 0-.706-.055-.87-.218-.162-.163-.217-.435-.217-.87 0-.434.055-.705.218-.869.163-.162.434-.217.869-.217zM4.241 5.529c.488-.353 1.462.217 3.41 1.358 2.4 1.407 3.601 2.115 3.602 2.823 0 .708-1.201 1.417-3.603 2.824-1.947 1.141-2.921 1.711-3.409 1.359-.487-.353-.488-1.63-.488-4.183 0-2.552 0-3.828.488-4.181m14.544 6.294c.435 0 .706.054.87.217.162.164.217.435.217.87 0 .434-.055.706-.218.869-.163.163-.434.217-.869.217h-4.722c-.435 0-.707-.054-.87-.217-.163-.163-.217-.435-.217-.87 0-.434.054-.706.217-.869.164-.163.435-.217.87-.217zm0-5.073c.435 0 .706.055.87.218.162.163.217.435.217.87 0 .434-.055.705-.218.868-.163.163-.434.218-.869.218h-2.898c-.435 0-.706-.055-.87-.218-.162-.163-.217-.434-.217-.869 0-.434.054-.706.218-.869.163-.163.434-.218.869-.218z"/>
+                                    </svg>
+                                    <span class="collection-name">{{ post.collections[0].collection_name }}</span>
+                                </div>
+                            {% else %}
+                                <div class="collection-info empty">
+                                    <!-- Empty space to maintain consistent card height -->
+                                </div>
+                            {% endif %}
+                        </div>
+
                     </div>
                     {% endfor %}
                 {% endfor %}
