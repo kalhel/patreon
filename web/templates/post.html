@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ post.title or post.post_id }} - Extracted Content</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+
+    <!-- Plyr CSS -->
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
@@ -223,6 +227,10 @@
             display: flex;
             align-items: center;
             gap: 16px;
+            padding: 16px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
         .audio-player-container .audio-avatar {
             width: 80px;
@@ -230,37 +238,34 @@
             border-radius: 8px;
             object-fit: cover;
             flex-shrink: 0;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
         }
         .audio-player-main {
             flex: 1;
-            display: flex;
-            align-items: center;
-            gap: 12px;
         }
         .audio-player-main audio {
-            flex: 1;
-            height: 40px;
-            outline: none;
+            width: 100%;
         }
-        .audio-speed-control {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            user-select: none;
+
+        /* Plyr customization */
+        .plyr {
+            border-radius: 8px;
         }
-        .audio-speed-control:hover {
+        .plyr--audio .plyr__controls {
+            background: transparent;
+            color: #fff;
+        }
+        .plyr__control--overlaid {
+            background: rgba(255, 255, 255, 0.9);
+        }
+        .plyr--full-ui input[type=range] {
+            color: #00aeff;
+        }
+        .plyr__control:hover {
             background: rgba(255, 255, 255, 0.15);
-            transform: scale(1.05);
         }
-        .audio-speed-control:active {
-            transform: scale(0.95);
+        .plyr__control.plyr__tab-focus {
+            box-shadow: 0 0 0 3px rgba(0, 174, 255, 0.5);
         }
 
         /* Collections */
@@ -574,7 +579,6 @@
                                             {% endif %}
                                             <div class="audio-player-main">
                                                 <audio controls src="{{ url_for('media_file', filename=audio_path) }}" id="audio-{{ loop.index }}"></audio>
-                                                <button class="audio-speed-control" onclick="changeSpeed({{ loop.index }})">1x</button>
                                             </div>
                                         </div>
                                     </div>
@@ -790,6 +794,20 @@
                 commentsToggle.classList.toggle('active');
             });
         }
+    </script>
+
+    <!-- Plyr JS -->
+    <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
+    <script>
+        // Initialize Plyr on all audio elements
+        const players = Array.from(document.querySelectorAll('audio')).map(audio => {
+            return new Plyr(audio, {
+                controls: ['play', 'progress', 'current-time', 'duration', 'mute', 'volume', 'settings'],
+                settings: ['speed'],
+                speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] },
+                tooltips: { controls: true, seek: true }
+            });
+        });
     </script>
 </body>
 </html>
