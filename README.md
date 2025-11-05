@@ -63,43 +63,53 @@ patreon/
 
 ---
 
-## 🚀 Flujo de Trabajo
+## 🚀 Flujo de Trabajo - Sistema de 3 Fases
 
-### Fase 1: Scraping de Patreon ✅ (En desarrollo)
+### Fase 1: Recolección de URLs ✅
+**Script**: `src/phase1_url_collector.py`
 
-1. **Autenticación**
-   - Login con email/password
-   - Obtener session cookie
-   - Validar acceso a creadores suscritos
+- Navega por el feed de cada creador
+- Recolecta URLs de todos los posts disponibles
+- Guarda lista de URLs en `data/raw/{creator}_post_urls.json`
+- Manejo de infinite scroll automático
 
-2. **Scraping de Posts**
-   - Extraer todos los posts de cada creador
-   - Capturar: título, fecha, texto completo, multimedia
-   - Guardar en JSON raw
+### Fase 2: Extracción de Detalles ✅
+**Script**: `src/phase2_detail_extractor.py`
 
-3. **Descarga de Multimedia**
-   - Detectar y descargar imágenes
-   - Detectar y descargar videos
-   - Detectar y descargar audios
-   - Organizar por creador y fecha
+- Lee URLs de Fase 1
+- Extrae contenido completo de cada post:
+  - Título, fecha, contenido en bloques estructurados
+  - Metadata (likes, comments, fecha de publicación)
+  - URLs de imágenes, videos, audios
+  - Tags de Patreon
+- Descarga automática de multimedia local
+- Guarda en `data/processed/{creator}_posts_detailed.json`
 
-4. **Generación de Tags**
-   - Análisis de contenido con IA
-   - Extracción de temas principales
-   - Categorización automática
+### Fase 3: Collections y Organización ✅
+**Script**: `src/phase3_collections_scraper.py`
 
-### Fase 2: Integración con Notion (Pendiente)
+- Extrae collections de cada creador
+- Descarga imágenes de portada de collections
+- Mapea qué posts pertenecen a qué collections
+- Actualiza posts con información de collections
+- Guarda en `data/processed/{creator}_collections.json`
 
-5. **Crear Bases de Datos en Notion**
-   - DB de Posts (título, contenido, fecha, creador, tags, multimedia)
-   - DB de Tags (nombre, descripción, color)
-   - DB de Creadores (nombre, URL, stats)
+### Web Viewer: Visualización Local 🌐
+**Script**: `web/viewer.py`
 
-6. **Subir Contenido**
-   - Crear páginas para cada post
-   - Relaciones entre posts y tags
-   - Relaciones entre posts y creadores
-   - Subir multimedia a Notion
+- Servidor Flask local para previsualizar contenido
+- Vista de biblioteca completa con filtros
+- Vista individual de posts con contenido completo
+- Vista de collections con posts agrupados
+- Sistema de navegación intuitivo
+- **Ver documentación completa**: `docs/WEB_VIEWER.md`
+
+### Integración con Notion (Futuro)
+**Script**: `src/notion_integrator.py`
+
+- Subida automática a Notion
+- Creación de bases de datos relacionadas
+- Sistema de tags y relaciones
 
 ---
 
@@ -204,15 +214,34 @@ python src/main.py --creator astrobymax --full-details
 
 ## 🎯 Estado Actual
 
-- [x] Estructura de proyecto creada
-- [x] Configuración de credenciales
-- [x] Implementar autenticación Patreon
-- [x] Implementar scraper de posts
-- [x] Implementar descargador de multimedia
-- [x] Implementar generador de tags
-- [ ] Crear bases de datos en Notion
-- [ ] Implementar integración Notion
-- [ ] Testing completo
+### ✅ Completado
+
+- [x] **Fase 1**: URL Collector - Recolección completa de URLs de posts
+- [x] **Fase 2**: Detail Extractor - Extracción de contenido detallado
+- [x] **Fase 3**: Collections Scraper - Sistema de collections implementado
+- [x] **Web Viewer**: Servidor local Flask con navegación completa
+  - [x] Vista de biblioteca (index) con filtros
+  - [x] Vista individual de posts
+  - [x] Vista de collections
+  - [x] Vista por tags
+  - [x] Sistema de navegación contextual
+  - [x] Diseño responsive y elegante
+- [x] Autenticación con Patreon (Selenium)
+- [x] Descarga de multimedia local
+- [x] Generación de tags con IA (Gemini)
+
+### 🔄 En Progreso
+
+- [ ] Integración con Notion
+- [ ] Sistema de actualización incremental
+
+### 📚 Documentación
+
+- [x] README principal
+- [x] Workflow completo (WORKFLOW.md)
+- [x] Documentación de Web Viewer (docs/WEB_VIEWER.md)
+- [x] Plan de Collections (COLLECTIONS_PLAN.md)
+- [x] Diseño de base de datos Notion (docs/NOTION_DATABASE_DESIGN.md)
 
 ---
 
