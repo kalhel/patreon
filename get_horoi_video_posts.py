@@ -10,11 +10,8 @@ from firebase_tracker import load_firebase_config, FirebaseTracker
 
 def main():
     # Load Firebase config
-    firebase_config = load_firebase_config()
-    tracker = FirebaseTracker(
-        database_url=firebase_config['database_url'],
-        database_secret=firebase_config['database_secret']
-    )
+    database_url, database_secret = load_firebase_config()
+    tracker = FirebaseTracker(database_url, database_secret)
 
     print("🔍 Querying Firebase for horoiproject posts with videos...\n", flush=True)
 
