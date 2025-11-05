@@ -19,15 +19,6 @@ import tempfile
 import requests
 from requests.cookies import RequestsCookieJar
 
-# Audio processing for waveform generation
-try:
-    from pydub import AudioSegment
-    import numpy as np
-    AUDIO_PROCESSING_AVAILABLE = True
-except ImportError:
-    AUDIO_PROCESSING_AVAILABLE = False
-    logger.warning("⚠️  pydub/numpy not available - waveform generation disabled")
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -38,6 +29,15 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+# Audio processing for waveform generation
+try:
+    from pydub import AudioSegment
+    import numpy as np
+    AUDIO_PROCESSING_AVAILABLE = True
+except ImportError:
+    AUDIO_PROCESSING_AVAILABLE = False
+    logger.warning("⚠️  pydub/numpy not available - waveform generation disabled")
 
 
 class MediaDownloader:
