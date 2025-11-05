@@ -146,13 +146,21 @@ def index():
                 cleaned.append(entry_str)
         return cleaned
 
-    # Process each post to filter video and audio paths
+    # Process each post to filter video and audio paths and set display names
     for post in posts:
         local_video_paths = filter_by_extension(post.get('video_local_paths'), {'.mp4', '.m4v', '.mov', '.webm', '.mkv'})
         local_audio_paths = filter_by_extension(post.get('audio_local_paths'), {'.mp3', '.m4a', '.aac', '.wav', '.flac', '.ogg', '.opus'})
 
         post['video_local_paths'] = local_video_paths
         post['audio_local_paths'] = local_audio_paths
+
+        # Set display name using same logic as view_post
+        metadata = post.get('post_metadata') or {}
+        creator_id = post.get('creator_id', 'unknown')
+        creator_display_name = metadata.get('creator_name') or get_creator_display_name(creator_id)
+        if not creator_display_name:
+            creator_display_name = creator_id or "Unknown Creator"
+        post['display_creator_name'] = creator_display_name
 
     # Group by creator
     creators = {}
@@ -322,6 +330,14 @@ def view_tag(tag_name):
     for post in posts:
         tags = post.get('patreon_tags', [])
         if tag_name in tags:
+            # Set display name using same logic as index and view_post
+            metadata = post.get('post_metadata') or {}
+            creator_id = post.get('creator_id', 'unknown')
+            creator_display_name = metadata.get('creator_name') or get_creator_display_name(creator_id)
+            if not creator_display_name:
+                creator_display_name = creator_id or "Unknown Creator"
+            post['display_creator_name'] = creator_display_name
+
             tagged_posts.append(post)
 
     return render_template('tag.html',
