@@ -16,7 +16,7 @@
             background: #1a1a1a;
             border: none;
             border-bottom: 4px solid #000000;
-            padding: 3rem 2rem;
+            padding: 2rem 2rem 1.5rem 2rem;
             box-shadow: none;
             text-align: center;
         }
@@ -49,7 +49,7 @@
             letter-spacing: 0.5px;
             padding: 0.5rem 1rem;
             border-radius: 8px;
-            margin-top: 1.5rem;
+            margin-top: 1rem;
             transition: all 0.2s;
             border: 2px solid rgba(255, 255, 255, 0.2);
         }
@@ -406,12 +406,16 @@
                     <div class="footer-meta-icons">
                         {% if post.content_blocks %}
                             {% set img_count = post.content_blocks | selectattr('type', 'equalto', 'image') | list | length %}
-                            {% set vid_count = (post.content_blocks | selectattr('type', 'equalto', 'video') | list | length) + (post.content_blocks | selectattr('type', 'equalto', 'youtube_embed') | list | length) %}
+                            {% set vid_count_blocks = (post.content_blocks | selectattr('type', 'equalto', 'video') | list | length) + (post.content_blocks | selectattr('type', 'equalto', 'youtube_embed') | list | length) %}
+                            {% set vid_count_local = post.video_local_paths | length if post.video_local_paths else 0 %}
+                            {% set vid_count = vid_count_blocks if vid_count_blocks > 0 else vid_count_local %}
                             {% set aud_count = post.content_blocks | selectattr('type', 'equalto', 'audio') | list | length %}
                             {% set com_count = post.content_blocks | selectattr('type', 'equalto', 'comment') | list | length %}
                         {% else %}
                             {% set img_count = post.images | length if post.images else 0 %}
-                            {% set vid_count = post.videos | length if post.videos else 0 %}
+                            {% set vid_count_old = post.videos | length if post.videos else 0 %}
+                            {% set vid_count_local = post.video_local_paths | length if post.video_local_paths else 0 %}
+                            {% set vid_count = vid_count_old if vid_count_old > 0 else vid_count_local %}
                             {% set aud_count = post.audios | length if post.audios else 0 %}
                             {% set com_count = 0 %}
                         {% endif %}
