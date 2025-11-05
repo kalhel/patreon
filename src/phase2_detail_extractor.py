@@ -124,6 +124,8 @@ def extract_post_details(
         full_post_data['downloaded_media'] = download_result
         if download_result.get('videos_relative'):
             full_post_data['video_local_paths'] = download_result['videos_relative']
+        if download_result.get('video_subtitles_relative'):
+            full_post_data['video_subtitles_relative'] = download_result['video_subtitles_relative']
         if download_result.get('audios_relative'):
             full_post_data['audio_local_paths'] = download_result['audios_relative']
         if download_result.get('images_relative'):
