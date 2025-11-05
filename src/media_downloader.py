@@ -1102,16 +1102,10 @@ class MediaDownloader:
             # Output filename pattern
             filename_base = f"{post_id}_yt{idx:02d}"
 
-            # yt-dlp command with best quality and subtitles
-            command = base_command + [
+            # First, download video without subtitles (to avoid subtitle errors blocking video)
+            video_command = base_command + [
                 '--format', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
                 '--merge-output-format', 'mp4',
-                '--write-subs',           # Manual subtitles
-                '--write-auto-subs',      # Auto-generated subtitles
-                '--sub-langs', 'es,en',   # Spanish and English only
-                '--sub-format', 'vtt',    # VTT format (compatible with HTML5)
-                '--convert-subs', 'vtt',  # Convert to VTT if needed
-                '--ignore-errors',        # Continue if subtitle download fails (e.g., rate limiting)
                 '--no-mtime',
                 '--no-warnings',
                 '-o', str(creator_dir / f'{filename_base}.%(ext)s'),
@@ -1119,9 +1113,9 @@ class MediaDownloader:
             ]
 
             try:
-                logger.info(f"  🔄 [YOUTUBE] Running yt-dlp for video {video_id}...")
+                logger.info(f"  🔄 [YOUTUBE] Downloading video {video_id}...")
                 result = subprocess.run(
-                    command,
+                    video_command,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     check=False,
@@ -1129,7 +1123,7 @@ class MediaDownloader:
                     timeout=600  # 10 minute timeout per video
                 )
 
-                # Check for downloaded video file (even if return code != 0 due to subtitle errors)
+                # Check for downloaded video file
                 video_path = creator_dir / f'{filename_base}.mp4'
                 if video_path.exists():
                     file_size = video_path.stat().st_size
@@ -1149,6 +1143,42 @@ class MediaDownloader:
                     block['type'] = 'video'
                     block['youtube_downloaded'] = True
                     block['youtube_video_id'] = video_id
+
+                    # Now try to download subtitles separately (each language independently)
+                    # This way if one fails (rate limit), the other can still succeed
+                    logger.info(f"  📝 [YOUTUBE] Attempting to download subtitles...")
+
+                    for lang in ['es', 'en']:
+                        subtitle_command = base_command + [
+                            '--skip-download',        # Don't re-download the video
+                            '--write-subs',           # Manual subtitles
+                            '--write-auto-subs',      # Auto-generated subtitles
+                            '--sub-langs', lang,      # One language at a time
+                            '--sub-format', 'vtt',
+                            '--convert-subs', 'vtt',
+                            '--ignore-errors',        # Continue if this language fails
+                            '--no-warnings',
+                            '-o', str(creator_dir / f'{filename_base}.%(ext)s'),
+                            url
+                        ]
+
+                        try:
+                            sub_result = subprocess.run(
+                                subtitle_command,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                check=False,
+                                text=True,
+                                timeout=60  # 1 minute timeout for subtitles
+                            )
+
+                            if sub_result.returncode != 0:
+                                if '429' in sub_result.stderr or 'Too Many Requests' in sub_result.stderr:
+                                    logger.warning(f"  ⚠️  [YOUTUBE] Rate limited for {lang} subtitles")
+                                else:
+                                    logger.debug(f"  ℹ️  [YOUTUBE] {lang} subtitles not available or failed")
+                        except Exception as e:
+                            logger.debug(f"  ℹ️  [YOUTUBE] Error downloading {lang} subtitles: {e}")
 
                     # Check for subtitle files with various naming patterns from yt-dlp
                     # Patterns: .es.vtt, .en.vtt, .es-es.vtt, .en-US.vtt, .es-orig.vtt, etc.
@@ -1203,18 +1233,16 @@ class MediaDownloader:
                             except ValueError:
                                 relatives_subtitles.append(abs_sub_path)
 
-                    # Warn if subtitles failed but video succeeded
-                    if result.returncode != 0 and found_subs == set():
-                        logger.warning(f"  ⚠️  [YOUTUBE] Subtitles failed for {video_id} (possibly rate limited)")
-                        if result.stderr and 'subtitle' in result.stderr.lower():
-                            logger.warning(f"  Subtitle error: {result.stderr[:300]}")
+                    # Log summary of what was found
+                    if found_subs:
+                        logger.info(f"  ✓ [YOUTUBE] Found {len(found_subs)} subtitle file(s)")
+                    else:
+                        logger.info(f"  ℹ️  [YOUTUBE] No subtitles found (may be rate limited or unavailable)")
                 else:
-                    logger.warning(f"  ⚠️  [YOUTUBE] Download failed for {video_id}")
+                    logger.warning(f"  ⚠️  [YOUTUBE] Video download failed for {video_id}")
                     logger.warning(f"  Return code: {result.returncode}")
                     if result.stderr:
                         logger.warning(f"  Error output: {result.stderr[:500]}")
-                    if result.stdout:
-                        logger.warning(f"  Stdout: {result.stdout[:500]}")
 
             except subprocess.TimeoutExpired:
                 logger.error(f"  ❌ [YOUTUBE] Download timeout for {video_id}")
