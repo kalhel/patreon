@@ -491,6 +491,37 @@
                                 {% set shown_tags.value = true %}
                             {% endif %}
 
+                            {# Show videos after tags #}
+                            {% set local_videos = post.video_local_paths if post.video_local_paths is defined and post.video_local_paths else [] %}
+                            {% set local_subtitles = post.video_subtitles_relative if post.video_subtitles_relative is defined and post.video_subtitles_relative else [] %}
+                            {% if local_videos %}
+                                {% set primary_video = local_videos[0] %}
+                                <!-- DEBUG: primary_video = {{ primary_video }} -->
+                                <!-- DEBUG: video URL = {{ url_for('media_file', filename=primary_video) }} -->
+                                <div class="content-block video">
+                                    <video controls preload="metadata" id="main-video">
+                                        <source src="{{ url_for('media_file', filename=primary_video) }}" type="video/mp4">
+                                        {% if local_subtitles %}
+                                            {% for subtitle in local_subtitles %}
+                                                <track kind="subtitles" src="{{ url_for('media_file', filename=subtitle) }}" srclang="en" label="Subtítulos">
+                                            {% endfor %}
+                                        {% endif %}
+                                        Your browser does not support the video tag.
+                                    </video>
+                                </div>
+                                <script>
+                                    // Debug video loading
+                                    const video = document.getElementById('main-video');
+                                    video.addEventListener('error', function(e) {
+                                        console.error('❌ Video error:', e);
+                                        console.error('Video src:', video.querySelector('source').src);
+                                    });
+                                    video.addEventListener('loadeddata', function() {
+                                        console.log('✅ Video loaded successfully');
+                                    });
+                                </script>
+                            {% endif %}
+
                         {% elif block.type == 'heading_2' %}
                             <div class="content-block heading-2">
                                 <h2>{{ block.text }}</h2>
@@ -518,12 +549,7 @@
                             </div>
 
                         {% elif block.type == 'video' %}
-                            <div class="content-block video">
-                                <video controls {% if block.poster %}poster="{{ block.poster }}"{% endif %}>
-                                    <source src="{{ block.url }}">
-                                    Your browser does not support the video tag.
-                                </video>
-                            </div>
+                            {# SKIP - Videos se muestran desde video_local_paths más abajo #}
 
                         {% elif block.type == 'audio' %}
                             <div class="content-block audio">
@@ -595,54 +621,6 @@
                         {% endfor %}
                     {% endif %}
 
-                    {% set local_videos = post.video_local_paths if post.video_local_paths is defined and post.video_local_paths else [] %}
-                    {% set local_subtitles = post.video_subtitles_relative if post.video_subtitles_relative is defined and post.video_subtitles_relative else [] %}
-                    {% if local_videos %}
-                        {% set primary_video = local_videos[0] %}
-                        <!-- DEBUG: primary_video = {{ primary_video }} -->
-                        <!-- DEBUG: video URL = {{ url_for('media_file', filename=primary_video) }} -->
-                        <div class="content-block video">
-                            <video controls preload="metadata" id="main-video">
-                                <source src="{{ url_for('media_file', filename=primary_video) }}" type="video/mp4">
-                                {% if local_subtitles %}
-                                    {% for subtitle in local_subtitles %}
-                                        <track kind="subtitles" src="{{ url_for('media_file', filename=subtitle) }}" srclang="en" label="Subtítulos">
-                                    {% endfor %}
-                                {% endif %}
-                                Your browser does not support the video tag.
-                            </video>
-                        </div>
-                        <script>
-                            // Debug video loading
-                            const video = document.getElementById('main-video');
-                            video.addEventListener('error', function(e) {
-                                console.error('❌ Video error:', e);
-                                console.error('Video src:', video.querySelector('source').src);
-                            });
-                            video.addEventListener('loadeddata', function() {
-                                console.log('✅ Video loaded successfully');
-                            });
-                        </script>
-                        {% if local_videos|length > 1 %}
-                        <div class="content-block paragraph">
-                            <p><strong>Descargas adicionales:</strong></p>
-                            <ul>
-                                {% for rel_path in local_videos[1:] %}
-                                {% set file_name = rel_path.rsplit('/', 1)[-1] %}
-                                <li><a href="{{ url_for('media_file', filename=rel_path) }}" target="_blank" rel="noopener">{{ file_name }}</a></li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-                        {% endif %}
-                    {% elif post.videos %}
-                        {% for video_url in post.videos %}
-                        <div class="content-block video">
-                            <video controls>
-                                <source src="{{ video_url }}">
-                            </video>
-                        </div>
-                        {% endfor %}
-                    {% endif %}
 
                     {% if post.audios %}
                         {% for audio_url in post.audios %}
