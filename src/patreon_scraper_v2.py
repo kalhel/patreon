@@ -12,6 +12,7 @@ import re
 from pathlib import Path
 from typing import List, Dict, Optional
 from datetime import datetime, timedelta
+from urllib.parse import urlparse, parse_qs
 
 import requests
 from selenium.webdriver.common.by import By
@@ -726,6 +727,12 @@ class PatreonScraperV2:
         except Exception as enrich_error:
             logger.debug(f"    ⚠️  Could not enrich video sources: {enrich_error}")
 
+        # Append Mux playback URLs if present
+        try:
+            self._append_mux_streams(post_detail)
+        except Exception as mux_error:
+            logger.debug(f"    ⚠️  Could not append Mux streams: {mux_error}")
+
         return post_detail
 
     def _fetch_post_api(self, post_id: str) -> Optional[Dict]:
@@ -839,6 +846,84 @@ class PatreonScraperV2:
             post_detail['video_downloads'] = dedupe(sorted(download_urls))
         if stream_urls:
             post_detail['video_streams'] = dedupe(sorted(stream_urls))
+
+    def _append_mux_streams(self, post_detail: Dict):
+        """Detect Mux playback IDs in the page and add stream/download URLs."""
+
+        playback_map = {}
+
+        # Find elements with data-mux-playback-id attribute
+        try:
+            elements = self.driver.find_elements(By.CSS_SELECTOR, '[data-mux-playback-id]')
+            for elem in elements:
+                playback_id = elem.get_attribute('data-mux-playback-id')
+                token = elem.get_attribute('data-mux-token') or ''
+                if playback_id:
+                    playback_map.setdefault(playback_id, set())
+                    if token:
+                        playback_map[playback_id].add(token)
+        except Exception:
+            pass
+
+        # Find Mux thumbnail images and extract playback IDs
+        try:
+            thumbs = self.driver.find_elements(By.CSS_SELECTOR, 'img[src*="image.mux.com/"]')
+            for img in thumbs:
+                src = img.get_attribute('src') or ''
+                match = re.search(r'image\.mux\.com/([^/]+)/thumbnail', src)
+                if match:
+                    playback_id = match.group(1)
+                    token = ''
+                    try:
+                        qs = parse_qs(urlparse(src).query)
+                        token = qs.get('token', [''])[0]
+                    except Exception:
+                        pass
+                    playback_map.setdefault(playback_id, set())
+                    if token:
+                        playback_map[playback_id].add(token)
+        except Exception:
+            pass
+
+        if not playback_map:
+            return
+
+        downloads = post_detail.get('video_downloads', []) or []
+        streams = post_detail.get('video_streams', []) or []
+        existing_videos = post_detail.get('videos', []) or []
+
+        # Build Mux stream and download URLs
+        for playback_id, tokens in playback_map.items():
+            if not playback_id:
+                continue
+
+            if tokens:
+                for token in tokens:
+                    stream_url = f"https://stream.mux.com/{playback_id}.m3u8?token={token}"
+                    download_url = f"https://stream.mux.com/{playback_id}/medium.mp4?token={token}"
+                    streams.append(stream_url)
+                    downloads.append(download_url)
+                    existing_videos.append(download_url)
+            else:
+                stream_url = f"https://stream.mux.com/{playback_id}.m3u8"
+                download_url = f"https://stream.mux.com/{playback_id}/medium.mp4"
+                streams.append(stream_url)
+                downloads.append(download_url)
+                existing_videos.append(download_url)
+
+        # Deduplicate
+        def dedupe(seq):
+            seen = set()
+            result = []
+            for value in seq:
+                if value not in seen:
+                    seen.add(value)
+                    result.append(value)
+            return result
+
+        post_detail['video_downloads'] = dedupe(downloads)
+        post_detail['video_streams'] = dedupe(streams)
+        post_detail['videos'] = dedupe(existing_videos)
 
     def save_posts(self, posts: List[Dict], creator_id: str, output_dir: str = "data/raw"):
         """
