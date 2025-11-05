@@ -702,7 +702,7 @@ def api_collections():
     """
     API endpoint to get collections with aggregated post stats
     Query params:
-        creator: filter by creator_id (optional)
+        creator: filter by creator_id (optional, can be comma-separated for multiple)
     Returns collections with:
         - collection metadata
         - latest_post_date
@@ -713,9 +713,10 @@ def api_collections():
     posts = load_all_posts()
     creator_filter = request.args.get('creator')
 
-    # Filter by creator if specified
+    # Filter by creator if specified (support multiple creators)
     if creator_filter:
-        posts = [p for p in posts if p.get('creator_id') == creator_filter]
+        creators = [c.strip() for c in creator_filter.split(',')]
+        posts = [p for p in posts if p.get('creator_id') in creators]
 
     # Group posts by collection
     collections_map = {}
