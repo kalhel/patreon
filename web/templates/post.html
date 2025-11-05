@@ -648,17 +648,7 @@
                             {# SKIP - Videos se muestran desde video_local_paths más abajo #}
 
                         {% elif block.type == 'audio' %}
-                            <div class="content-block audio">
-                                <div class="audio-player-container">
-                                    {% if block.get('thumbnail') %}
-                                    <img src="{{ block.thumbnail }}" alt="Audio thumbnail" class="audio-avatar">
-                                    {% endif %}
-                                    <div class="audio-player-main">
-                                        <audio controls src="{{ block.url }}" id="audio-{{ loop.index }}"></audio>
-                                        <button class="audio-speed-control" onclick="changeSpeed({{ loop.index }})">1x</button>
-                                    </div>
-                                </div>
-                            </div>
+                            {# SKIP - Audio se muestra desde audio_local_paths después de tags #}
 
                         {% elif block.type == 'bulleted_list' %}
                             <div class="content-block bulleted-list">
