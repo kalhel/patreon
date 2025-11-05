@@ -1111,6 +1111,7 @@ class MediaDownloader:
                 '--sub-langs', 'es,en',   # Spanish and English only
                 '--sub-format', 'vtt',    # VTT format (compatible with HTML5)
                 '--convert-subs', 'vtt',  # Convert to VTT if needed
+                '--ignore-errors',        # Continue if subtitle download fails (e.g., rate limiting)
                 '--no-mtime',
                 '--no-warnings',
                 '-o', str(creator_dir / f'{filename_base}.%(ext)s'),
@@ -1128,29 +1129,26 @@ class MediaDownloader:
                     timeout=600  # 10 minute timeout per video
                 )
 
-                if result.returncode == 0:
-                    # Check for downloaded video file
-                    video_path = creator_dir / f'{filename_base}.mp4'
-                    if video_path.exists():
-                        file_size = video_path.stat().st_size
-                        logger.info(f"  ✓ [YOUTUBE] Downloaded video: {video_path.name} ({self._format_size(file_size)})")
+                # Check for downloaded video file (even if return code != 0 due to subtitle errors)
+                video_path = creator_dir / f'{filename_base}.mp4'
+                if video_path.exists():
+                    file_size = video_path.stat().st_size
+                    logger.info(f"  ✓ [YOUTUBE] Downloaded video: {video_path.name} ({self._format_size(file_size)})")
 
-                        abs_path = str(video_path)
-                        downloaded_videos.append(abs_path)
-                        try:
-                            relatives_videos.append(video_path.relative_to(self.output_dir).as_posix())
-                        except ValueError:
-                            relatives_videos.append(abs_path)
+                    abs_path = str(video_path)
+                    downloaded_videos.append(abs_path)
+                    try:
+                        relatives_videos.append(video_path.relative_to(self.output_dir).as_posix())
+                    except ValueError:
+                        relatives_videos.append(abs_path)
 
-                        self.stats['videos']['downloaded'] += 1
-                        self.stats['videos']['total'] += 1
+                    self.stats['videos']['downloaded'] += 1
+                    self.stats['videos']['total'] += 1
 
-                        # Update the content block to be a video block instead of youtube_embed
-                        block['type'] = 'video'
-                        block['youtube_downloaded'] = True
-                        block['youtube_video_id'] = video_id
-                    else:
-                        logger.warning(f"  ⚠️  [YOUTUBE] Video file not found after download: {video_path}")
+                    # Update the content block to be a video block instead of youtube_embed
+                    block['type'] = 'video'
+                    block['youtube_downloaded'] = True
+                    block['youtube_video_id'] = video_id
 
                     # Check for subtitle files with various naming patterns from yt-dlp
                     # Patterns: .es.vtt, .en.vtt, .es-es.vtt, .en-US.vtt, .es-orig.vtt, etc.
@@ -1204,6 +1202,12 @@ class MediaDownloader:
                                 relatives_subtitles.append(subtitle_path.relative_to(self.output_dir).as_posix())
                             except ValueError:
                                 relatives_subtitles.append(abs_sub_path)
+
+                    # Warn if subtitles failed but video succeeded
+                    if result.returncode != 0 and found_subs == set():
+                        logger.warning(f"  ⚠️  [YOUTUBE] Subtitles failed for {video_id} (possibly rate limited)")
+                        if result.stderr and 'subtitle' in result.stderr.lower():
+                            logger.warning(f"  Subtitle error: {result.stderr[:300]}")
                 else:
                     logger.warning(f"  ⚠️  [YOUTUBE] Download failed for {video_id}")
                     logger.warning(f"  Return code: {result.returncode}")
