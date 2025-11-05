@@ -560,23 +560,39 @@
                                 {% set shown_tags.value = true %}
                             {% endif %}
 
-                            {# Show audio after tags - only from local files #}
+                            {# Show audio after tags #}
+                            {# First from audio_local_paths #}
                             {% set local_audios = post.audio_local_paths if post.audio_local_paths is defined and post.audio_local_paths else [] %}
-                            {% if local_audios %}
-                                {% for audio_path in local_audios %}
-                                    <div class="content-block audio">
-                                        <div class="audio-player-container">
-                                            {% if creator_avatar %}
-                                            <img src="{{ creator_avatar }}" alt="Audio thumbnail" class="audio-avatar">
-                                            {% endif %}
-                                            <div class="audio-player-main">
-                                                <audio controls src="{{ url_for('media_file', filename=audio_path) }}" id="audio-{{ loop.index }}"></audio>
-                                                <button class="audio-speed-control" onclick="changeSpeed({{ loop.index }})">1x</button>
-                                            </div>
+                            {% for audio_path in local_audios %}
+                                <div class="content-block audio">
+                                    <div class="audio-player-container">
+                                        {% if creator_avatar %}
+                                        <img src="{{ creator_avatar }}" alt="Audio thumbnail" class="audio-avatar">
+                                        {% endif %}
+                                        <div class="audio-player-main">
+                                            <audio controls src="{{ url_for('media_file', filename=audio_path) }}" id="audio-local-{{ loop.index }}"></audio>
+                                            <button class="audio-speed-control" onclick="changeSpeed({{ loop.index }})">1x</button>
                                         </div>
                                     </div>
-                                {% endfor %}
-                            {% endif %}
+                                </div>
+                            {% endfor %}
+
+                            {# Then from content_blocks with type audio #}
+                            {% for block in post.content_blocks if block.type == 'audio' %}
+                                <div class="content-block audio">
+                                    <div class="audio-player-container">
+                                        {% if block.get('thumbnail') %}
+                                        <img src="{{ block.thumbnail }}" alt="Audio thumbnail" class="audio-avatar">
+                                        {% elif creator_avatar %}
+                                        <img src="{{ creator_avatar }}" alt="Audio thumbnail" class="audio-avatar">
+                                        {% endif %}
+                                        <div class="audio-player-main">
+                                            <audio controls src="{{ block.url }}" id="audio-block-{{ loop.index }}"></audio>
+                                            <button class="audio-speed-control" onclick="changeSpeed({{ loop.index }})">1x</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
 
                             {# Show videos after tags #}
                             {% set local_videos = post.video_local_paths if post.video_local_paths is defined and post.video_local_paths else [] %}
