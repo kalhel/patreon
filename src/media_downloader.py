@@ -971,6 +971,56 @@ class MediaDownloader:
 
         return {'absolute': downloaded, 'relative': relatives}
 
+    def _clean_vtt_alignment(self, vtt_path: Path) -> bool:
+        """
+        Clean alignment parameters from VTT subtitle files.
+
+        YouTube subtitles often include 'align:start position:0%' which forces
+        left alignment and breaks our centered subtitle CSS.
+
+        Args:
+            vtt_path: Path to VTT file to clean
+
+        Returns:
+            bool: True if cleaned successfully
+        """
+        try:
+            # Read the file
+            with open(vtt_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            original_content = content
+
+            # Remove alignment parameters from timestamp lines
+            # Pattern: "00:00:00.000 --> 00:00:00.000 align:start position:0%"
+            # We want: "00:00:00.000 --> 00:00:00.000"
+            import re
+
+            # Remove align:start, align:end, align:middle, etc.
+            content = re.sub(r'\s+align:\w+', '', content)
+
+            # Remove position:N%
+            content = re.sub(r'\s+position:\d+%', '', content)
+
+            # Remove line:N%
+            content = re.sub(r'\s+line:\d+%', '', content)
+
+            # Remove size:N%
+            content = re.sub(r'\s+size:\d+%', '', content)
+
+            # Only write if content changed
+            if content != original_content:
+                with open(vtt_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                logger.info(f"  🧹 [VTT CLEAN] Removed alignment parameters from: {vtt_path.name}")
+                return True
+
+            return False
+
+        except Exception as e:
+            logger.warning(f"  ⚠️  [VTT CLEAN] Error cleaning {vtt_path.name}: {e}")
+            return False
+
     def download_youtube_videos_from_post(self, post: Dict, creator_id: str) -> Dict[str, List[str]]:
         """
         Download YouTube videos from youtube_embed blocks
@@ -1143,6 +1193,9 @@ class MediaDownloader:
                                 subtitle_path.rename(new_path)
                                 logger.info(f"  📝 [YOUTUBE] Renamed subtitle: {subtitle_path.name} → {new_name}")
                                 subtitle_path = new_path
+
+                            # Clean alignment parameters from VTT file
+                            self._clean_vtt_alignment(subtitle_path)
 
                             logger.info(f"  ✓ [YOUTUBE] Found subtitle ({lang_code}): {subtitle_path.name}")
                             abs_sub_path = str(subtitle_path)
