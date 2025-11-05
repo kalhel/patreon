@@ -429,17 +429,40 @@
         }
 
         .content-preview.text-preview {
-            padding: 1rem 1.25rem;
-            background: #f5f5f5;
-            border-left: 3px solid #e0e0e0;
-            min-height: 80px;
+            padding: 2rem 1.5rem;
+            border-radius: 8px;
+            min-height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            margin: -0.5rem -0.5rem 0 -0.5rem;
+        }
+
+        /* Creator-specific colors for text preview backgrounds - dynamically generated */
+        {% for creator_id, color in creator_colors.items() %}
+        .content-preview.text-preview[data-creator="{{ creator_id }}"] {
+            background: linear-gradient(135deg, {{ color }} 0%, {{ color }}dd 100%);
+        }
+        {% endfor %}
+
+        /* Default color for unknown creators */
+        .content-preview.text-preview:not([data-creator]) {
+            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
         }
 
         .content-preview.text-preview p {
             margin: 0;
-            font-size: 0.875rem;
-            line-height: 1.6;
-            color: #666666;
+            font-size: 1.1rem;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.85);
+            text-align: center;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+            max-width: 100%;
+            word-wrap: break-word;
         }
 
         @media (max-width: 768px) {
@@ -647,11 +670,11 @@
                             {% endif %}
                         {% endfor %}
                         {% if text_to_show.value %}
-                            <div class="content-preview text-preview">
+                            <div class="content-preview text-preview" data-creator="{{ post.creator_id }}">
                                 <p>{{ text_to_show.value[:200] }}{% if text_to_show.value|length > 200 %}...{% endif %}</p>
                             </div>
                         {% elif post.full_content and post.full_content|length > 30 %}
-                            <div class="content-preview text-preview">
+                            <div class="content-preview text-preview" data-creator="{{ post.creator_id }}">
                                 <p>{{ post.full_content[:200] }}{% if post.full_content|length > 200 %}...{% endif %}</p>
                             </div>
                         {% endif %}

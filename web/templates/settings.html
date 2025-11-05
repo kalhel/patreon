@@ -472,6 +472,14 @@
                                     Enable Collections Scraping
                                 </label>
                             </div>
+                            <div class="form-group">
+                                <label>Text Preview Color</label>
+                                <div style="display: flex; gap: 1rem; align-items: center;">
+                                    <input type="color" class="edit-preview-color" value="{{ creator.preview_color or '#4db8a0' }}" style="width: 80px; height: 40px; cursor: pointer; border: 1px solid #333; border-radius: 6px; background: #0a0a0a;">
+                                    <div class="url-display" style="flex: 1;">{{ creator.preview_color or '#4db8a0' }}</div>
+                                </div>
+                                <small>Color for text preview background gradient</small>
+                            </div>
                             <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
                                 <button class="btn" onclick="saveCreator('{{ creator.creator_id }}')">💾 Save Changes</button>
                                 <button class="btn btn-secondary" onclick="toggleEditCreator('{{ creator.creator_id }}')">❌ Cancel</button>
@@ -521,6 +529,14 @@
                         <input type="checkbox" id="new-collections-enabled" checked>
                         Enable Collections Scraping
                     </label>
+                </div>
+                <div class="form-group">
+                    <label>Text Preview Color</label>
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <input type="color" id="new-preview-color" value="#4db8a0" style="width: 80px; height: 40px; cursor: pointer; border: 1px solid #333; border-radius: 6px; background: #0a0a0a;">
+                        <div class="url-display" style="flex: 1;">#4db8a0</div>
+                    </div>
+                    <small>Color for text preview background gradient</small>
                 </div>
                 <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
                     <button class="btn" onclick="addNewCreator()">➕ Add Creator</button>
@@ -698,7 +714,8 @@
                     name: item.querySelector('.edit-name').value,
                     url: item.querySelector('.edit-url').value,
                     collections_url: item.querySelector('.edit-collections-url').value,
-                    collections_enabled: item.querySelector('.edit-collections-enabled').checked
+                    collections_enabled: item.querySelector('.edit-collections-enabled').checked,
+                    preview_color: item.querySelector('.edit-preview-color').value
                 };
 
                 // Handle avatar upload if a file was selected
@@ -813,7 +830,8 @@
                     name: name,
                     url: url,
                     collections_url: collectionsUrl,
-                    collections_enabled: collectionsEnabled
+                    collections_enabled: collectionsEnabled,
+                    preview_color: document.getElementById('new-preview-color').value
                 };
 
                 // Handle avatar upload if a file was selected
@@ -877,6 +895,30 @@
         function reloadPage() {
             location.reload();
         }
+
+        // Update color display when color picker changes
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle edit mode color pickers
+            document.querySelectorAll('.edit-preview-color').forEach(function(input) {
+                input.addEventListener('input', function() {
+                    const displayDiv = this.parentElement.querySelector('.url-display');
+                    if (displayDiv) {
+                        displayDiv.textContent = this.value;
+                    }
+                });
+            });
+
+            // Handle new creator color picker
+            const newColorPicker = document.getElementById('new-preview-color');
+            if (newColorPicker) {
+                newColorPicker.addEventListener('input', function() {
+                    const displayDiv = this.parentElement.querySelector('.url-display');
+                    if (displayDiv) {
+                        displayDiv.textContent = this.value;
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>

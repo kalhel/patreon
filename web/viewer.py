@@ -44,6 +44,21 @@ CREATOR_AVATARS = {
 }
 
 
+def load_creators_config():
+    """Load creators configuration from config file"""
+    config_dir = Path(__file__).parent.parent / "config"
+    creators_file = config_dir / "creators.json"
+
+    if creators_file.exists():
+        try:
+            with open(creators_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return data.get('creators', [])
+        except:
+            pass
+    return []
+
+
 def format_date_eu(date_str):
     """Convert various date strings to DD/MM/YY format"""
     if not date_str:
@@ -184,9 +199,14 @@ def index():
             elif post.get('creator_avatar'):
                 creator_avatars[creator_id] = post['creator_avatar']
 
+    # Load creator colors from config
+    creators_config = load_creators_config()
+    creator_colors = {c['creator_id']: c.get('preview_color', '#4db8a0') for c in creators_config}
+
     return render_template('index.html',
                           creators=creators,
                           creator_avatars=creator_avatars,
+                          creator_colors=creator_colors,
                           total_posts=len(posts))
 
 
@@ -362,9 +382,14 @@ def view_tag(tag_name):
 
             tagged_posts.append(post)
 
+    # Load creator colors from config
+    creators_config = load_creators_config()
+    creator_colors = {c['creator_id']: c.get('preview_color', '#4db8a0') for c in creators_config}
+
     return render_template('tag.html',
                           tag=tag_name,
                           posts=tagged_posts,
+                          creator_colors=creator_colors,
                           total=len(tagged_posts))
 
 
@@ -404,11 +429,16 @@ def view_collection(creator_id, collection_id):
             'collection_image_local': None
         }
 
+    # Load creator colors from config
+    creators_config = load_creators_config()
+    creator_colors = {c['creator_id']: c.get('preview_color', '#4db8a0') for c in creators_config}
+
     return render_template('collection.html',
                           creator_id=creator_id,
                           creator_display_name=creator_display_name,
                           creator_avatar=creator_avatar,
                           collection=collection_info,
+                          creator_colors=creator_colors,
                           posts=collection_posts,
                           total=len(collection_posts))
 

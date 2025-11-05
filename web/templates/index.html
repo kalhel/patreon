@@ -544,18 +544,12 @@
             margin: -0.5rem -0.5rem 0 -0.5rem;
         }
 
-        /* Creator-specific colors for text preview backgrounds */
-        .content-preview.text-preview[data-creator="astrobymax"] {
-            background: linear-gradient(135deg, #4db8a0 0%, #3da690 100%);
+        /* Creator-specific colors for text preview backgrounds - dynamically generated */
+        {% for creator_id, color in creator_colors.items() %}
+        .content-preview.text-preview[data-creator="{{ creator_id }}"] {
+            background: linear-gradient(135deg, {{ color }} 0%, {{ color }}dd 100%);
         }
-
-        .content-preview.text-preview[data-creator="headonhistory"] {
-            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-        }
-
-        .content-preview.text-preview[data-creator="horoiproject"] {
-            background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
-        }
+        {% endfor %}
 
         /* Default color for unknown creators */
         .content-preview.text-preview:not([data-creator]) {
