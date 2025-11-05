@@ -821,60 +821,65 @@
                         console.log('✓ Loaded waveform from JSON:', waveformSrc);
                     }
                 } catch (e) {
-                    console.log('⚠ No waveform JSON, loading from audio:', audioSrc);
+                    console.log('⚠ No waveform JSON - waveform will load on first play');
                 }
 
-                // Create WaveSurfer instance
-                const config = {
-                    container: '#waveform-' + id,
-                    waveColor: '#e0e0e0',
-                    progressColor: '#1a1a1a',
-                    cursorColor: '#1a1a1a',
-                    barWidth: 3,
-                    barRadius: 3,
-                    cursorWidth: 2,
-                    height: 70,
-                    barGap: 3,
-                    normalize: true
-                };
-
-                // Use peaks if we have waveform data, otherwise load from URL
+                // Only create WaveSurfer if we have waveform data
                 if (waveformData && waveformData.data) {
-                    config.peaks = [waveformData.data];
-                    config.duration = waveformData.length / waveformData.sample_rate;
-                    config.backend = 'MediaElement'; // Use MediaElement for faster streaming playback
-                    // Don't set URL in config when using peaks - load on demand
+                    // Create WaveSurfer with pre-generated waveform
+                    const config = {
+                        container: '#waveform-' + id,
+                        waveColor: '#e0e0e0',
+                        progressColor: '#1a1a1a',
+                        cursorColor: '#1a1a1a',
+                        barWidth: 3,
+                        barRadius: 3,
+                        cursorWidth: 2,
+                        height: 70,
+                        barGap: 3,
+                        normalize: true,
+                        backend: 'MediaElement',
+                        peaks: [waveformData.data],
+                        duration: waveformData.length / waveformData.sample_rate
+                    };
+
+                    wavesurfers[id] = WaveSurfer.create(config);
+                    speeds[id] = 1;
+
+                    // Store that audio needs to be loaded on play
+                    wavesurfers[id]._audioLoaded = false;
+                    wavesurfers[id]._audioSrc = audioSrc;
+
+                    // When audio is ready, update the duration
+                    wavesurfers[id].on('ready', () => {
+                        const duration = wavesurfers[id].getDuration();
+                        document.getElementById('time-' + id).textContent =
+                            '0:00 / ' + formatTime(duration);
+                    });
+
+                    // Update time display
+                    wavesurfers[id].on('timeupdate', (currentTime) => {
+                        const duration = wavesurfers[id].getDuration();
+                        document.getElementById('time-' + id).textContent =
+                            formatTime(currentTime) + ' / ' + formatTime(duration);
+                    });
+
+                    // Update button when playback ends
+                    wavesurfers[id].on('finish', () => {
+                        const btn = document.querySelector(`button[onclick="playPause(${id})"]`);
+                        if (btn) btn.textContent = '▶';
+                    });
                 } else {
-                    config.url = audioSrc;
-                    config.backend = 'WebAudio'; // WebAudio for better waveform generation
+                    // No JSON - don't create WaveSurfer yet, will create on first play
+                    wavesurfers[id] = null;
+                    speeds[id] = 1;
+
+                    // Show placeholder in waveform container
+                    const container = document.getElementById('waveform-' + id);
+                    container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 70px; color: #999; font-size: 13px;">⚠️ Waveform se generará al reproducir</div>';
+                    container._audioSrc = audioSrc;
+                    container._needsInit = true;
                 }
-
-                wavesurfers[id] = WaveSurfer.create(config);
-                speeds[id] = 1;
-
-                // Store whether audio has been loaded
-                wavesurfers[id]._audioLoaded = !waveformData;
-                wavesurfers[id]._audioSrc = audioSrc;
-
-                // When audio is ready, update the duration
-                wavesurfers[id].on('ready', () => {
-                    const duration = wavesurfers[id].getDuration();
-                    document.getElementById('time-' + id).textContent =
-                        '0:00 / ' + formatTime(duration);
-                });
-
-                // Update time display
-                wavesurfers[id].on('timeupdate', (currentTime) => {
-                    const duration = wavesurfers[id].getDuration();
-                    document.getElementById('time-' + id).textContent =
-                        formatTime(currentTime) + ' / ' + formatTime(duration);
-                });
-
-                // Update button when playback ends
-                wavesurfers[id].on('finish', () => {
-                    const btn = document.querySelector(`button[onclick="playPause(${id})"]`);
-                    if (btn) btn.textContent = '▶';
-                });
             });
         });
 
@@ -896,6 +901,52 @@
         function playPause(id) {
             const button = event.target;
             const ws = wavesurfers[id];
+
+            // If WaveSurfer doesn't exist yet (no JSON waveform), create it now
+            if (!ws) {
+                const container = document.getElementById('waveform-' + id);
+                if (container._needsInit) {
+                    button.textContent = '⏳';
+                    button.disabled = true;
+                    container.innerHTML = ''; // Clear placeholder
+
+                    // Create WaveSurfer with audio URL (will generate waveform)
+                    wavesurfers[id] = WaveSurfer.create({
+                        container: '#waveform-' + id,
+                        waveColor: '#e0e0e0',
+                        progressColor: '#1a1a1a',
+                        cursorColor: '#1a1a1a',
+                        barWidth: 3,
+                        barRadius: 3,
+                        cursorWidth: 2,
+                        height: 70,
+                        barGap: 3,
+                        normalize: true,
+                        backend: 'MediaElement',
+                        url: container._audioSrc
+                    });
+
+                    wavesurfers[id].on('ready', () => {
+                        wavesurfers[id].play();
+                        button.textContent = '⏸';
+                        button.disabled = false;
+
+                        const duration = wavesurfers[id].getDuration();
+                        document.getElementById('time-' + id).textContent = '0:00 / ' + formatTime(duration);
+                    });
+
+                    // Setup time updates
+                    wavesurfers[id].on('timeupdate', (currentTime) => {
+                        const duration = wavesurfers[id].getDuration();
+                        document.getElementById('time-' + id).textContent = formatTime(currentTime) + ' / ' + formatTime(duration);
+                    });
+
+                    wavesurfers[id].on('finish', () => {
+                        button.textContent = '▶';
+                    });
+                }
+                return;
+            }
 
             if (ws.isPlaying()) {
                 ws.pause();
@@ -919,6 +970,8 @@
         }
 
         function changeSpeed(id) {
+            if (!wavesurfers[id]) return; // Can't change speed if not initialized yet
+
             const button = event.target;
             const speedOptions = [1, 1.25, 1.5, 1.75, 2];
             const currentIndex = speedOptions.indexOf(speeds[id]);
