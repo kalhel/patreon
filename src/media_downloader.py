@@ -19,6 +19,15 @@ import tempfile
 import requests
 from requests.cookies import RequestsCookieJar
 
+# Audio processing for waveform generation
+try:
+    from pydub import AudioSegment
+    import numpy as np
+    AUDIO_PROCESSING_AVAILABLE = True
+except ImportError:
+    AUDIO_PROCESSING_AVAILABLE = False
+    logger.warning("⚠️  pydub/numpy not available - waveform generation disabled")
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -842,6 +851,73 @@ class MediaDownloader:
 
         return {'absolute': downloaded, 'relative': relatives}
 
+    def generate_waveform(self, audio_path: Path, samples: int = 500) -> Optional[Path]:
+        """
+        Generate waveform data from audio file and save as JSON
+
+        Args:
+            audio_path: Path to audio file (.mp3, .wav, etc)
+            samples: Number of waveform samples to generate (default 500)
+
+        Returns:
+            Path to generated JSON file, or None if generation failed
+        """
+        if not AUDIO_PROCESSING_AVAILABLE:
+            logger.warning(f"⚠️  Cannot generate waveform - pydub/numpy not installed")
+            return None
+
+        try:
+            # Load audio file
+            audio = AudioSegment.from_file(str(audio_path))
+
+            # Convert to mono and get raw data
+            audio_mono = audio.set_channels(1)
+            samples_data = np.array(audio_mono.get_array_of_samples())
+
+            # Normalize to -1 to 1 range
+            max_val = np.abs(samples_data).max()
+            if max_val > 0:
+                samples_data = samples_data.astype(float) / max_val
+
+            # Downsample to desired number of samples
+            chunk_size = len(samples_data) // samples
+            if chunk_size < 1:
+                chunk_size = 1
+
+            waveform = []
+            for i in range(samples):
+                start = i * chunk_size
+                end = start + chunk_size
+                if end > len(samples_data):
+                    end = len(samples_data)
+                chunk = samples_data[start:end]
+                if len(chunk) > 0:
+                    # Use RMS (root mean square) for better waveform representation
+                    rms = np.sqrt(np.mean(chunk**2))
+                    waveform.append(float(rms))
+
+            # Save as JSON next to the audio file
+            json_path = audio_path.with_suffix('.json')
+            waveform_data = {
+                'version': 1,
+                'channels': 1,
+                'sample_rate': audio.frame_rate,
+                'samples_per_pixel': chunk_size,
+                'bits': 8,
+                'length': len(samples_data),
+                'data': waveform
+            }
+
+            with open(json_path, 'w') as f:
+                json.dump(waveform_data, f)
+
+            logger.info(f"  ✓ [WAVEFORM] Generated: {json_path.name}")
+            return json_path
+
+        except Exception as e:
+            logger.error(f"  ✗ [WAVEFORM] Failed to generate for {audio_path.name}: {e}")
+            return None
+
     def download_audios_from_post(self, post: Dict, creator_id: str, referer: Optional[str]) -> Dict[str, List[str]]:
         """
         Download all audio files from a post
@@ -887,6 +963,9 @@ class MediaDownloader:
                         relatives.append(output_path.relative_to(self.output_dir).as_posix())
                     except ValueError:
                         relatives.append(abs_path)
+
+                    # Generate waveform JSON for this audio file
+                    self.generate_waveform(output_path)
 
             time.sleep(0.5)
 

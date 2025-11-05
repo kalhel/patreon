@@ -607,7 +607,10 @@
                                         {% endif %}
                                         <div class="audio-player-main">
                                             <button class="audio-btn" onclick="playPause({{ loop.index }})">▶</button>
-                                            <div id="waveform-{{ loop.index }}" data-audio-src="{{ url_for('media_file', filename=audio_path) }}" style="flex: 1; min-width: 0;"></div>
+                                            <div id="waveform-{{ loop.index }}"
+                                                 data-audio-src="{{ url_for('media_file', filename=audio_path) }}"
+                                                 data-waveform-src="{{ url_for('media_file', filename=audio_path|replace('.mp3', '.json')) }}"
+                                                 style="flex: 1; min-width: 0;"></div>
                                             <span class="audio-time" id="time-{{ loop.index }}">0:00 / 0:00</span>
                                             <button class="audio-speed" onclick="changeSpeed({{ loop.index }})">1x</button>
                                         </div>
@@ -804,11 +807,25 @@
         document.addEventListener('DOMContentLoaded', function() {
             const waveformDivs = document.querySelectorAll('[id^="waveform-"]');
 
-            waveformDivs.forEach(div => {
+            waveformDivs.forEach(async (div) => {
                 const id = div.id.replace('waveform-', '');
                 const audioSrc = div.getAttribute('data-audio-src');
+                const waveformSrc = div.getAttribute('data-waveform-src');
 
-                wavesurfers[id] = WaveSurfer.create({
+                // Try to load pre-generated waveform JSON first
+                let waveformData = null;
+                try {
+                    const response = await fetch(waveformSrc);
+                    if (response.ok) {
+                        waveformData = await response.json();
+                        console.log('✓ Loaded waveform from JSON:', waveformSrc);
+                    }
+                } catch (e) {
+                    console.log('⚠ No waveform JSON, loading from audio:', audioSrc);
+                }
+
+                // Create WaveSurfer instance
+                const config = {
                     container: '#waveform-' + id,
                     waveColor: '#e0e0e0',
                     progressColor: '#1a1a1a',
@@ -818,11 +835,20 @@
                     cursorWidth: 2,
                     height: 70,
                     barGap: 3,
-                    url: audioSrc,
                     normalize: true,
                     backend: 'WebAudio'
-                });
+                };
 
+                // Use peaks if we have waveform data, otherwise load from URL
+                if (waveformData && waveformData.data) {
+                    config.peaks = [waveformData.data];
+                    config.duration = waveformData.length / waveformData.sample_rate;
+                    config.url = audioSrc; // Still need URL for playback
+                } else {
+                    config.url = audioSrc;
+                }
+
+                wavesurfers[id] = WaveSurfer.create(config);
                 speeds[id] = 1;
 
                 // When audio is ready, update the duration
