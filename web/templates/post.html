@@ -550,7 +550,17 @@
                                 </div>
                             {% endif %}
 
-                            {# Show audio after collections #}
+                            {# Show tags after collections #}
+                            {% if not shown_tags.value and post.patreon_tags %}
+                                <div class="tags-container">
+                                    {% for tag in post.patreon_tags %}
+                                    <a href="/tag/{{ tag }}" class="tag">{{ tag }}</a>
+                                    {% endfor %}
+                                </div>
+                                {% set shown_tags.value = true %}
+                            {% endif %}
+
+                            {# Show audio after tags #}
                             {% set local_audios = post.audio_local_paths if post.audio_local_paths is defined and post.audio_local_paths else [] %}
                             {% if local_audios %}
                                 {% for audio_path in local_audios %}
@@ -566,16 +576,6 @@
                                         </div>
                                     </div>
                                 {% endfor %}
-                            {% endif %}
-
-                            {# Show tags after audio #}
-                            {% if not shown_tags.value and post.patreon_tags %}
-                                <div class="tags-container">
-                                    {% for tag in post.patreon_tags %}
-                                    <a href="/tag/{{ tag }}" class="tag">{{ tag }}</a>
-                                    {% endfor %}
-                                </div>
-                                {% set shown_tags.value = true %}
                             {% endif %}
 
                             {# Show videos after tags #}
