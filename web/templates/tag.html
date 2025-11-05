@@ -830,17 +830,18 @@
                     cursorWidth: 2,
                     height: 50,
                     barGap: 2,
-                    normalize: true,
-                    backend: 'WebAudio'
+                    normalize: true
                 };
 
                 // Use peaks if we have waveform data, otherwise load from URL
                 if (waveformData && waveformData.data) {
                     config.peaks = [waveformData.data];
                     config.duration = waveformData.length / waveformData.sample_rate;
+                    config.backend = 'MediaElement'; // Use MediaElement for faster streaming playback
                     // Don't set URL in config when using peaks - load on demand
                 } else {
                     config.url = audioSrc;
+                    config.backend = 'WebAudio'; // WebAudio for better waveform generation
                 }
 
                 wavesurfersPreview[postId] = WaveSurfer.create(config);
