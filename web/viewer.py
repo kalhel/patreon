@@ -198,6 +198,10 @@ def view_post(post_id):
     if not post:
         return f"Post {post_id} not found", 404
 
+    # Get referrer info (for "back to collection" button)
+    from_collection_id = request.args.get('from_collection')
+    from_creator_id = post.get('creator_id')
+
     metadata = post.get('post_metadata') or {}
     creator_id = post.get('creator_id', 'unknown')
     creator_display_name = metadata.get('creator_name') or get_creator_display_name(creator_id)
@@ -273,6 +277,14 @@ def view_post(post_id):
     post['video_local_paths'] = local_video_paths
     post['audio_local_paths'] = local_audio_paths
 
+    # Get collection info for "back to collection" button
+    collection_info = None
+    if from_collection_id:
+        for collection in post.get('collections', []):
+            if collection.get('collection_id') == from_collection_id:
+                collection_info = collection
+                break
+
     return render_template(
         'post.html',
         post=post,
@@ -289,6 +301,9 @@ def view_post(post_id):
         published_label=published_label,
         date_skip_values=sorted(date_skip_originals),
         date_skip_values_lower=sorted(date_skip_lower),
+        from_collection_id=from_collection_id,
+        from_creator_id=from_creator_id,
+        collection_info=collection_info,
     )
 
 
@@ -344,6 +359,51 @@ def view_tag(tag_name):
                           tag=tag_name,
                           posts=tagged_posts,
                           total=len(tagged_posts))
+
+
+@app.route('/collection/<creator_id>/<collection_id>')
+def view_collection(creator_id, collection_id):
+    """View all posts in a specific collection"""
+    posts = load_all_posts()
+
+    # Filter posts that belong to this collection
+    collection_posts = []
+    collection_info = None
+
+    for post in posts:
+        if post.get('creator_id') != creator_id:
+            continue
+
+        collections = post.get('collections', [])
+        for collection in collections:
+            if collection.get('collection_id') == collection_id:
+                collection_posts.append(post)
+                # Store collection info from first match
+                if not collection_info:
+                    collection_info = collection
+                break
+
+    # Get creator info
+    creator_display_name = get_creator_display_name(creator_id)
+    creator_avatar = None
+    if creator_id in CREATOR_AVATARS:
+        creator_avatar = f"/static/{CREATOR_AVATARS[creator_id]}"
+
+    # Default collection info if not found
+    if not collection_info:
+        collection_info = {
+            'collection_id': collection_id,
+            'collection_name': f'Collection {collection_id}',
+            'collection_image_local': None
+        }
+
+    return render_template('collection.html',
+                          creator_id=creator_id,
+                          creator_display_name=creator_display_name,
+                          creator_avatar=creator_avatar,
+                          collection=collection_info,
+                          posts=collection_posts,
+                          total=len(collection_posts))
 
 
 @app.route('/api/posts')

@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ collection.collection_name }} - {{ creator_display_name }}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Black & White Traditional Design */
+        body {
+            background: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header {
+            background: #1a1a1a;
+            border-bottom: 4px solid #000000;
+            padding: 2.5rem 2rem;
+            text-align: center;
+        }
+
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: rgba(255, 255, 255, 0.85);
+            background: transparent;
+            text-decoration: none;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            transition: all 0.2s;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .back-button .icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+        }
+
+        .back-button .icon svg {
+            width: 100%;
+            height: 100%;
+            fill: currentColor;
+        }
+
+        .creator-info {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .creator-avatar-small {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .creator-name {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1rem;
+            font-weight: 500;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .collection-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .collection-image-large {
+            width: 120px;
+            height: 120px;
+            border-radius: 16px;
+            object-fit: cover;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .collection-title {
+            color: #ffffff;
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin: 0;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .collection-subtitle {
+            color: #b0b0b0;
+            font-size: 1rem;
+            font-weight: 300;
+            letter-spacing: 0.5px;
+        }
+
+        .wide-container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        .posts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        @media (min-width: 1200px) {
+            .posts-grid {
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            }
+        }
+
+        .post-card-compact {
+            background: radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.8) 0%, transparent 50%),
+                        linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+            border: 1px solid transparent;
+            border-radius: 12px;
+            padding: 2rem;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            position: relative;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+            overflow: hidden;
+        }
+
+        .post-card-compact::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #e0e0e0 0%, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%, #e0e0e0 100%);
+            border-radius: 12px;
+            z-index: -1;
+            opacity: 1;
+            transition: all 0.4s ease;
+        }
+
+        .post-card-compact:hover {
+            background: radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 1) 0%, transparent 50%),
+                        linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.06);
+            transform: translateY(-4px);
+        }
+
+        .post-card-compact:hover::before {
+            background: linear-gradient(45deg, #d0d0d0 0%, #e0e0e0 25%, #d0d0d0 50%, #e0e0e0 75%, #d0d0d0 100%);
+        }
+
+        .post-card-compact h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #1a1a1a;
+            line-height: 1.6;
+            flex-grow: 0;
+            min-height: 3em;
+        }
+
+        .post-card-compact h3 a {
+            color: #1a1a1a;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .post-card-compact h3 a::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1;
+        }
+
+        .content-preview {
+            margin-bottom: 1.5rem;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+            z-index: 5;
+        }
+
+        .content-preview.image-preview {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+        }
+
+        .content-preview.image-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .content-preview.text-preview {
+            padding: 1rem 1.25rem;
+            background: #f5f5f5;
+            border-left: 3px solid #e0e0e0;
+            min-height: 80px;
+        }
+
+        .content-preview.text-preview p {
+            margin: 0;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            color: #666666;
+        }
+
+        .post-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8125rem;
+            color: #666666;
+            margin-top: auto;
+            padding-top: 1.25rem;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .post-date {
+            font-weight: 400;
+            font-family: 'Georgia', serif;
+        }
+
+        .post-meta-icons {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .meta-icon {
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            opacity: 0.25;
+            filter: grayscale(100%);
+        }
+
+        .meta-icon.active {
+            opacity: 1;
+            filter: grayscale(0%);
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 2rem 1rem;
+            }
+
+            .collection-title {
+                font-size: 1.75rem;
+                letter-spacing: 2px;
+            }
+
+            .collection-image-large {
+                width: 80px;
+                height: 80px;
+            }
+
+            .posts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .wide-container {
+                padding: 2rem 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/" class="back-button">
+            <span class="icon">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                </svg>
+            </span>
+            <span>Back to Library</span>
+        </a>
+
+        <div class="creator-info">
+            {% if creator_avatar %}
+            <img src="{{ creator_avatar }}" alt="{{ creator_display_name }}" class="creator-avatar-small">
+            {% endif %}
+            <span class="creator-name">{{ creator_display_name }}</span>
+        </div>
+
+        <div class="collection-header">
+            {% if collection.collection_image_local %}
+            <img src="{{ url_for('media_file', filename=collection.collection_image_local) }}"
+                 alt="{{ collection.collection_name }}"
+                 class="collection-image-large">
+            {% endif %}
+            <h1 class="collection-title">{{ collection.collection_name }}</h1>
+            <div class="collection-subtitle">{{ total }} post{{ 's' if total != 1 else '' }}</div>
+        </div>
+    </div>
+
+    <div class="wide-container">
+        {% if posts %}
+            <div class="posts-grid">
+                {% for post in posts %}
+                <div class="post-card-compact">
+                    <h3><a href="/post/{{ post.post_id }}?from_collection={{ collection.collection_id }}">{{ post.title or 'Untitled Post' }}</a></h3>
+
+                    {# Content preview #}
+                    {% set preview_shown = namespace(value=false) %}
+
+                    {# Check for first image #}
+                    {% if post.content_blocks and not preview_shown.value %}
+                        {% for block in post.content_blocks %}
+                            {% if not preview_shown.value and block.type == 'image' %}
+                                <div class="content-preview image-preview">
+                                    <img src="{{ block.url }}" alt="{{ block.caption or '' }}" loading="lazy">
+                                </div>
+                                {% set preview_shown.value = true %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+
+                    {# Show first paragraph as fallback #}
+                    {% if not preview_shown.value and post.content_blocks %}
+                        {% for block in post.content_blocks %}
+                            {% if not preview_shown.value and block.type == 'paragraph' and block.text and block.text|length > 30 %}
+                                <div class="content-preview text-preview">
+                                    <p>{{ block.text[:200] }}{% if block.text|length > 200 %}...{% endif %}</p>
+                                </div>
+                                {% set preview_shown.value = true %}
+                            {% endif %}
+                        {% endfor %}
+                    {% elif not preview_shown.value and post.full_content and post.full_content|length > 30 %}
+                        <div class="content-preview text-preview">
+                            <p>{{ post.full_content[:200] }}{% if post.full_content|length > 200 %}...{% endif %}</p>
+                        </div>
+                    {% endif %}
+
+                    <div class="post-footer">
+                        <div class="post-date">
+                            {{ post.post_metadata.published_date if post.post_metadata else 'N/A' }}
+                        </div>
+                        <div class="post-meta-icons">
+                            {% set img_count = post.content_blocks | selectattr('type', 'equalto', 'image') | list | length if post.content_blocks else (post.images | length if post.images else 0) %}
+                            {% set vid_count = ((post.content_blocks | selectattr('type', 'equalto', 'video') | list | length) + (post.content_blocks | selectattr('type', 'equalto', 'youtube_embed') | list | length)) if post.content_blocks else (post.videos | length if post.videos else 0) %}
+                            {% set aud_count = post.content_blocks | selectattr('type', 'equalto', 'audio') | list | length if post.content_blocks else (post.audios | length if post.audios else 0) %}
+
+                            <span class="meta-icon {% if img_count > 0 %}active{% endif %}" title="Images">🖼️</span>
+                            <span class="meta-icon {% if vid_count > 0 %}active{% endif %}" title="Videos">🎥</span>
+                            <span class="meta-icon {% if aud_count > 0 %}active{% endif %}" title="Audio">🎵</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <p>No posts found in this collection.</p>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

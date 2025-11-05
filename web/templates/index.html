@@ -272,6 +272,31 @@
             opacity: 0;
         }
 
+        .collection-info.clickable {
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 0.5rem;
+            margin: -0.5rem;
+            border-radius: 8px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .collection-info.clickable:hover {
+            background: rgba(0, 0, 0, 0.03);
+            transform: translateX(3px);
+        }
+
+        .collection-info.clickable:hover .collection-thumbnail {
+            border-color: #1a1a1a;
+            transform: scale(1.05);
+        }
+
+        .collection-info.clickable:hover .collection-name {
+            color: #1a1a1a;
+        }
+
         .collection-thumbnail {
             width: 36px;
             height: 36px;
@@ -1249,12 +1274,12 @@
                         <div class="post-card-collection">
                             {% if post.collections and post.collections|length > 0 %}
                                 {% set collection = post.collections[0] %}
-                                <div class="collection-info">
+                                <a href="/collection/{{ post.creator_id }}/{{ collection.collection_id }}" class="collection-info clickable">
                                     {% if collection.collection_image_local %}
                                         <img src="{{ url_for('media_file', filename=collection.collection_image_local) }}" alt="{{ collection.collection_name }}" class="collection-thumbnail" loading="lazy">
                                     {% endif %}
                                     <span class="collection-name">{{ collection.collection_name }}</span>
-                                </div>
+                                </a>
                             {% else %}
                                 <div class="collection-info empty">
                                     <!-- Empty space to maintain consistent card height -->
