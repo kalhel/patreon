@@ -850,66 +850,87 @@ class PatreonScraperV2:
     def _append_mux_streams(self, post_detail: Dict):
         """Detect Mux playback IDs in the page and add stream/download URLs."""
 
+        logger.info("  🔍 [MUX] Buscando playback IDs de Mux en la página...")
         playback_map = {}
 
         # Find elements with data-mux-playback-id attribute
         try:
             elements = self.driver.find_elements(By.CSS_SELECTOR, '[data-mux-playback-id]')
+            logger.info(f"  🔍 [MUX] Encontrados {len(elements)} elementos con data-mux-playback-id")
             for elem in elements:
                 playback_id = elem.get_attribute('data-mux-playback-id')
                 token = elem.get_attribute('data-mux-token') or ''
                 if playback_id:
+                    logger.info(f"  ✓ [MUX] Playback ID desde data-attribute: {playback_id[:20]}... (token: {'SÍ' if token else 'NO'})")
                     playback_map.setdefault(playback_id, set())
                     if token:
                         playback_map[playback_id].add(token)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"  ⚠️  [MUX] Error buscando data-mux-playback-id: {e}")
 
         # Find Mux thumbnail images and extract playback IDs
         try:
             thumbs = self.driver.find_elements(By.CSS_SELECTOR, 'img[src*="image.mux.com/"]')
+            logger.info(f"  🔍 [MUX] Encontradas {len(thumbs)} imágenes de Mux thumbnail")
             for img in thumbs:
                 src = img.get_attribute('src') or ''
                 match = re.search(r'image\.mux\.com/([^/]+)/thumbnail', src)
                 if match:
                     playback_id = match.group(1)
+                    logger.info(f"  ✓ [MUX] Playback ID desde thumbnail: {playback_id[:20]}...")
                     token = ''
                     try:
                         qs = parse_qs(urlparse(src).query)
                         token = qs.get('token', [''])[0]
+                        if token:
+                            logger.info(f"  ✓ [MUX] Token extraído: {token[:30]}...")
                     except Exception:
                         pass
                     playback_map.setdefault(playback_id, set())
                     if token:
                         playback_map[playback_id].add(token)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"  ⚠️  [MUX] Error buscando thumbnails: {e}")
 
         if not playback_map:
+            logger.warning("  ❌ [MUX] NO se encontraron playback IDs de Mux")
             return
+
+        logger.info(f"  ✓ [MUX] Total playback IDs encontrados: {len(playback_map)}")
 
         downloads = post_detail.get('video_downloads', []) or []
         streams = post_detail.get('video_streams', []) or []
         existing_videos = post_detail.get('videos', []) or []
 
+        logger.info(f"  📋 [MUX] Estado ANTES - downloads:{len(downloads)}, streams:{len(streams)}, videos:{len(existing_videos)}")
+
         # Build Mux stream and download URLs
+        urls_added = 0
         for playback_id, tokens in playback_map.items():
             if not playback_id:
                 continue
 
             if tokens:
                 for token in tokens:
-                    stream_url = f"https://stream.mux.com/{playback_id}.m3u8?token={token}"
-                    download_url = f"https://stream.mux.com/{playback_id}/medium.mp4?token={token}"
-                    streams.append(stream_url)
-                    downloads.append(download_url)
-                    existing_videos.append(download_url)
+                    stream_url = f"https://stream.mux.com/{playback_id}.m3u8?token={token[:30]}..."
+                    download_url = f"https://stream.mux.com/{playback_id}/medium.mp4?token={token[:30]}..."
+                    logger.info(f"  ➕ [MUX] Agregando HLS: {stream_url}")
+                    logger.info(f"  ➕ [MUX] Agregando MP4: {download_url}")
+                    streams.append(f"https://stream.mux.com/{playback_id}.m3u8?token={token}")
+                    downloads.append(f"https://stream.mux.com/{playback_id}/medium.mp4?token={token}")
+                    existing_videos.append(f"https://stream.mux.com/{playback_id}/medium.mp4?token={token}")
+                    urls_added += 1
             else:
                 stream_url = f"https://stream.mux.com/{playback_id}.m3u8"
                 download_url = f"https://stream.mux.com/{playback_id}/medium.mp4"
+                logger.info(f"  ➕ [MUX] Agregando HLS (sin token): {stream_url}")
+                logger.info(f"  ➕ [MUX] Agregando MP4 (sin token): {download_url}")
                 streams.append(stream_url)
                 downloads.append(download_url)
                 existing_videos.append(download_url)
+                urls_added += 1
+
+        logger.info(f"  ✓ [MUX] Total URLs agregadas: {urls_added}")
 
         # Deduplicate
         def dedupe(seq):
@@ -924,6 +945,8 @@ class PatreonScraperV2:
         post_detail['video_downloads'] = dedupe(downloads)
         post_detail['video_streams'] = dedupe(streams)
         post_detail['videos'] = dedupe(existing_videos)
+
+        logger.info(f"  📋 [MUX] Estado DESPUÉS - downloads:{len(post_detail['video_downloads'])}, streams:{len(post_detail['video_streams'])}, videos:{len(post_detail['videos'])}")
 
     def save_posts(self, posts: List[Dict], creator_id: str, output_dir: str = "data/raw"):
         """

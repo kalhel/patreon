@@ -536,17 +536,28 @@ class MediaDownloader:
         stream_only_urls = dedupe_mux(stream_only_urls)
         stream_only_urls = filter_video_candidates(stream_only_urls)
 
+        logger.info(f"  📊 [VIDEO DL] URLs después de dedupe/filter:")
+        logger.info(f"  📊 [VIDEO DL] - video_urls (directas): {len(video_urls)}")
+        for i, url in enumerate(video_urls[:3]):
+            logger.info(f"  📊 [VIDEO DL]   {i+1}. {url[:80]}...")
+        logger.info(f"  📊 [VIDEO DL] - stream_only_urls (HLS): {len(stream_only_urls)}")
+        for i, url in enumerate(stream_only_urls[:3]):
+            logger.info(f"  📊 [VIDEO DL]   {i+1}. {url[:80]}...")
+        logger.info(f"  📊 [VIDEO DL] - expected_count: {expected_count}")
+
         if not video_urls:
             if stream_only_urls:
-                logger.info("Video available as stream-only (HLS). Attempting yt-dlp fallback.")
+                logger.info("  🎬 [VIDEO DL] Video disponible como stream-only (HLS). Intentando yt-dlp fallback.")
 
                 for idx, stream_url in enumerate(stream_only_urls):
+                    logger.info(f"  🎬 [VIDEO DL] Procesando stream HLS #{idx+1}: {stream_url[:80]}...")
                     filename = self._get_filename_from_url(stream_url, '.mp4')
                     if Path(filename).suffix.lower() not in video_extensions:
                         filename = f"{Path(filename).stem}.mp4"
 
                     filename = f"{post_id}_{idx:02d}_{filename}"
                     output_path = creator_dir / filename
+                    logger.info(f"  💾 [VIDEO DL] Descargando a: {output_path}")
 
                     if self._download_with_ytdlp([stream_url], output_path, referer):
                         abs_path = str(output_path)
