@@ -550,8 +550,15 @@
                                 </div>
                             {% endif %}
 
-                            {# Audio and tags will be shown in their natural order from content_blocks #}
-                            {# Tags appear before first audio block #}
+                            {# Show tags after collections #}
+                            {% if not shown_tags.value and post.patreon_tags %}
+                                <div class="tags-container">
+                                    {% for tag in post.patreon_tags %}
+                                    <a href="/tag/{{ tag }}" class="tag">{{ tag }}</a>
+                                    {% endfor %}
+                                </div>
+                                {% set shown_tags.value = true %}
+                            {% endif %}
 
                             {# Show videos after audio #}
                             {% set local_videos = post.video_local_paths if post.video_local_paths is defined and post.video_local_paths else [] %}
@@ -623,16 +630,6 @@
                             {# SKIP - Videos se muestran desde video_local_paths más abajo #}
 
                         {% elif block.type == 'audio' %}
-                            {# Show tags before audio if not shown yet #}
-                            {% if not shown_tags.value and post.patreon_tags %}
-                                <div class="tags-container">
-                                    {% for tag in post.patreon_tags %}
-                                    <a href="/tag/{{ tag }}" class="tag">{{ tag }}</a>
-                                    {% endfor %}
-                                </div>
-                                {% set shown_tags.value = true %}
-                            {% endif %}
-
                             <div class="content-block audio">
                                 <div class="audio-player-container">
                                     {% if block.get('thumbnail') %}
