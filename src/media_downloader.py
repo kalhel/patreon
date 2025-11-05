@@ -712,6 +712,62 @@ class MediaDownloader:
 
         return {'absolute': downloaded, 'relative': relatives}
 
+    def download_subtitles_from_post(self, post: Dict, creator_id: str, referer: Optional[str]) -> Dict[str, List[str]]:
+        """
+        Download subtitle files (.vtt) from a post
+
+        Args:
+            post: Post dictionary
+            creator_id: Creator identifier
+            referer: HTTP referer for authenticated asset requests
+
+        Returns:
+            Dict with 'absolute' and 'relative' lists of downloaded subtitle paths
+        """
+        downloaded = []
+        relatives = []
+
+        # Get video_downloads which may contain .vtt files
+        video_downloads = self._flatten_urls(post.get('video_downloads'))
+
+        # Filter only .vtt files
+        vtt_urls = [url for url in video_downloads if url and '.vtt' in url.lower()]
+
+        if not vtt_urls:
+            logger.info("  📝 [SUBTITLES] No hay archivos .vtt para descargar")
+            return {'absolute': [], 'relative': []}
+
+        logger.info(f"  📝 [SUBTITLES] Encontrados {len(vtt_urls)} archivos de subtítulos")
+
+        creator_dir = self.videos_dir / creator_id
+        creator_dir.mkdir(exist_ok=True)
+        post_id = post.get('post_id', 'unknown')
+
+        for i, url in enumerate(vtt_urls):
+            filename = self._get_filename_from_url(url, '.vtt')
+            filename = f"{post_id}_{i:02d}_{filename}"
+            output_path = creator_dir / filename
+
+            try:
+                response = self.session.get(url, headers={'Referer': referer}, timeout=30)
+                response.raise_for_status()
+
+                output_path.write_bytes(response.content)
+                abs_path = str(output_path)
+                downloaded.append(abs_path)
+
+                try:
+                    relatives.append(output_path.relative_to(self.output_dir).as_posix())
+                except ValueError:
+                    relatives.append(abs_path)
+
+                logger.info(f"  ✓ [SUBTITLES] Descargado: {filename}")
+
+            except Exception as e:
+                logger.warning(f"  ⚠️  [SUBTITLES] Error descargando {url[:50]}: {e}")
+
+        return {'absolute': downloaded, 'relative': relatives}
+
     def download_audios_from_post(self, post: Dict, creator_id: str, referer: Optional[str]) -> Dict[str, List[str]]:
         """
         Download all audio files from a post
@@ -784,6 +840,8 @@ class MediaDownloader:
             'videos': [],
             'videos_relative': [],
             'video_streams': post.get('video_streams', []),
+            'video_subtitles': [],
+            'video_subtitles_relative': [],
             'audios': [],
             'audios_relative': []
         }
@@ -804,6 +862,11 @@ class MediaDownloader:
         videos = self.download_videos_from_post(post, creator_id, referer, expected_videos)
         result['videos'] = videos['absolute']
         result['videos_relative'] = videos['relative']
+
+        # Download subtitles (.vtt files)
+        subtitles = self.download_subtitles_from_post(post, creator_id, referer)
+        result['video_subtitles'] = subtitles['absolute']
+        result['video_subtitles_relative'] = subtitles['relative']
 
         # Download audios
         audios = self.download_audios_from_post(post, creator_id, referer)
