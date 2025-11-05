@@ -171,13 +171,17 @@ Mostrar badge en tarjetas de posts que pertenecen a collections:
 - [x] Añadir campo `collections` a cada post
 
 ### Paso 3: Web Viewer - Mínimo (30 min)
-- [ ] Cargar collections en viewer.py
-- [ ] Mostrar badge en post cards
+- [x] Cargar collections en viewer.py
+- [x] Mostrar badge en post cards
 
 ### Paso 4: Web Viewer - Completo (1-2 horas)
-- [ ] Página de collection
-- [ ] Grid de collections en index
-- [ ] Filtrado por collection
+- [x] Página de collection
+- [x] Grid de collections en index
+- [x] Filtrado por collection
+- [x] Navegación contextual con "Back to Collection"
+- [x] Collections clickables en todas las vistas
+- [x] Preview de audio/video/YouTube en collection view
+- [x] Header compacto horizontal optimizado
 
 ## Notas Técnicas
 
