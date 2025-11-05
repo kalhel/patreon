@@ -1381,7 +1381,6 @@
                                 {% endif %}
                                 <div class="audio-player-main">
                                     <button class="audio-btn" onclick="playPauseSimple('{{ post.post_id }}')">▶</button>
-                                    <div class="simple-waveform" id="waveform-{{ post.post_id }}" data-waveform-src="{{ url_for('media_file', filename=audio_path|replace('.mp3', '.json')) }}"></div>
                                     <span class="audio-time" id="time-{{ post.post_id }}">--:--</span>
                                     <button class="audio-speed" onclick="changeSpeedSimple('{{ post.post_id }}')">1x</button>
                                 </div>
@@ -1710,86 +1709,34 @@
         searchInput.addEventListener('input', filterPosts);
     </script>
 
-    <!-- Simple audio player for previews (no WaveSurfer) -->
+    <!-- Simple audio player for previews -->
     <script>
         // Simple player speeds
         const audioSpeeds = {};
 
-        // Load waveform visualizations from JSON
+        // Setup audio players
         document.addEventListener('DOMContentLoaded', function() {
-            const waveformDivs = document.querySelectorAll('.simple-waveform');
+            const audioElements = document.querySelectorAll('audio[id^="audio-"]');
 
-            waveformDivs.forEach(async (div) => {
-                const postId = div.id.replace('waveform-', '');
-                const waveformSrc = div.getAttribute('data-waveform-src');
-                const audioEl = document.getElementById('audio-' + postId);
-
+            audioElements.forEach((audioEl) => {
+                const postId = audioEl.id.replace('audio-', '');
                 audioSpeeds[postId] = 1;
 
-                // Try to load waveform JSON
-                try {
-                    const response = await fetch(waveformSrc);
-                    if (response.ok) {
-                        const waveformData = await response.json();
-                        renderStaticWaveform(div, waveformData.data, postId);
-                    } else {
-                        div.classList.add('loading');
-                        div.textContent = '♪';
-                    }
-                } catch (e) {
-                    div.classList.add('loading');
-                    div.textContent = '♪';
-                }
-
                 // Setup audio events
-                if (audioEl) {
-                    audioEl.addEventListener('loadedmetadata', () => {
-                        updateTimeDisplay(postId, 0, audioEl.duration);
-                    });
+                audioEl.addEventListener('loadedmetadata', () => {
+                    updateTimeDisplay(postId, 0, audioEl.duration);
+                });
 
-                    audioEl.addEventListener('timeupdate', () => {
-                        updateTimeDisplay(postId, audioEl.currentTime, audioEl.duration);
-                        updateWaveformProgress(postId, audioEl.currentTime, audioEl.duration);
-                    });
+                audioEl.addEventListener('timeupdate', () => {
+                    updateTimeDisplay(postId, audioEl.currentTime, audioEl.duration);
+                });
 
-                    audioEl.addEventListener('ended', () => {
-                        const btn = document.querySelector(`button[onclick="playPauseSimple('${postId}')"]`);
-                        if (btn) btn.textContent = '▶';
-                    });
-                }
+                audioEl.addEventListener('ended', () => {
+                    const btn = document.querySelector(`button[onclick="playPauseSimple('${postId}')"]`);
+                    if (btn) btn.textContent = '▶';
+                });
             });
         });
-
-        function renderStaticWaveform(container, peaks, postId) {
-            container.innerHTML = '';
-            // Sample every Nth peak for ~100 bars
-            const step = Math.ceil(peaks.length / 100);
-            for (let i = 0; i < peaks.length; i += step) {
-                const bar = document.createElement('div');
-                bar.className = 'simple-waveform-bar';
-                const height = Math.max(2, peaks[i] * 100);
-                bar.style.height = height + '%';
-                bar.dataset.index = i;
-                container.appendChild(bar);
-            }
-        }
-
-        function updateWaveformProgress(postId, currentTime, duration) {
-            const waveform = document.getElementById('waveform-' + postId);
-            if (!waveform) return;
-
-            const bars = waveform.querySelectorAll('.simple-waveform-bar');
-            const progress = currentTime / duration;
-            const playedBars = Math.floor(bars.length * progress);
-
-            bars.forEach((bar, index) => {
-                if (index < playedBars) {
-                    bar.classList.add('played');
-                } else {
-                    bar.classList.remove('played');
-                }
-            });
-        }
 
         function updateTimeDisplay(postId, current, total) {
             const timeEl = document.getElementById('time-' + postId);
