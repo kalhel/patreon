@@ -85,55 +85,49 @@ def extract_collection_data(driver, collection_element) -> Optional[Dict]:
         Dictionary with collection data or None if extraction failed
     """
     try:
-        # Try to find collection link
+        # Find collection link using data-tag
         try:
-            link = collection_element.find_element(By.CSS_SELECTOR, 'a[href*="/collection/"]')
+            link = collection_element.find_element(By.CSS_SELECTOR, '[data-tag="box-collection-title-href"]')
             collection_url = link.get_attribute('href')
 
             # Extract collection ID from URL
-            # Format: https://www.patreon.com/collection/12345?filters...
+            # Format: https://www.patreon.com/collection/12345
             collection_id = collection_url.split('/collection/')[-1].split('?')[0]
         except NoSuchElementException:
             logger.warning("  ⚠️  Could not find collection link")
             return None
 
-        # Try to find collection name
+        # Find collection name using data-tag
         try:
-            # Common selectors for collection title
-            name_element = collection_element.find_element(By.CSS_SELECTOR, 'h2, h3, [data-tag="collection-title"]')
+            name_element = collection_element.find_element(By.CSS_SELECTOR, '[data-tag="box-collection-title"]')
             collection_name = name_element.text.strip()
         except NoSuchElementException:
-            # Fallback to link text
-            collection_name = link.text.strip() if link else "Unnamed Collection"
+            collection_name = "Unnamed Collection"
+            logger.warning(f"  ⚠️  Could not find collection name for {collection_id}")
 
-        # Try to find collection image
+        # Find collection image from data-tag with imgurl attribute
         collection_image = None
         try:
-            img = collection_element.find_element(By.TAG_NAME, 'img')
-            collection_image = img.get_attribute('src')
+            img_element = collection_element.find_element(By.CSS_SELECTOR, '[data-tag="box-collection-thumbnail"]')
+            collection_image = img_element.get_attribute('imgurl')
         except NoSuchElementException:
             logger.debug("  No image found for collection")
 
-        # Try to find post count
+        # Find post count using data-tag
         post_count = 0
         try:
-            # Look for text like "15 posts" or similar
-            text_content = collection_element.text
-            if 'post' in text_content.lower():
-                import re
-                match = re.search(r'(\d+)\s*post', text_content.lower())
-                if match:
-                    post_count = int(match.group(1))
-        except Exception:
-            pass
+            count_element = collection_element.find_element(By.CSS_SELECTOR, '[data-tag="box-collection-num-post"]')
+            post_count = int(count_element.text.strip())
+        except (NoSuchElementException, ValueError):
+            logger.debug("  No post count found for collection")
 
-        # Try to find description
+        # Find description using data-tag (optional)
         description = None
         try:
-            desc_element = collection_element.find_element(By.CSS_SELECTOR, 'p, [data-tag="collection-description"]')
+            desc_element = collection_element.find_element(By.CSS_SELECTOR, '[data-tag="box-collection-description"]')
             description = desc_element.text.strip()
         except NoSuchElementException:
-            pass
+            pass  # Description is optional
 
         collection_data = {
             "collection_id": collection_id,
@@ -142,15 +136,17 @@ def extract_collection_data(driver, collection_element) -> Optional[Dict]:
             "collection_image": collection_image,
             "description": description,
             "post_count": post_count,
-            "post_ids": [],  # Will be populated by clicking into the collection
+            "post_ids": [],  # Will be populated by visiting the collection
             "scraped_at": datetime.now().isoformat()
         }
 
-        logger.info(f"  ✓ Found collection: {collection_name} ({collection_id})")
+        logger.info(f"  ✓ Found collection: {collection_name} (ID: {collection_id}, Posts: {post_count})")
         return collection_data
 
     except Exception as e:
         logger.error(f"  ❌ Error extracting collection data: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return None
 
 
@@ -168,44 +164,64 @@ def extract_post_ids_from_collection(driver, collection_url: str) -> List[str]:
     logger.info(f"  📂 Extracting posts from collection: {collection_url}")
 
     try:
-        # Navigate to collection
-        driver.get(collection_url)
-        time.sleep(3)  # Wait for page load
+        # Navigate to collection with condensed view
+        if '?' in collection_url:
+            collection_url = collection_url.split('?')[0]
+        collection_url_condensed = f"{collection_url}?view=condensed"
+
+        driver.get(collection_url_condensed)
+        time.sleep(4)  # Wait for page load
 
         post_ids = []
 
-        # Try multiple strategies to find post elements
-        selectors = [
-            'a[href*="/posts/"]',
-            '[data-tag="post-card"] a',
-            'article a[href*="/posts/"]'
-        ]
+        # Find all links to posts
+        # Format: https://www.patreon.com/posts/116593622?collection=1815761
+        post_links = driver.find_elements(By.CSS_SELECTOR, 'a[href*="/posts/"]')
 
-        for selector in selectors:
-            try:
-                post_links = driver.find_elements(By.CSS_SELECTOR, selector)
+        for link in post_links:
+            href = link.get_attribute('href')
+            if href and '/posts/' in href:
+                try:
+                    # Extract post ID from URL
+                    # Format options:
+                    # 1. https://www.patreon.com/posts/116593622?collection=...
+                    # 2. https://www.patreon.com/posts/title-name-116593622
 
-                for link in post_links:
-                    href = link.get_attribute('href')
-                    if href and '/posts/' in href:
-                        # Extract post ID from URL
-                        # Format: https://www.patreon.com/posts/title-12345678
-                        parts = href.rstrip('/').split('-')
-                        if parts and parts[-1].isdigit():
-                            post_id = parts[-1]
-                            if post_id not in post_ids:
-                                post_ids.append(post_id)
+                    # Remove query parameters
+                    url_without_params = href.split('?')[0]
 
-                if post_ids:
-                    break  # Found posts with this selector
-            except Exception:
-                continue
+                    # Get the part after /posts/
+                    after_posts = url_without_params.split('/posts/')[-1]
+
+                    # Try to extract post ID
+                    # If it's just numbers, use it directly
+                    if after_posts.isdigit():
+                        post_id = after_posts
+                    else:
+                        # If it has dashes (title-name-123456), get the last part
+                        parts = after_posts.split('-')
+                        # Find the last numeric part
+                        for part in reversed(parts):
+                            if part.isdigit():
+                                post_id = part
+                                break
+                        else:
+                            continue  # Skip if no numeric ID found
+
+                    if post_id and post_id not in post_ids:
+                        post_ids.append(post_id)
+
+                except Exception as e:
+                    logger.debug(f"  Could not extract post ID from {href}: {e}")
+                    continue
 
         logger.info(f"  ✓ Found {len(post_ids)} posts in collection")
         return post_ids
 
     except Exception as e:
         logger.error(f"  ❌ Error extracting post IDs: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return []
 
 
@@ -243,33 +259,46 @@ def scrape_collections_for_creator(
         try:
             logger.info(f"🔍 Trying collections URL: {collections_url}")
             driver.get(collections_url)
-            time.sleep(3)  # Wait for page load
+            time.sleep(5)  # Wait for page load and dynamic content
 
-            # Check if page loaded successfully (not 404)
-            if "404" in driver.title or "not found" in driver.page_source.lower():
-                logger.warning(f"  ⚠️  Collections page not found")
-                continue
+            # Look for the Collections heading to confirm we're on the right page
+            try:
+                heading = driver.find_element(By.XPATH, "//h1[contains(text(), 'Collections')]")
+                logger.info(f"  ✓ Found Collections page")
+            except NoSuchElementException:
+                logger.warning(f"  ⚠️  Collections heading not found, may not be the right page")
+                # Continue anyway, might still work
 
-            # Try to find collection cards
-            collection_selectors = [
-                '[data-tag="collection-card"]',
-                'a[href*="/collection/"]',
-                'div[class*="collection"]'
-            ]
+            # Find collection cards by looking for elements with collection title links
+            # Each collection card contains a [data-tag="box-collection-title-href"] element
+            try:
+                collection_links = driver.find_elements(By.CSS_SELECTOR, '[data-tag="box-collection-title-href"]')
+                logger.info(f"  ✓ Found {len(collection_links)} collections")
 
-            collection_elements = []
-            for selector in collection_selectors:
-                try:
-                    elements = driver.find_elements(By.CSS_SELECTOR, selector)
-                    if elements:
-                        collection_elements = elements
-                        logger.info(f"  ✓ Found {len(elements)} collection elements with selector: {selector}")
-                        break
-                except Exception:
+                if not collection_links:
+                    logger.warning(f"  ⚠️  No collections found on page")
                     continue
 
-            if not collection_elements:
-                logger.warning(f"  ⚠️  No collections found on page")
+                # For each collection link, find its parent container to extract all data
+                collection_elements = []
+                for link in collection_links:
+                    # Navigate up to find the parent container with all collection data
+                    # Usually 4-5 levels up
+                    parent = link
+                    for _ in range(6):
+                        parent = parent.find_element(By.XPATH, '..')
+                        # Check if this parent contains all the data-tags we need
+                        try:
+                            parent.find_element(By.CSS_SELECTOR, '[data-tag="box-collection-title"]')
+                            collection_elements.append(parent)
+                            break
+                        except NoSuchElementException:
+                            continue
+
+                logger.info(f"  ✓ Found {len(collection_elements)} collection card elements")
+
+            except NoSuchElementException:
+                logger.warning(f"  ⚠️  No collection elements found")
                 continue
 
             # Extract data from each collection
