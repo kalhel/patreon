@@ -406,6 +406,95 @@ def view_collection(creator_id, collection_id):
                           total=len(collection_posts))
 
 
+@app.route('/settings', methods=['GET'])
+def settings():
+    """Settings page for configuration and processing status"""
+    config_dir = Path(__file__).parent.parent / "config"
+
+    # Load credentials
+    credentials = {}
+    credentials_file = config_dir / "credentials.json"
+    if credentials_file.exists():
+        with open(credentials_file, 'r', encoding='utf-8') as f:
+            credentials = json.load(f)
+
+    # Load creators
+    creators_list = []
+    creators_file = config_dir / "creators.json"
+    if creators_file.exists():
+        with open(creators_file, 'r', encoding='utf-8') as f:
+            creators_data = json.load(f)
+            creators_list = creators_data.get('creators', [])
+
+    # Get processing status for each creator
+    processing_status = []
+    for creator in creators_list:
+        creator_id = creator['creator_id']
+
+        # Check Phase 2: Posts detailed
+        posts_file = PROCESSED_DATA_DIR / f"{creator_id}_posts_detailed.json"
+        posts_count = 0
+        posts_last_updated = None
+        if posts_file.exists():
+            try:
+                with open(posts_file, 'r', encoding='utf-8') as f:
+                    posts_data = json.load(f)
+                    posts_count = len(posts_data)
+                posts_last_updated = datetime.fromtimestamp(posts_file.stat().st_mtime).strftime('%d/%m/%Y %H:%M')
+            except:
+                pass
+
+        # Check Phase 3: Collections
+        collections_file = PROCESSED_DATA_DIR / f"{creator_id}_collections.json"
+        collections_count = 0
+        collections_last_updated = None
+        if collections_file.exists():
+            try:
+                with open(collections_file, 'r', encoding='utf-8') as f:
+                    collections_data = json.load(f)
+                    collections_count = len(collections_data.get('collections', []))
+                collections_last_updated = datetime.fromtimestamp(collections_file.stat().st_mtime).strftime('%d/%m/%Y %H:%M')
+            except:
+                pass
+
+        processing_status.append({
+            'creator_id': creator_id,
+            'creator_name': creator['name'],
+            'creator_url': creator['url'],
+            'phase1_status': 'Configured' if creator['url'] else 'Not configured',
+            'phase2_posts': posts_count,
+            'phase2_last_updated': posts_last_updated,
+            'phase3_collections': collections_count,
+            'phase3_last_updated': collections_last_updated
+        })
+
+    return render_template('settings.html',
+                          credentials=credentials,
+                          creators=creators_list,
+                          processing_status=processing_status)
+
+
+@app.route('/api/settings/save', methods=['POST'])
+def save_settings():
+    """Save configuration from settings page"""
+    try:
+        config_dir = Path(__file__).parent.parent / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+
+        data = request.get_json()
+
+        # Save credentials
+        if 'credentials' in data:
+            credentials_file = config_dir / "credentials.json"
+            with open(credentials_file, 'w', encoding='utf-8') as f:
+                json.dump(data['credentials'], f, indent=2)
+
+        return jsonify({'success': True, 'message': 'Configuration saved successfully'})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @app.route('/api/posts')
 def api_posts():
     """API endpoint to get all posts as JSON"""

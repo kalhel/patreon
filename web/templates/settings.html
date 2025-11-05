@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Patreon Scraper</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            background: #0a0a0a;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .settings-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            border: 1px solid #333;
+        }
+
+        .header h1 {
+            margin: 0 0 0.5rem 0;
+            font-size: 2rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .header p {
+            margin: 0;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.95rem;
+        }
+
+        .section {
+            background: #1a1a1a;
+            border: 1px solid #2d2d2d;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0 0 1.5rem 0;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .section-title::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(180deg, #4CAF50 0%, #2196F3 100%);
+            border-radius: 2px;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 0.95rem;
+            font-family: 'Consolas', 'Monaco', monospace;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #2196F3;
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+        }
+
+        .form-group input[type="password"] {
+            letter-spacing: 2px;
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: 0.4rem;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.85rem;
+        }
+
+        .status-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .status-table th,
+        .status-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #2d2d2d;
+        }
+
+        .status-table th {
+            background: #0a0a0a;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-table td {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.95rem;
+        }
+
+        .status-table tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .status-badge.success {
+            background: rgba(76, 175, 80, 0.15);
+            color: #4CAF50;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .status-badge.warning {
+            background: rgba(255, 152, 0, 0.15);
+            color: #FF9800;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .status-badge.info {
+            background: rgba(33, 150, 243, 0.15);
+            color: #2196F3;
+            border: 1px solid rgba(33, 150, 243, 0.3);
+        }
+
+        .status-badge.danger {
+            background: rgba(244, 67, 54, 0.15);
+            color: #F44336;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .creator-item {
+            background: #0a0a0a;
+            border: 1px solid #2d2d2d;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .creator-item h3 {
+            margin: 0 0 1rem 0;
+            color: #ffffff;
+            font-size: 1.1rem;
+        }
+
+        .creator-item .url-display {
+            background: #000000;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            color: #2196F3;
+            word-break: break-all;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #555 0%, #333 100%);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+        }
+
+        .info-box {
+            background: rgba(33, 150, 243, 0.1);
+            border: 1px solid rgba(33, 150, 243, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .info-box p {
+            margin: 0;
+            color: #2196F3;
+            font-size: 0.9rem;
+        }
+
+        .file-path {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            color: #4CAF50;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 968px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="settings-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>⚙️ Settings & Configuration</h1>
+            <p>Manage credentials, creator URLs, and track processing status</p>
+        </div>
+
+        <!-- Credentials Section -->
+        <div class="section">
+            <h2 class="section-title">Patreon Credentials</h2>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label for="patreon-email">Email</label>
+                    <input type="email" id="patreon-email"
+                           value="{{ credentials.get('patreon', {}).get('email', '') }}"
+                           placeholder="your@email.com">
+                    <small>Email usado para login en Patreon</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="patreon-password">Password</label>
+                    <input type="password" id="patreon-password"
+                           value="{{ credentials.get('patreon', {}).get('password', '') }}"
+                           placeholder="••••••••">
+                    <small>Password de tu cuenta Patreon</small>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <p>📁 Archivo: <span class="file-path">config/credentials.json</span></p>
+            </div>
+        </div>
+
+        <!-- Firebase Section -->
+        <div class="section">
+            <h2 class="section-title">Firebase Configuration</h2>
+
+            <div class="form-group">
+                <label for="firebase-credentials">Credentials Path</label>
+                <input type="text" id="firebase-credentials"
+                       value="{{ credentials.get('firebase', {}).get('credentials_path', '') }}"
+                       placeholder="path/to/firebase-credentials.json">
+                <small>Ruta al archivo JSON con credenciales de Firebase</small>
+            </div>
+
+            <div class="form-group">
+                <label for="firebase-url">Database URL</label>
+                <input type="text" id="firebase-url"
+                       value="{{ credentials.get('firebase', {}).get('database_url', '') }}"
+                       placeholder="https://your-project.firebaseio.com">
+                <small>URL de la base de datos Firebase Realtime Database</small>
+            </div>
+
+            <div class="info-box">
+                <p>📁 Archivo: <span class="file-path">config/credentials.json</span></p>
+            </div>
+        </div>
+
+        <!-- Creators Section -->
+        <div class="section">
+            <h2 class="section-title">Creators Configuration</h2>
+
+            {% if creators %}
+                {% for creator in creators %}
+                <div class="creator-item">
+                    <h3>{{ creator.name }}</h3>
+                    <div class="form-group">
+                        <label>Creator ID</label>
+                        <div class="url-display">{{ creator.creator_id }}</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Patreon URL</label>
+                        <div class="url-display">{{ creator.url }}</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Collections Enabled</label>
+                        <span class="status-badge {% if creator.collections_enabled %}success{% else %}danger{% endif %}">
+                            {% if creator.collections_enabled %}✓ Enabled{% else %}✗ Disabled{% endif %}
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: rgba(255, 255, 255, 0.5);">No creators configured yet.</p>
+            {% endif %}
+
+            <div class="info-box">
+                <p>📁 Archivo: <span class="file-path">config/creators.json</span></p>
+            </div>
+        </div>
+
+        <!-- Processing Status Section -->
+        <div class="section">
+            <h2 class="section-title">Processing Status by Phase</h2>
+
+            <table class="status-table">
+                <thead>
+                    <tr>
+                        <th>Creator</th>
+                        <th>Phase 1<br><small>URL Collection</small></th>
+                        <th>Phase 2<br><small>Posts Details</small></th>
+                        <th>Phase 3<br><small>Collections</small></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if processing_status %}
+                        {% for status in processing_status %}
+                        <tr>
+                            <td>
+                                <strong>{{ status.creator_name }}</strong><br>
+                                <small style="color: rgba(255, 255, 255, 0.5);">{{ status.creator_id }}</small>
+                            </td>
+                            <td>
+                                <span class="status-badge info">{{ status.phase1_status }}</span>
+                            </td>
+                            <td>
+                                {% if status.phase2_posts > 0 %}
+                                    <span class="status-badge success">{{ status.phase2_posts }} posts</span><br>
+                                    <small style="color: rgba(255, 255, 255, 0.5);">Updated: {{ status.phase2_last_updated }}</small>
+                                {% else %}
+                                    <span class="status-badge warning">No data</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if status.phase3_collections > 0 %}
+                                    <span class="status-badge success">{{ status.phase3_collections }} collections</span><br>
+                                    <small style="color: rgba(255, 255, 255, 0.5);">Updated: {{ status.phase3_last_updated }}</small>
+                                {% else %}
+                                    <span class="status-badge warning">No data</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: rgba(255, 255, 255, 0.5);">
+                                No processing data available
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+
+            <div class="info-box" style="margin-top: 1.5rem;">
+                <p>
+                    💾 Data files location: <span class="file-path">data/processed/</span><br>
+                    📄 Posts: <span class="file-path">{creator_id}_posts_detailed.json</span><br>
+                    🗂️ Collections: <span class="file-path">{creator_id}_collections.json</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="actions">
+            <a href="/" class="back-link">
+                ← Back to Library
+            </a>
+            <button class="btn" onclick="saveConfiguration()">
+                💾 Save Configuration
+            </button>
+            <button class="btn btn-secondary" onclick="reloadPage()">
+                🔄 Reload Status
+            </button>
+        </div>
+    </div>
+
+    <script>
+        async function saveConfiguration() {
+            try {
+                // Collect all form data
+                const credentials = {
+                    patreon: {
+                        email: document.getElementById('patreon-email').value,
+                        password: document.getElementById('patreon-password').value
+                    },
+                    firebase: {
+                        credentials_path: document.getElementById('firebase-credentials').value,
+                        database_url: document.getElementById('firebase-url').value
+                    }
+                };
+
+                // Send to backend
+                const response = await fetch('/api/settings/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ credentials })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('✅ Configuration saved successfully!\n\nFiles updated:\n- config/credentials.json');
+                    location.reload();
+                } else {
+                    alert('❌ Error saving configuration:\n' + result.message);
+                }
+            } catch (error) {
+                alert('❌ Error saving configuration:\n' + error.message);
+            }
+        }
+
+        function reloadPage() {
+            location.reload();
+        }
+    </script>
+</body>
+</html>

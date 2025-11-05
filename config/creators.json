@@ -1,0 +1,25 @@
+{
+  "creators": [
+    {
+      "creator_id": "astrobymax",
+      "name": "AstroByMax",
+      "url": "https://www.patreon.com/astrobymax",
+      "avatar": "astrobymax.jpg",
+      "collections_enabled": true
+    },
+    {
+      "creator_id": "horoiproject",
+      "name": "HOROI Project",
+      "url": "https://www.patreon.com/horoiproject",
+      "avatar": "horoiproject.jpg",
+      "collections_enabled": true
+    },
+    {
+      "creator_id": "headonhistory",
+      "name": "Ali A Olomi",
+      "url": "https://www.patreon.com/headonhistory",
+      "avatar": "headonhistory.jpg",
+      "collections_enabled": true
+    }
+  ]
+}
