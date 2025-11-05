@@ -7,7 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
-        /* Black & White Traditional Design */
+        /* Black & White Traditional Design - matching index.html */
         body {
             background: #ffffff;
             margin: 0;
@@ -19,44 +19,6 @@
             border-bottom: 4px solid #000000;
             padding: 2.5rem 2rem;
             text-align: center;
-        }
-
-        .back-button {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: rgba(255, 255, 255, 0.85);
-            background: transparent;
-            text-decoration: none;
-            font-size: 0.8125rem;
-            font-weight: 500;
-            letter-spacing: 0.5px;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-            transition: all 0.2s;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .back-button:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: #ffffff;
-            border-color: rgba(255, 255, 255, 0.4);
-            transform: translateY(-2px);
-        }
-
-        .back-button .icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 18px;
-            height: 18px;
-        }
-
-        .back-button .icon svg {
-            width: 100%;
-            height: 100%;
-            fill: currentColor;
         }
 
         .creator-info {
@@ -115,6 +77,36 @@
             letter-spacing: 0.5px;
         }
 
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: rgba(255, 255, 255, 0.85);
+            background: transparent;
+            text-decoration: none;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+            transition: all 0.2s;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .back-button .icon svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
         .wide-container {
             max-width: 100%;
             margin: 0 auto;
@@ -134,64 +126,106 @@
             }
         }
 
+        /* Copy exact card styles from index.html */
         .post-card-compact {
-            background: radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.8) 0%, transparent 50%),
-                        linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
-            border: 1px solid transparent;
-            border-radius: 12px;
-            padding: 2rem;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             flex-direction: column;
             height: 100%;
             position: relative;
             cursor: pointer;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
             overflow: hidden;
-        }
-
-        .post-card-compact::before {
-            content: '';
-            position: absolute;
-            top: -2px;
-            left: -2px;
-            right: -2px;
-            bottom: -2px;
-            background: linear-gradient(45deg, #e0e0e0 0%, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%, #e0e0e0 100%);
-            border-radius: 12px;
-            z-index: -1;
-            opacity: 1;
-            transition: all 0.4s ease;
-        }
-
-        .post-card-compact:hover {
-            background: radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 1) 0%, transparent 50%),
-                        linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.06);
-            transform: translateY(-4px);
-        }
-
-        .post-card-compact:hover::before {
-            background: linear-gradient(45deg, #d0d0d0 0%, #e0e0e0 25%, #d0d0d0 50%, #e0e0e0 75%, #d0d0d0 100%);
-        }
-
-        .post-card-compact h3 {
-            font-size: 1.125rem;
-            font-weight: 600;
-            margin-bottom: 1.5rem;
-            color: #1a1a1a;
-            line-height: 1.6;
-            flex-grow: 0;
-            min-height: 3em;
-        }
-
-        .post-card-compact h3 a {
-            color: #1a1a1a;
-            text-decoration: none;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
             transition: all 0.3s ease;
         }
 
-        .post-card-compact h3 a::after {
+        .post-card-compact:hover {
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            transform: translateY(-4px);
+        }
+
+        .post-card-content {
+            background: #ffffff;
+            padding: 2rem;
+            flex-grow: 1;
+            display: grid;
+            grid-template-rows: auto auto auto 1fr;
+        }
+
+        .post-card-collection {
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            padding: 0.75rem 2rem;
+            min-height: 2.5rem;
+            display: flex;
+            align-items: center;
+            border-radius: 0 0 16px 16px;
+        }
+
+        .collection-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            width: 100%;
+            min-height: 2rem;
+        }
+
+        .collection-info.empty {
+            opacity: 0;
+        }
+
+        .collection-thumbnail {
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            object-fit: cover;
+            flex-shrink: 0;
+            border: 1px solid #dee2e6;
+        }
+
+        .collection-name {
+            font-size: 0.875rem;
+            color: #495057;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .post-card-footer-black {
+            background: #1a1a1a;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            border-radius: 16px 16px 0 0;
+            border-bottom: 3px solid #000000;
+        }
+
+        .post-card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0 0 0.75rem 0;
+            color: #1a1a1a;
+            line-height: 1.4;
+            min-height: 3.5rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .post-card-title a {
+            color: #1a1a1a;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .post-card-title a:hover {
+            color: #666666;
+        }
+
+        .post-card-title a::after {
             content: '';
             position: absolute;
             top: 0;
@@ -199,6 +233,69 @@
             right: 0;
             bottom: 0;
             z-index: 1;
+        }
+
+        .post-card-date {
+            font-size: 0.8125rem;
+            color: #999999;
+            margin-bottom: 1.5rem;
+            font-family: 'Georgia', serif;
+        }
+
+        .footer-creator-info {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .footer-creator-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            object-fit: cover;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            flex-shrink: 0;
+        }
+
+        .footer-creator-name {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+
+        .footer-meta-icons {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-left: auto;
+        }
+
+        .meta-icon,
+        .meta-icon-with-count {
+            color: rgba(255, 255, 255, 0.3);
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .meta-icon.active,
+        .meta-icon-with-count.active {
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .meta-icon .icon svg,
+        .meta-icon-with-count .icon svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        .meta-icon-with-count .count {
+            font-size: 0.75rem;
+            font-weight: 600;
         }
 
         .content-preview {
@@ -221,6 +318,18 @@
             display: block;
         }
 
+        .content-preview.video-preview {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+        }
+
+        .content-preview.video-preview video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
         .content-preview.text-preview {
             padding: 1rem 1.25rem;
             background: #f5f5f5;
@@ -233,40 +342,6 @@
             font-size: 0.875rem;
             line-height: 1.6;
             color: #666666;
-        }
-
-        .post-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.8125rem;
-            color: #666666;
-            margin-top: auto;
-            padding-top: 1.25rem;
-            border-top: 1px solid #e0e0e0;
-        }
-
-        .post-date {
-            font-weight: 400;
-            font-family: 'Georgia', serif;
-        }
-
-        .post-meta-icons {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .meta-icon {
-            font-size: 1rem;
-            transition: all 0.2s ease;
-            opacity: 0.25;
-            filter: grayscale(100%);
-        }
-
-        .meta-icon.active {
-            opacity: 1;
-            filter: grayscale(0%);
         }
 
         @media (max-width: 768px) {
@@ -296,15 +371,6 @@
 </head>
 <body>
     <div class="header">
-        <a href="/" class="back-button">
-            <span class="icon">
-                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-                </svg>
-            </span>
-            <span>Back to Library</span>
-        </a>
-
         <div class="creator-info">
             {% if creator_avatar %}
             <img src="{{ creator_avatar }}" alt="{{ creator_display_name }}" class="creator-avatar-small">
@@ -321,59 +387,137 @@
             <h1 class="collection-title">{{ collection.collection_name }}</h1>
             <div class="collection-subtitle">{{ total }} post{{ 's' if total != 1 else '' }}</div>
         </div>
+
+        <a href="/" class="back-button">
+            <span class="icon">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                </svg>
+            </span>
+            <span>Back to Library</span>
+        </a>
     </div>
 
     <div class="wide-container">
         {% if posts %}
             <div class="posts-grid">
                 {% for post in posts %}
+                {% if post.content_blocks %}
+                    {% set img_count = post.content_blocks | selectattr('type', 'equalto', 'image') | list | length %}
+                    {% set vid_count_blocks = (post.content_blocks | selectattr('type', 'equalto', 'video') | list | length) + (post.content_blocks | selectattr('type', 'equalto', 'youtube_embed') | list | length) %}
+                    {% set vid_count_local = post.video_local_paths | length if post.video_local_paths else 0 %}
+                    {% set vid_count = vid_count_blocks if vid_count_blocks > 0 else vid_count_local %}
+                    {% set aud_count = post.content_blocks | selectattr('type', 'equalto', 'audio') | list | length %}
+                    {% set com_count = post.content_blocks | selectattr('type', 'equalto', 'comment') | list | length %}
+                {% else %}
+                    {% set img_count = post.images | length if post.images else 0 %}
+                    {% set vid_count_old = post.videos | length if post.videos else 0 %}
+                    {% set vid_count_local = post.video_local_paths | length if post.video_local_paths else 0 %}
+                    {% set vid_count = vid_count_old if vid_count_old > 0 else vid_count_local %}
+                    {% set aud_count = post.audios | length if post.audios else 0 %}
+                    {% set com_count = 0 %}
+                {% endif %}
+
                 <div class="post-card-compact">
-                    <h3><a href="/post/{{ post.post_id }}?from_collection={{ collection.collection_id }}">{{ post.title or 'Untitled Post' }}</a></h3>
-
-                    {# Content preview #}
-                    {% set preview_shown = namespace(value=false) %}
-
-                    {# Check for first image #}
-                    {% if post.content_blocks and not preview_shown.value %}
-                        {% for block in post.content_blocks %}
-                            {% if not preview_shown.value and block.type == 'image' %}
-                                <div class="content-preview image-preview">
-                                    <img src="{{ block.url }}" alt="{{ block.caption or '' }}" loading="lazy">
-                                </div>
-                                {% set preview_shown.value = true %}
+                    <!-- Header Negro -->
+                    <div class="post-card-footer-black">
+                        <div class="footer-creator-info">
+                            {% if creator_avatar %}
+                            <img src="{{ creator_avatar }}" alt="{{ creator_display_name }}" class="footer-creator-avatar">
                             {% endif %}
-                        {% endfor %}
-                    {% endif %}
-
-                    {# Show first paragraph as fallback #}
-                    {% if not preview_shown.value and post.content_blocks %}
-                        {% for block in post.content_blocks %}
-                            {% if not preview_shown.value and block.type == 'paragraph' and block.text and block.text|length > 30 %}
-                                <div class="content-preview text-preview">
-                                    <p>{{ block.text[:200] }}{% if block.text|length > 200 %}...{% endif %}</p>
-                                </div>
-                                {% set preview_shown.value = true %}
-                            {% endif %}
-                        {% endfor %}
-                    {% elif not preview_shown.value and post.full_content and post.full_content|length > 30 %}
-                        <div class="content-preview text-preview">
-                            <p>{{ post.full_content[:200] }}{% if post.full_content|length > 200 %}...{% endif %}</p>
+                            <span class="footer-creator-name">{{ creator_display_name }}</span>
                         </div>
-                    {% endif %}
+                        <div class="footer-meta-icons">
+                            <span class="meta-icon {% if img_count > 0 %}active{% endif %}" title="Images">
+                                <span class="icon">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                                    </svg>
+                                </span>
+                            </span>
+                            <span class="meta-icon {% if vid_count > 0 %}active{% endif %}" title="Videos">
+                                <span class="icon">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+                                    </svg>
+                                </span>
+                            </span>
+                            <span class="meta-icon {% if aud_count > 0 %}active{% endif %}" title="Audio">
+                                <span class="icon">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                                    </svg>
+                                </span>
+                            </span>
+                            <span class="meta-icon-with-count {% if com_count > 0 %}active{% endif %}" title="Comments">
+                                💬 <span class="count">{{ com_count }}</span>
+                            </span>
+                            <span class="meta-icon-with-count like active" title="Likes">
+                                <span class="icon">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                                    </svg>
+                                </span>
+                                <span class="count">{{ post.like_count if post.like_count else 0 }}</span>
+                            </span>
+                        </div>
+                    </div>
 
-                    <div class="post-footer">
-                        <div class="post-date">
+                    <div class="post-card-content">
+                        <!-- Título -->
+                        <h3 class="post-card-title"><a href="/post/{{ post.post_id }}?from_collection={{ collection.collection_id }}">{{ post.title or 'Untitled Post' }}</a></h3>
+
+                        <!-- Fecha -->
+                        <div class="post-card-date">
                             {{ post.post_metadata.published_date if post.post_metadata else 'N/A' }}
                         </div>
-                        <div class="post-meta-icons">
-                            {% set img_count = post.content_blocks | selectattr('type', 'equalto', 'image') | list | length if post.content_blocks else (post.images | length if post.images else 0) %}
-                            {% set vid_count = ((post.content_blocks | selectattr('type', 'equalto', 'video') | list | length) + (post.content_blocks | selectattr('type', 'equalto', 'youtube_embed') | list | length)) if post.content_blocks else (post.videos | length if post.videos else 0) %}
-                            {% set aud_count = post.content_blocks | selectattr('type', 'equalto', 'audio') | list | length if post.content_blocks else (post.audios | length if post.audios else 0) %}
 
-                            <span class="meta-icon {% if img_count > 0 %}active{% endif %}" title="Images">🖼️</span>
-                            <span class="meta-icon {% if vid_count > 0 %}active{% endif %}" title="Videos">🎥</span>
-                            <span class="meta-icon {% if aud_count > 0 %}active{% endif %}" title="Audio">🎵</span>
-                        </div>
+                        {# Content preview #}
+                        {% set preview_shown = namespace(value=false) %}
+
+                        {# Local video #}
+                        {% if post.video_local_paths and post.video_local_paths|length > 0 and not preview_shown.value %}
+                            {% set first_video = post.video_local_paths[0] %}
+                            <div class="content-preview video-preview">
+                                <video controls preload="metadata">
+                                    <source src="{{ url_for('media_file', filename=first_video) }}" type="video/mp4">
+                                </video>
+                            </div>
+                            {% set preview_shown.value = true %}
+                        {% endif %}
+
+                        {# Check for first image #}
+                        {% if post.content_blocks and not preview_shown.value %}
+                            {% for block in post.content_blocks %}
+                                {% if not preview_shown.value and block.type == 'image' %}
+                                    <div class="content-preview image-preview">
+                                        <img src="{{ block.url }}" alt="{{ block.caption or '' }}" loading="lazy">
+                                    </div>
+                                    {% set preview_shown.value = true %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+
+                        {# Show first paragraph as fallback #}
+                        {% if not preview_shown.value and post.content_blocks %}
+                            {% for block in post.content_blocks %}
+                                {% if not preview_shown.value and block.type == 'paragraph' and block.text and block.text|length > 30 %}
+                                    <div class="content-preview text-preview">
+                                        <p>{{ block.text[:200] }}{% if block.text|length > 200 %}...{% endif %}</p>
+                                    </div>
+                                    {% set preview_shown.value = true %}
+                                {% endif %}
+                            {% endfor %}
+                        {% elif not preview_shown.value and post.full_content and post.full_content|length > 30 %}
+                            <div class="content-preview text-preview">
+                                <p>{{ post.full_content[:200] }}{% if post.full_content|length > 200 %}...{% endif %}</p>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Collection footer -->
+                    <div class="post-card-collection">
+                        <div class="collection-info empty"></div>
                     </div>
                 </div>
                 {% endfor %}

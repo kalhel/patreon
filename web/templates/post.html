@@ -267,47 +267,41 @@
         .collections-container {
             display: flex;
             flex-wrap: wrap;
-            gap: 12px;
-            margin: 20px 0;
-            padding: 20px;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-radius: 12px;
-            border-left: 4px solid #1a1a1a;
+            gap: 10px;
+            margin: 15px 0;
         }
         .collection-badge-post {
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
             background: #ffffff;
-            padding: 12px 18px;
-            border-radius: 8px;
-            border: 1px solid #dee2e6;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            padding: 8px 14px;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+            transition: all 0.2s ease;
             text-decoration: none;
             cursor: pointer;
         }
         .collection-badge-post:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             border-color: #1a1a1a;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
         }
         .collection-badge-post .collection-image {
-            width: 48px;
-            height: 48px;
-            border-radius: 6px;
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
             object-fit: cover;
-            border: 2px solid #e9ecef;
+            border: 1px solid #e0e0e0;
             flex-shrink: 0;
         }
         .collection-badge-post:hover .collection-image {
             border-color: #1a1a1a;
         }
         .collection-badge-post .collection-label {
-            font-size: 0.9375rem;
-            font-weight: 600;
-            color: #2b2b2b;
-            letter-spacing: 0.3px;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: #666666;
+            letter-spacing: 0;
         }
         .collection-badge-post:hover .collection-label {
             color: #1a1a1a;
