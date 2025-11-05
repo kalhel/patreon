@@ -25,8 +25,8 @@ MEDIA_ROOT = Path(__file__).parent.parent / "data" / "media"
 # Display names for creators
 CREATOR_DISPLAY_NAMES = {
     'headonhistory': 'Ali A Olomi',
-    'horoiproject': 'horoiproject',
-    'astrobymax': 'astrobymax'
+    'horoiproject': 'HOROI Project',
+    'astrobymax': 'AstroByMax'
 }
 
 # Local avatar paths for creators
