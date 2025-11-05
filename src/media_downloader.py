@@ -1102,18 +1102,55 @@ class MediaDownloader:
                     else:
                         logger.warning(f"  ⚠️  [YOUTUBE] Video file not found after download: {video_path}")
 
-                    # Check for subtitle files (es, en, or auto-generated)
-                    for lang in ['es', 'en']:
-                        for suffix in [f'.{lang}', f'.{lang}-orig']:
-                            subtitle_path = creator_dir / f'{filename_base}{suffix}.vtt'
-                            if subtitle_path.exists():
-                                logger.info(f"  ✓ [YOUTUBE] Found subtitle: {subtitle_path.name}")
-                                abs_sub_path = str(subtitle_path)
-                                downloaded_subtitles.append(abs_sub_path)
-                                try:
-                                    relatives_subtitles.append(subtitle_path.relative_to(self.output_dir).as_posix())
-                                except ValueError:
-                                    relatives_subtitles.append(abs_sub_path)
+                    # Check for subtitle files with various naming patterns from yt-dlp
+                    # Patterns: .es.vtt, .en.vtt, .es-es.vtt, .en-US.vtt, .es-orig.vtt, etc.
+                    subtitle_patterns = [
+                        f'{filename_base}.es*.vtt',
+                        f'{filename_base}.en*.vtt',
+                        f'{filename_base}.*es*.vtt',
+                        f'{filename_base}.*en*.vtt'
+                    ]
+
+                    found_subs = set()
+                    for pattern in subtitle_patterns:
+                        import glob
+                        matches = glob.glob(str(creator_dir / pattern))
+                        for match_path in matches:
+                            subtitle_path = Path(match_path)
+
+                            # Skip if already processed
+                            if str(subtitle_path) in found_subs:
+                                continue
+                            found_subs.add(str(subtitle_path))
+
+                            # Detect language from filename
+                            name_lower = subtitle_path.stem.lower()
+                            lang_code = None
+                            if '.es' in name_lower or 'spanish' in name_lower:
+                                lang_code = 'es'
+                            elif '.en' in name_lower or 'english' in name_lower:
+                                lang_code = 'en'
+                            else:
+                                # Default to 'unknown' if can't detect
+                                lang_code = 'xx'
+
+                            # Rename to consistent format: {post_id}_yt00_es.vtt
+                            new_name = f'{filename_base}_{lang_code}.vtt'
+                            new_path = creator_dir / new_name
+
+                            # Rename if different
+                            if subtitle_path != new_path:
+                                subtitle_path.rename(new_path)
+                                logger.info(f"  📝 [YOUTUBE] Renamed subtitle: {subtitle_path.name} → {new_name}")
+                                subtitle_path = new_path
+
+                            logger.info(f"  ✓ [YOUTUBE] Found subtitle ({lang_code}): {subtitle_path.name}")
+                            abs_sub_path = str(subtitle_path)
+                            downloaded_subtitles.append(abs_sub_path)
+                            try:
+                                relatives_subtitles.append(subtitle_path.relative_to(self.output_dir).as_posix())
+                            except ValueError:
+                                relatives_subtitles.append(abs_sub_path)
                 else:
                     logger.warning(f"  ⚠️  [YOUTUBE] Download failed for {video_id}")
                     if result.stderr:

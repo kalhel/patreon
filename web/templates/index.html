@@ -496,10 +496,12 @@
             pointer-events: auto;
         }
 
-        /* Position subtitles at the bottom */
+        /* Subtitle styling - keep natural positioning, just style appearance */
         .content-preview.video-preview video::cue {
-            bottom: 5%;
-            position: relative;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            font-size: 1.1em;
+            text-align: center;
         }
 
         .content-preview.youtube-preview {
@@ -1355,7 +1357,30 @@
                                 <video controls preload="metadata" crossorigin="anonymous">
                                     <source src="{{ url_for('media_file', filename=first_video) }}" type="video/mp4">
                                     {% if local_subtitles and local_subtitles|length > 0 %}
-                                        <track kind="subtitles" src="{{ url_for('media_file', filename=local_subtitles[0]) }}" default>
+                                        {% set has_spanish = namespace(value=false) %}
+                                        {% for subtitle_path in local_subtitles %}
+                                            {# Detect language from filename #}
+                                            {% set filename_lower = subtitle_path.lower() %}
+                                            {% if '_es.' in filename_lower or '.es.' in filename_lower %}
+                                                {% set lang_code = 'es' %}
+                                                {% set lang_label = 'Spanish' %}
+                                                {% set has_spanish.value = true %}
+                                                {% set is_default = true %}
+                                            {% elif '_en.' in filename_lower or '.en.' in filename_lower %}
+                                                {% set lang_code = 'en' %}
+                                                {% set lang_label = 'English' %}
+                                                {% set is_default = false %}
+                                            {% else %}
+                                                {% set lang_code = 'xx' %}
+                                                {% set lang_label = 'Subtitles' %}
+                                                {% set is_default = false %}
+                                            {% endif %}
+                                            {# If no Spanish found, make first subtitle default #}
+                                            {% if loop.first and not has_spanish.value %}
+                                                {% set is_default = true %}
+                                            {% endif %}
+                                            <track kind="subtitles" src="{{ url_for('media_file', filename=subtitle_path) }}" srclang="{{ lang_code }}" label="{{ lang_label }}"{% if is_default %} default{% endif %}>
+                                        {% endfor %}
                                     {% endif %}
                                     Tu navegador no soporta el tag de video.
                                 </video>
