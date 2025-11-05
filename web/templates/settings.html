@@ -537,12 +537,22 @@
         <div class="section">
             <h2 class="section-title">Processing Status by Phase</h2>
 
+            {% if firebase_enabled %}
+            <div class="info-box" style="margin-bottom: 1rem; background: rgba(76, 175, 80, 0.1); border-color: rgba(76, 175, 80, 0.3);">
+                <p style="color: #4CAF50;">✅ Firebase Connected - Showing live processing status</p>
+            </div>
+            {% else %}
+            <div class="info-box" style="margin-bottom: 1rem; background: rgba(255, 152, 0, 0.1); border-color: rgba(255, 152, 0, 0.3);">
+                <p style="color: #FF9800;">⚠️  Firebase Not Connected - Showing only JSON file data</p>
+            </div>
+            {% endif %}
+
             <table class="status-table">
                 <thead>
                     <tr>
                         <th>Creator</th>
-                        <th>Phase 1<br><small>URL Collection</small></th>
-                        <th>Phase 2<br><small>Posts Details</small></th>
+                        <th>Phase 1<br><small>URL Collection (Firebase)</small></th>
+                        <th>Phase 2<br><small>Posts Details (JSON Files)</small></th>
                         <th>Phase 3<br><small>Collections</small></th>
                     </tr>
                 </thead>
@@ -555,7 +565,22 @@
                                 <small style="color: rgba(255, 255, 255, 0.5);">{{ status.creator_id }}</small>
                             </td>
                             <td>
-                                <span class="status-badge info">{{ status.phase1_status }}</span>
+                                {% if firebase_enabled %}
+                                    {% if status.phase1_total > 0 %}
+                                        <span class="status-badge {% if status.phase1_pending > 0 %}warning{% else %}success{% endif %}">
+                                            {{ status.phase1_total }} total
+                                        </span><br>
+                                        <small style="color: rgba(255, 255, 255, 0.5);">
+                                            ✅ {{ status.phase1_processed }} processed<br>
+                                            ⏳ {{ status.phase1_pending }} pending
+                                        </small>
+                                    {% else %}
+                                        <span class="status-badge info">{{ status.phase1_status }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="status-badge info">{{ status.phase1_status }}</span><br>
+                                    <small style="color: rgba(255, 255, 255, 0.4);">Firebase N/A</small>
+                                {% endif %}
                             </td>
                             <td>
                                 {% if status.phase2_posts > 0 %}
@@ -589,7 +614,12 @@
                 <p>
                     💾 Data files location: <span class="file-path">data/processed/</span><br>
                     📄 Posts: <span class="file-path">{creator_id}_posts_detailed.json</span><br>
-                    🗂️ Collections: <span class="file-path">{creator_id}_collections.json</span>
+                    🗂️ Collections: <span class="file-path">{creator_id}_collections.json</span><br>
+                    {% if firebase_enabled %}
+                    🔥 Firebase: <span class="file-path" style="color: #4CAF50;">Connected</span>
+                    {% else %}
+                    🔥 Firebase: <span class="file-path" style="color: #FF9800;">Not configured</span>
+                    {% endif %}
                 </p>
             </div>
         </div>
