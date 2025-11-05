@@ -1820,8 +1820,27 @@
 
             // REORDER BY RELEVANCE when using advanced search
             if (searchTerms.length > 0 && useAdvancedSearch && searchResults.size > 0) {
-                // Sort by rank (lower = more relevant in BM25)
-                cardsWithRelevance.sort((a, b) => a.rank - b.rank);
+                // Calculate relevance score based on WHERE the match was found
+                // Priority: Title > Content > Tags > Subtitles > Comments
+                cardsWithRelevance.forEach(item => {
+                    const matchedIn = searchResults.get(
+                        item.card.querySelector('.post-card-title a').href.match(/\/post\/([^?#]+)/)?.[1]
+                    )?.matched_in || [];
+
+                    let fieldScore = 0;
+                    if (matchedIn.includes('title')) fieldScore += 1000;      // Highest priority
+                    if (matchedIn.includes('content')) fieldScore += 100;     // Second priority
+                    if (matchedIn.includes('tags')) fieldScore += 50;         // Third priority
+                    if (matchedIn.includes('subtitles')) fieldScore += 10;    // Fourth priority
+                    if (matchedIn.includes('comments')) fieldScore += 1;      // Lowest priority
+
+                    // Combine field score with BM25 rank (lower rank = better)
+                    // Negate rank so higher scores = better overall
+                    item.finalScore = fieldScore - (item.rank * 0.1);
+                });
+
+                // Sort by final score (higher = more relevant)
+                cardsWithRelevance.sort((a, b) => b.finalScore - a.finalScore);
 
                 // Reorder in DOM
                 cardsWithRelevance.forEach((item, index) => {
