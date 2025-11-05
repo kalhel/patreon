@@ -7,10 +7,20 @@ import json
 
 def main():
     # Check for VTT files
-    media_dir = Path('media')
+    media_dir = Path('data/media')
 
     if not media_dir.exists():
-        print("❌ Media directory not found!")
+        print("❌ data/media directory not found!")
+        print("\nChecking if any media files exist elsewhere...")
+
+        # Try to find VTT files anywhere
+        vtt_files_any = list(Path('.').rglob('*.vtt'))
+        if vtt_files_any:
+            print(f"\n⚠️  Found {len(vtt_files_any)} .vtt files in other locations:")
+            for f in vtt_files_any[:5]:
+                print(f"  {f}")
+        else:
+            print("\n❌ No .vtt files found anywhere in the project!")
         return
 
     print("🔍 Searching for .vtt subtitle files...\n")
