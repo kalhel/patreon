@@ -101,3 +101,5 @@ Thumbs.db
 *.temp
 temp/
 tmp/
+*:Zone.Identifier
+*.mp4
