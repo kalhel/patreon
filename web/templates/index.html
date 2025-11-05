@@ -989,12 +989,13 @@
             background: #2d3f5f;
         }
 
-        /* NEW Search indicator v2 - cleaner design */
+        /* NEW Search indicator v2 - cleaner design with icons */
         .search-indicator-v2 {
             display: flex;
             gap: 0.5rem;
             margin-bottom: 1rem;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .search-indicator-v2.hidden {
@@ -1004,19 +1005,28 @@
         .search-badge-v2 {
             background: #1a1a1a;
             color: #ffffff;
-            padding: 4px 12px;
+            padding: 4px 10px;
             border-radius: 12px;
             font-size: 0.625rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            line-height: 20px;
-            height: 20px;
+            line-height: 18px;
+            height: 22px;
             white-space: nowrap;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
+            gap: 4px;
             flex-shrink: 0;
+        }
+
+        .search-badge-v2 .icon {
+            width: 12px;
+            height: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .search-badge-v2.title {
@@ -1029,6 +1039,14 @@
 
         .search-badge-v2.tags {
             background: #ef4444;
+        }
+
+        .search-badge-v2.comments {
+            background: #f59e0b;
+        }
+
+        .search-badge-v2.subtitles {
+            background: #8b5cf6;
         }
 
         /* Tags in post cards */
@@ -1583,12 +1601,88 @@
             }, 100);
         }
 
-        // Combined filter function (search + creators + content + tags)
-        function filterPosts() {
+        // Advanced search state
+        let searchResults = new Map(); // postId -> matched_in array
+        let lastSearchQuery = '';
+        let searchDebounceTimer = null;
+        let useAdvancedSearch = true; // Try to use API, fallback to client-side
+
+        // Check if advanced search is available
+        async function checkAdvancedSearch() {
+            try {
+                const response = await fetch('/api/search/stats');
+                return response.ok;
+            } catch {
+                return false;
+            }
+        }
+
+        // Perform advanced search using API
+        async function performAdvancedSearch(query) {
+            if (!query || query.length < 2) {
+                searchResults.clear();
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=100`);
+                if (!response.ok) {
+                    console.warn('Advanced search not available, falling back to client-side');
+                    useAdvancedSearch = false;
+                    return;
+                }
+
+                const data = await response.json();
+                searchResults.clear();
+
+                // Build map of post_id -> matched_in
+                data.results.forEach(result => {
+                    searchResults.set(result.post_id, result.matched_in);
+                });
+
+                lastSearchQuery = query;
+
+            } catch (error) {
+                console.warn('Advanced search error:', error);
+                useAdvancedSearch = false;
+            }
+        }
+
+        // Combined filter function with advanced search
+        async function filterPosts() {
+            const searchTerm = searchInput.value.trim();
+            let visibleCount = 0;
+
+            // Debounce search API calls
+            if (searchDebounceTimer) {
+                clearTimeout(searchDebounceTimer);
+            }
+
+            // If search term changed and we're using advanced search
+            if (searchTerm && searchTerm !== lastSearchQuery && useAdvancedSearch) {
+                searchDebounceTimer = setTimeout(async () => {
+                    await performAdvancedSearch(searchTerm);
+                    // Re-run filter with API results
+                    await filterPostsImmediate();
+                }, 300);
+
+                // Show all temporarily while searching
+                postCards.forEach(card => {
+                    const indicatorV2 = card.querySelector('.search-indicator-v2');
+                    indicatorV2.classList.add('hidden');
+                });
+            }
+
+            // Immediate filter (without waiting for API)
+            await filterPostsImmediate();
+        }
+
+        // Immediate filter without debouncing
+        async function filterPostsImmediate() {
             const searchTerm = searchInput.value.toLowerCase().trim();
             let visibleCount = 0;
 
-            // Split search terms by spaces for multi-term search
+            // Split search terms for fallback client-side search
             const searchTerms = searchTerm ? searchTerm.split(/\s+/).filter(t => t) : [];
 
             postCards.forEach(card => {
@@ -1597,64 +1691,67 @@
                 const tags = card.dataset.tags || '';
                 const content = card.dataset.content || '';
                 const creatorId = card.dataset.creatorId || '';
+                const postId = card.querySelector('.post-card-title a').href.split('/post/')[1];
                 const hasImages = card.dataset.hasImages === 'true';
                 const hasVideos = card.dataset.hasVideos === 'true';
                 const hasAudio = card.dataset.hasAudio === 'true';
 
-                // Combine all searchable text (including post content)
-                const searchableText = `${title} ${creator} ${tags} ${content}`;
+                // Check if this post is in search results (if using API)
+                let searchMatch = true;
+                let matchedIn = [];
 
-                // Search match - all terms must be present (AND logic)
-                const searchMatch = searchTerms.length === 0 ||
-                                    searchTerms.every(term => searchableText.includes(term));
+                if (searchTerms.length > 0) {
+                    if (useAdvancedSearch && searchResults.size > 0) {
+                        // Use API results
+                        searchMatch = searchResults.has(postId);
+                        if (searchMatch) {
+                            matchedIn = searchResults.get(postId) || [];
+                        }
+                    } else {
+                        // Fallback to client-side search
+                        const searchableText = `${title} ${creator} ${tags} ${content}`;
+                        searchMatch = searchTerms.every(term => searchableText.includes(term));
 
-                // Detect where the search terms were found
-                const matchIndicator = card.querySelector('.search-match-indicator');
-                if (searchTerms.length > 0 && searchMatch) {
-                    const matchLocations = new Set();
-                    searchTerms.forEach(term => {
-                        if (title.includes(term)) matchLocations.add('title');
-                        if (tags.includes(term)) matchLocations.add('tags');
-                        if (content.includes(term)) matchLocations.add('content');
-                    });
-
-                    // Update match indicator (order: Title → Text → Tags)
-                    const badges = [];
-                    if (matchLocations.has('title')) {
-                        badges.push('<span class="match-badge title">Title</span>');
+                        if (searchMatch) {
+                            // Detect where matches occurred
+                            searchTerms.forEach(term => {
+                                if (title.includes(term) && !matchedIn.includes('title')) matchedIn.push('title');
+                                if (content.includes(term) && !matchedIn.includes('content')) matchedIn.push('content');
+                                if (tags.includes(term) && !matchedIn.includes('tags')) matchedIn.push('tags');
+                            });
+                        }
                     }
-                    if (matchLocations.has('content')) {
-                        badges.push('<span class="match-badge content">Text</span>');
-                    }
-                    if (matchLocations.has('tags')) {
-                        badges.push('<span class="match-badge tags">Tags</span>');
-                    }
-                    matchIndicator.innerHTML = badges.join('');
-                    matchIndicator.classList.remove('hidden');
-                } else {
-                    matchIndicator.classList.add('hidden');
                 }
 
-                // NEW: Update indicator v2 (cleaner badges with better alignment)
+                // Update search badges (v2 - with icons)
                 const indicatorV2 = card.querySelector('.search-indicator-v2');
-                if (searchTerms.length > 0 && searchMatch) {
-                    const matchLocations = new Set();
-                    searchTerms.forEach(term => {
-                        if (title.includes(term)) matchLocations.add('title');
-                        if (tags.includes(term)) matchLocations.add('tags');
-                        if (content.includes(term)) matchLocations.add('content');
-                    });
-
-                    // Build badges array (order: Title → Text → Tags)
+                if (searchTerms.length > 0 && searchMatch && matchedIn.length > 0) {
                     const badgesV2 = [];
-                    if (matchLocations.has('title')) {
-                        badgesV2.push('<span class="search-badge-v2 title">Title</span>');
+
+                    // Icons for each badge type
+                    const icons = {
+                        'title': '📌',
+                        'content': '📄',
+                        'tags': '🏷️',
+                        'comments': '💬',
+                        'subtitles': '🎬'
+                    };
+
+                    // Order: Title → Text → Tags → Comments → Subtitles
+                    if (matchedIn.includes('title')) {
+                        badgesV2.push(`<span class="search-badge-v2 title"><span class="icon">${icons['title']}</span>Title</span>`);
                     }
-                    if (matchLocations.has('content')) {
-                        badgesV2.push('<span class="search-badge-v2 text">Text</span>');
+                    if (matchedIn.includes('content')) {
+                        badgesV2.push(`<span class="search-badge-v2 text"><span class="icon">${icons['content']}</span>Text</span>`);
                     }
-                    if (matchLocations.has('tags')) {
-                        badgesV2.push('<span class="search-badge-v2 tags">Tags</span>');
+                    if (matchedIn.includes('tags')) {
+                        badgesV2.push(`<span class="search-badge-v2 tags"><span class="icon">${icons['tags']}</span>Tags</span>`);
+                    }
+                    if (matchedIn.includes('comments')) {
+                        badgesV2.push(`<span class="search-badge-v2 comments"><span class="icon">${icons['comments']}</span>Comments</span>`);
+                    }
+                    if (matchedIn.includes('subtitles')) {
+                        badgesV2.push(`<span class="search-badge-v2 subtitles"><span class="icon">${icons['subtitles']}</span>Video</span>`);
                     }
 
                     indicatorV2.innerHTML = badgesV2.join('');
@@ -1663,11 +1760,10 @@
                     indicatorV2.classList.add('hidden');
                 }
 
-                // Creator filter match (if no creators selected, show all)
-                const creatorMatch = selectedCreators.size === 0 ||
-                                     selectedCreators.has(creatorId);
+                // Creator filter match
+                const creatorMatch = selectedCreators.size === 0 || selectedCreators.has(creatorId);
 
-                // Content filters (only apply if at least one is active)
+                // Content type filters
                 let contentMatch = true;
                 if (contentFilters.images || contentFilters.videos || contentFilters.audio) {
                     contentMatch = (contentFilters.images && hasImages) ||
@@ -1675,7 +1771,7 @@
                                    (contentFilters.audio && hasAudio);
                 }
 
-                // Tag filters (only apply if at least one tag is selected)
+                // Tag filters
                 let tagMatch = true;
                 if (selectedTags.size > 0) {
                     const postTags = tags.split('|').map(t => t.trim()).filter(t => t);
@@ -1707,6 +1803,16 @@
 
         // Add event listener for real-time search
         searchInput.addEventListener('input', filterPosts);
+
+        // Check if advanced search is available on page load
+        checkAdvancedSearch().then(available => {
+            if (available) {
+                console.log('✓ Advanced search available');
+            } else {
+                console.log('⚠ Advanced search not available, using client-side search');
+                useAdvancedSearch = false;
+            }
+        });
     </script>
 
     <!-- Simple audio player for previews -->

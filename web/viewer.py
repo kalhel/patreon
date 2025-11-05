@@ -709,6 +709,92 @@ def api_post(post_id):
     return jsonify({'error': 'Post not found'}), 404
 
 
+@app.route('/api/search')
+def api_search():
+    """
+    Advanced search endpoint using FTS5 index
+    Query params:
+        q: search query (required)
+        creator: filter by creator_id (optional)
+        limit: max results (default 50)
+    """
+    from pathlib import Path
+    import sys
+
+    # Import search indexer
+    search_module_path = Path(__file__).parent
+    if str(search_module_path) not in sys.path:
+        sys.path.insert(0, str(search_module_path))
+
+    try:
+        from search_indexer import SearchIndexer
+    except ImportError:
+        return jsonify({
+            'error': 'Search index not available. Run: python web/search_indexer.py'
+        }), 503
+
+    # Get query parameters
+    query = request.args.get('q', '').strip()
+    creator_filter = request.args.get('creator')
+    limit = int(request.args.get('limit', 50))
+
+    if not query:
+        return jsonify({'error': 'Query parameter "q" is required'}), 400
+
+    # Check if index exists
+    index_path = Path(__file__).parent / "search_index.db"
+    if not index_path.exists():
+        return jsonify({
+            'error': 'Search index not built. Run: python web/search_indexer.py',
+            'hint': 'Build the search index first before searching'
+        }), 503
+
+    # Perform search
+    try:
+        indexer = SearchIndexer(db_path=index_path)
+        results = indexer.search(query, limit=limit, creator_filter=creator_filter)
+        indexer.close()
+
+        return jsonify({
+            'query': query,
+            'total_results': len(results),
+            'results': results
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Search failed: {str(e)}'}), 500
+
+
+@app.route('/api/search/stats')
+def api_search_stats():
+    """Get search index statistics"""
+    from pathlib import Path
+    import sys
+
+    search_module_path = Path(__file__).parent
+    if str(search_module_path) not in sys.path:
+        sys.path.insert(0, str(search_module_path))
+
+    try:
+        from search_indexer import SearchIndexer
+    except ImportError:
+        return jsonify({'error': 'Search indexer not available'}), 503
+
+    index_path = Path(__file__).parent / "search_index.db"
+    if not index_path.exists():
+        return jsonify({'error': 'Search index not built'}), 404
+
+    try:
+        indexer = SearchIndexer(db_path=index_path)
+        stats = indexer.get_stats()
+        indexer.close()
+
+        return jsonify(stats)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/media/<path:filename>')
 def media_file(filename):
     """Serve downloaded media files"""
