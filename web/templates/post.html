@@ -6,9 +6,6 @@
     <title>{{ post.title or post.post_id }} - Extracted Content</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
 
-    <!-- Plyr CSS -->
-    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
-
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
@@ -226,46 +223,57 @@
         .audio-player-container {
             display: flex;
             align-items: center;
-            gap: 16px;
-            padding: 16px;
+            gap: 20px;
+            padding: 20px;
             background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
             border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
         .audio-player-container .audio-avatar {
-            width: 80px;
-            height: 80px;
-            border-radius: 8px;
+            width: 100px;
+            height: 100px;
+            border-radius: 12px;
             object-fit: cover;
             flex-shrink: 0;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
         }
         .audio-player-main {
             flex: 1;
-        }
-        .audio-player-main audio {
-            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
-        /* Plyr customization */
-        .plyr {
-            border-radius: 8px;
+        /* WaveSurfer controls */
+        .waveform-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 8px;
         }
-        .plyr--audio .plyr__controls {
-            background: transparent;
-            color: #fff;
+        .wave-button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
         }
-        .plyr__control--overlaid {
-            background: rgba(255, 255, 255, 0.9);
+        .wave-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
         }
-        .plyr--full-ui input[type=range] {
-            color: #00aeff;
+        .wave-button:active {
+            transform: scale(0.95);
         }
-        .plyr__control:hover {
-            background: rgba(255, 255, 255, 0.15);
-        }
-        .plyr__control.plyr__tab-focus {
-            box-shadow: 0 0 0 3px rgba(0, 174, 255, 0.5);
+        .wave-time {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 13px;
+            font-family: monospace;
         }
 
         /* Collections */
@@ -578,7 +586,12 @@
                                                 <img src="{{ creator_avatar }}" alt="Audio thumbnail" class="audio-avatar">
                                             {% endif %}
                                             <div class="audio-player-main">
-                                                <audio controls src="{{ url_for('media_file', filename=audio_path) }}" id="audio-{{ loop.index }}"></audio>
+                                                <div id="waveform-{{ loop.index }}" data-audio-src="{{ url_for('media_file', filename=audio_path) }}"></div>
+                                                <div class="waveform-controls">
+                                                    <button class="wave-button" onclick="playPauseWave({{ loop.index }})">▶ Play</button>
+                                                    <button class="wave-button" onclick="changeWaveSpeed({{ loop.index }})">1x</button>
+                                                    <span class="wave-time" id="time-{{ loop.index }}">0:00 / 0:00</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -762,25 +775,77 @@
         </div>
     </div>
 
+    <!-- WaveSurfer JS -->
+    <script src="https://unpkg.com/wavesurfer.js@7"></script>
+
     <script>
-        // Speed control for audio players
+        // WaveSurfer instances
+        const wavesurfers = {};
         const speeds = {};
 
-        function changeSpeed(audioId) {
-            const audio = document.getElementById('audio-' + audioId);
+        // Initialize WaveSurfer for each audio
+        document.addEventListener('DOMContentLoaded', function() {
+            const waveformDivs = document.querySelectorAll('[id^="waveform-"]');
+
+            waveformDivs.forEach(div => {
+                const id = div.id.replace('waveform-', '');
+                const audioSrc = div.getAttribute('data-audio-src');
+
+                wavesurfers[id] = WaveSurfer.create({
+                    container: '#waveform-' + id,
+                    waveColor: 'rgba(255, 255, 255, 0.3)',
+                    progressColor: '#00aeff',
+                    cursorColor: '#fff',
+                    barWidth: 3,
+                    barRadius: 3,
+                    cursorWidth: 2,
+                    height: 80,
+                    barGap: 2,
+                    url: audioSrc
+                });
+
+                speeds[id] = 1;
+
+                // Update time display
+                wavesurfers[id].on('timeupdate', (currentTime) => {
+                    const duration = wavesurfers[id].getDuration();
+                    document.getElementById('time-' + id).textContent =
+                        formatTime(currentTime) + ' / ' + formatTime(duration);
+                });
+
+                // Update button when playback ends
+                wavesurfers[id].on('finish', () => {
+                    document.querySelector(`button[onclick="playPauseWave(${id})"]`).textContent = '▶ Play';
+                });
+            });
+        });
+
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return minutes + ':' + (secs < 10 ? '0' : '') + secs;
+        }
+
+        function playPauseWave(id) {
             const button = event.target;
-
-            if (!speeds[audioId]) {
-                speeds[audioId] = 1;
+            if (wavesurfers[id].isPlaying()) {
+                wavesurfers[id].pause();
+                button.textContent = '▶ Play';
+            } else {
+                wavesurfers[id].play();
+                button.textContent = '⏸ Pause';
             }
+        }
 
+        function changeWaveSpeed(id) {
+            const button = event.target;
             const speedOptions = [1, 1.25, 1.5, 1.75, 2];
-            const currentIndex = speedOptions.indexOf(speeds[audioId]);
+            const currentIndex = speedOptions.indexOf(speeds[id]);
             const nextIndex = (currentIndex + 1) % speedOptions.length;
             const newSpeed = speedOptions[nextIndex];
 
-            audio.playbackRate = newSpeed;
-            speeds[audioId] = newSpeed;
+            wavesurfers[id].setPlaybackRate(newSpeed);
+            speeds[id] = newSpeed;
             button.textContent = newSpeed + 'x';
         }
 
@@ -794,20 +859,6 @@
                 commentsToggle.classList.toggle('active');
             });
         }
-    </script>
-
-    <!-- Plyr JS -->
-    <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
-    <script>
-        // Initialize Plyr on all audio elements
-        const players = Array.from(document.querySelectorAll('audio')).map(audio => {
-            return new Plyr(audio, {
-                controls: ['play', 'progress', 'current-time', 'duration', 'mute', 'volume', 'settings'],
-                settings: ['speed'],
-                speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] },
-                tooltips: { controls: true, seek: true }
-            });
-        });
     </script>
 </body>
 </html>
