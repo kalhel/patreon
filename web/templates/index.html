@@ -1038,12 +1038,6 @@
             vertical-align: middle;
         }
 
-        .search-badge-v2 .icon {
-            font-size: 10px;
-            line-height: 1;
-            display: inline-block;
-            vertical-align: middle;
-        }
 
         .search-badge-v2.title {
             background: #10b981;
@@ -1770,19 +1764,19 @@
 
                     // Order: Title → Text → Tags → Comments → Subtitles
                     if (matchedIn.includes('title')) {
-                        badgesV2.push(`<span class="search-badge-v2 title"><span class="icon">${icons['title']}</span>Title</span>`);
+                        badgesV2.push(`<span class="search-badge-v2 title">${icons['title']} Title</span>`);
                     }
                     if (matchedIn.includes('content')) {
-                        badgesV2.push(`<span class="search-badge-v2 text"><span class="icon">${icons['content']}</span>Text</span>`);
+                        badgesV2.push(`<span class="search-badge-v2 text">${icons['content']} Text</span>`);
                     }
                     if (matchedIn.includes('tags')) {
-                        badgesV2.push(`<span class="search-badge-v2 tags"><span class="icon">${icons['tags']}</span>Tags</span>`);
+                        badgesV2.push(`<span class="search-badge-v2 tags">${icons['tags']} Tags</span>`);
                     }
                     if (matchedIn.includes('comments')) {
-                        badgesV2.push(`<span class="search-badge-v2 comments"><span class="icon">${icons['comments']}</span>Comments</span>`);
+                        badgesV2.push(`<span class="search-badge-v2 comments">${icons['comments']} Comments</span>`);
                     }
                     if (matchedIn.includes('subtitles')) {
-                        badgesV2.push(`<span class="search-badge-v2 subtitles"><span class="icon">${icons['subtitles']}</span>Video</span>`);
+                        badgesV2.push(`<span class="search-badge-v2 subtitles">${icons['subtitles']} Video</span>`);
                     }
 
                     indicatorV2.innerHTML = badgesV2.join('');
