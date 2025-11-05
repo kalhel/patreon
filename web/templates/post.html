@@ -588,7 +588,13 @@
                                         <img src="{{ creator_avatar }}" alt="Audio thumbnail" class="audio-avatar">
                                         {% endif %}
                                         <div class="audio-player-main">
-                                            <audio controls src="{{ audio_block.url }}" id="audio-block-{{ loop.index }}"></audio>
+                                            {% if audio_block.get('local_path') %}
+                                                <audio controls src="{{ url_for('media_file', filename=audio_block.local_path) }}" id="audio-block-{{ loop.index }}"></audio>
+                                            {% elif audio_block.url and not audio_block.url.startswith('http') %}
+                                                <audio controls src="{{ url_for('media_file', filename=audio_block.url) }}" id="audio-block-{{ loop.index }}"></audio>
+                                            {% else %}
+                                                <audio controls src="{{ audio_block.url }}" id="audio-block-{{ loop.index }}"></audio>
+                                            {% endif %}
                                             <button class="audio-speed-control" onclick="changeSpeed('block-{{ loop.index }}')">1x</button>
                                         </div>
                                     </div>
