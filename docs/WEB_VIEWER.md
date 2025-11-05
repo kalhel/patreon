@@ -107,31 +107,27 @@ Vista detallada de un post individual con todo su contenido.
 Vista dedicada a una collection específica.
 
 **Características**:
-- Header negro con:
-  - Avatar y nombre del creador
-  - Imagen grande de la collection (120x120px)
-  - Nombre de la collection en grande
-  - Contador de posts
+- Header negro compacto con diseño horizontal:
+  - Imagen de collection (120x120px, redondeada)
+  - Título de collection (lado derecho de la imagen)
+  - Avatar pequeño del creador (32x32px)
+  - Nombre del creador y contador de posts en línea
   - Botón "Back to Library"
 - Grid de posts de esa collection
 - Mismo diseño de tarjetas que el index
 - Los posts incluyen `?from_collection=` en la URL para activar navegación contextual
+- Previews de audio/video/YouTube funcionan igual que en index
 
-**Diseño del Header**:
+**Diseño del Header** (Compacto y Horizontal):
 ```
-┌────────────────────────────────────┐
-│ [Negro Fondo]                      │
-│                                    │
-│   [Avatar] NOMBRE CREADOR          │
-│                                    │
-│       [Imagen Collection]          │
-│                                    │
-│       NOMBRE COLLECTION            │
-│       15 posts                     │
-│                                    │
-│   [← Back to Library]              │
-│                                    │
-└────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│ [Negro Fondo - Padding reducido: 1.5rem]       │
+│                                                 │
+│  [Img 120px]  NOMBRE COLLECTION                │
+│               [Avatar] Creador • 15 posts       │
+│                                                 │
+│  [← Back to Library]                            │
+└─────────────────────────────────────────────────┘
 ```
 
 ---
@@ -276,6 +272,58 @@ data/media/
 ├── audio/{creator}/
 └── collections/{creator}/
 ```
+
+### Sistema de Preview en Tarjetas
+
+Las tarjetas de posts muestran un preview del contenido con el siguiente orden de prioridad:
+
+**Orden de Prioridad** (el primero disponible se muestra):
+1. **Videos locales** - Reproductor HTML5 con controles
+2. **YouTube embeds** - Iframe embebido
+3. **Audio files** - Reproductor de audio con controles
+4. **Imágenes** - Primera imagen del post
+5. **Texto** - Preview del contenido textual
+
+**Implementación**:
+```jinja
+{# Se usa un namespace para tracking #}
+{% set preview_shown = namespace(value=false) %}
+
+{# 1. Videos locales #}
+{% if not preview_shown.value and post.video_local_paths %}
+  <!-- Mostrar video -->
+{% endif %}
+
+{# 2. YouTube embeds #}
+{% if not preview_shown.value and post.content_blocks %}
+  {% for block in post.content_blocks %}
+    {% if block.type == 'youtube' %}
+      <!-- Mostrar YouTube -->
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+{# 3. Audio (desde content_blocks primero, luego local) #}
+{% if not preview_shown.value and post.content_blocks %}
+  {% for block in post.content_blocks %}
+    {% if block.type == 'audio' %}
+      <!-- Mostrar reproductor audio -->
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+{# 4. Imágenes #}
+{% if not preview_shown.value and post.image_local_paths %}
+  <!-- Mostrar imagen -->
+{% endif %}
+
+{# 5. Texto (fallback) #}
+{% if not preview_shown.value %}
+  <!-- Mostrar preview de texto -->
+{% endif %}
+```
+
+**Nota importante**: Este orden es consistente en todas las vistas (index, collection, tag) para mantener coherencia visual.
 
 ### Filtros Implementados
 
