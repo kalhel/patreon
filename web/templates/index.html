@@ -206,20 +206,37 @@
 
         .posts-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
             gap: 2rem;
             margin-bottom: 4rem;
         }
 
         @media (min-width: 1200px) {
             .posts-grid {
-                grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
             }
         }
 
         @media (min-width: 1600px) {
             .posts-grid {
-                grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+            }
+        }
+
+        /* Collections grid - narrower cards */
+        .posts-grid.collections-mode {
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        }
+
+        @media (min-width: 1200px) {
+            .posts-grid.collections-mode {
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            }
+        }
+
+        @media (min-width: 1600px) {
+            .posts-grid.collections-mode {
+                grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
             }
         }
 
@@ -950,7 +967,6 @@
         .creator-breakdown {
             margin-top: 0;
             padding-top: 0;
-            border-top: 1px solid #e0e0e0;
         }
 
         .search-stat.creator-stat {
@@ -1898,6 +1914,9 @@
             const postsGrid = document.querySelector('.posts-grid');
             postsGrid.innerHTML = '';
 
+            // Add collections-mode class for narrower cards
+            postsGrid.classList.add('collections-mode');
+
             collectionsData.forEach(collection => {
                 const card = createCollectionCard(collection);
                 postsGrid.appendChild(card);
@@ -1956,6 +1975,9 @@
         function showPostsView() {
             const postsGrid = document.querySelector('.posts-grid');
             postsGrid.innerHTML = '';
+
+            // Remove collections-mode class to restore normal post card width
+            postsGrid.classList.remove('collections-mode');
 
             // Restore all post cards
             postCards.forEach(card => {
