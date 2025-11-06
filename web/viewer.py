@@ -146,7 +146,9 @@ def load_all_posts():
                         print(f"       Sample creator_id: {sample_creator}")
                     all_posts.extend(posts)
             except Exception as e:
-                print(f"Error loading {json_file}: {e}")
+                print(f"❌ ERROR loading {json_file.name}: {e}")
+                print(f"   This file is corrupted and needs to be fixed!")
+                print(f"   Run: python fix_corrupted_json.py {json_file}")
     else:
         print(f"DEBUG: PROCESSED_DATA_DIR does not exist: {PROCESSED_DATA_DIR}")
 
