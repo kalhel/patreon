@@ -1889,13 +1889,28 @@
         // Show/Hide collections toggle
         toggleCollections.addEventListener('click', async function() {
             collectionsVisible = !collectionsVisible;
+            const searchContainer = document.querySelector('.search-container');
+
             if (collectionsVisible) {
                 this.classList.add('selected');
                 this.querySelector('span:last-child').textContent = 'Show Posts';
+
+                // Clear search and hide search container (collections don't use search)
+                searchInput.value = '';
+                if (searchContainer) {
+                    searchContainer.style.display = 'none';
+                }
+
                 await loadAndShowCollections();
             } else {
                 this.classList.remove('selected');
                 this.querySelector('span:last-child').textContent = 'Show Collections';
+
+                // Show search container again
+                if (searchContainer) {
+                    searchContainer.style.display = 'block';
+                }
+
                 showPostsView();
             }
         });
