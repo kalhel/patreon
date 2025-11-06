@@ -386,10 +386,20 @@ def view_creator(creator_id):
                 creator_avatar = candidate
                 break
 
+    # Build avatar paths with /static/ prefix (same as index and tag)
+    creator_avatars = {}
+    for post in creator_posts:
+        cid = post.get('creator_id', 'unknown')
+        if cid not in creator_avatars:
+            if cid in CREATOR_AVATARS:
+                creator_avatars[cid] = f"/static/{CREATOR_AVATARS[cid]}"
+            elif post.get('creator_avatar'):
+                creator_avatars[cid] = post['creator_avatar']
+
     return render_template('creator.html',
                           creator_id=creator_id,
                           creator_avatar=creator_avatar,
-                          creator_avatars=CREATOR_AVATARS,
+                          creator_avatars=creator_avatars,
                           posts=creator_posts)
 
 
@@ -401,6 +411,7 @@ def view_tag(tag_name):
     # Filter posts that have this tag and group by creator
     tagged_posts = []
     creators_with_tag = {}  # {creator_id: [posts]}
+    creator_avatars = {}  # Build local dict with full paths
 
     for post in posts:
         tags = post.get('patreon_tags', [])
@@ -420,6 +431,13 @@ def view_tag(tag_name):
                 creators_with_tag[creator_id] = []
             creators_with_tag[creator_id].append(post)
 
+            # Build avatar paths with /static/ prefix (same as index)
+            if creator_id not in creator_avatars:
+                if creator_id in CREATOR_AVATARS:
+                    creator_avatars[creator_id] = f"/static/{CREATOR_AVATARS[creator_id]}"
+                elif post.get('creator_avatar'):
+                    creator_avatars[creator_id] = post['creator_avatar']
+
     # Load creator colors from config
     creators_config = load_creators_config()
     creator_colors = {c['creator_id']: c.get('preview_color', '#4db8a0') for c in creators_config}
@@ -429,7 +447,7 @@ def view_tag(tag_name):
                           posts=tagged_posts,
                           creators=creators_with_tag,
                           creator_colors=creator_colors,
-                          creator_avatars=CREATOR_AVATARS,
+                          creator_avatars=creator_avatars,
                           total=len(tagged_posts))
 
 
@@ -473,11 +491,21 @@ def view_collection(creator_id, collection_id):
     creators_config = load_creators_config()
     creator_colors = {c['creator_id']: c.get('preview_color', '#4db8a0') for c in creators_config}
 
+    # Build avatar paths with /static/ prefix (same as index and tag)
+    creator_avatars = {}
+    for post in collection_posts:
+        cid = post.get('creator_id', 'unknown')
+        if cid not in creator_avatars:
+            if cid in CREATOR_AVATARS:
+                creator_avatars[cid] = f"/static/{CREATOR_AVATARS[cid]}"
+            elif post.get('creator_avatar'):
+                creator_avatars[cid] = post['creator_avatar']
+
     return render_template('collection.html',
                           creator_id=creator_id,
                           creator_display_name=creator_display_name,
                           creator_avatar=creator_avatar,
-                          creator_avatars=CREATOR_AVATARS,
+                          creator_avatars=creator_avatars,
                           collection=collection_info,
                           creator_colors=creator_colors,
                           posts=collection_posts,
