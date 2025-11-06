@@ -149,8 +149,8 @@ Examples:
 
     # Load config
     config = load_config()
-    firebase_config = load_firebase_config()
-    tracker = FirebaseTracker(firebase_config)
+    database_url, database_secret = load_firebase_config()
+    tracker = FirebaseTracker(database_url, database_secret)
 
     # Find posts to re-scrape
     post_ids_to_process = []

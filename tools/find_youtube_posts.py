@@ -107,8 +107,8 @@ Examples:
     args = parser.parse_args()
 
     # Load Firebase config
-    config = load_firebase_config()
-    tracker = FirebaseTracker(config)
+    database_url, database_secret = load_firebase_config()
+    tracker = FirebaseTracker(database_url, database_secret)
 
     logger.info("🔍 Scanning for posts with YouTube videos...\n")
 
