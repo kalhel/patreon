@@ -4,15 +4,10 @@ Find all posts that contain YouTube videos
 This helps identify which posts need thumbnail re-processing
 """
 
-import sys
-from pathlib import Path
-
-# Add src directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-from firebase_tracker import FirebaseTracker, load_firebase_config
 import json
 import logging
+from pathlib import Path
+from typing import Dict, Tuple
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,35 +16,75 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def find_youtube_posts(tracker: FirebaseTracker, creator_id: str = None):
+def load_posts_from_json(data_dir: Path, creator_id: str = None) -> Dict:
+    """
+    Load posts from JSON files in data/processed/
+
+    Args:
+        data_dir: Path to data directory
+        creator_id: Optional creator filter
+
+    Returns:
+        Dict of all posts
+    """
+    processed_dir = data_dir / "processed"
+
+    if not processed_dir.exists():
+        logger.error(f"❌ Directory not found: {processed_dir}")
+        return {}
+
+    all_posts = {}
+
+    # Find all JSON files
+    if creator_id:
+        json_files = [processed_dir / f"{creator_id}_posts_detailed.json"]
+    else:
+        json_files = list(processed_dir.glob("*_posts_detailed.json"))
+
+    for json_file in json_files:
+        if not json_file.exists():
+            continue
+
+        try:
+            with open(json_file, 'r', encoding='utf-8') as f:
+                posts = json.load(f)
+
+            for post in posts:
+                post_id = post.get('post_id')
+                if post_id:
+                    all_posts[post_id] = post
+
+        except Exception as e:
+            logger.warning(f"⚠️  Error reading {json_file}: {e}")
+
+    return all_posts
+
+
+def find_youtube_posts(creator_id: str = None) -> Tuple[Dict, int, int]:
     """
     Find all posts that contain YouTube videos
 
     Args:
-        tracker: Firebase tracker instance
         creator_id: Optional creator filter
 
     Returns:
-        Dict mapping creator_id to list of post IDs with YouTube videos
+        Tuple of (youtube_posts dict, total_posts, total_with_youtube)
     """
     youtube_posts = {}
     total_posts = 0
     total_with_youtube = 0
 
-    # Get all posts
-    all_posts = tracker.get_all_posts()
+    # Get project root (parent of tools/)
+    project_root = Path(__file__).parent.parent
+    data_dir = project_root / "data"
+
+    # Load posts from JSON files
+    all_posts = load_posts_from_json(data_dir, creator_id)
 
     if not all_posts:
         return youtube_posts, total_posts, total_with_youtube
 
-    # Filter by creator if specified
-    if creator_id:
-        all_posts = {
-            post_id: post for post_id, post in all_posts.items()
-            if post.get('creator_id') == creator_id
-        }
-
-    # Group by creator
+    # Group by creator and find YouTube videos
     for post_id, post in all_posts.items():
         total_posts += 1
         creator = post.get('creator_id', 'unknown')
@@ -102,15 +137,10 @@ Examples:
 
     args = parser.parse_args()
 
-    # Load Firebase config
-    database_url, database_secret = load_firebase_config()
-    tracker = FirebaseTracker(database_url, database_secret)
-
     logger.info("🔍 Scanning for posts with YouTube videos...\n")
 
     # Find YouTube posts
     youtube_posts, total_posts, total_with_youtube = find_youtube_posts(
-        tracker,
         creator_id=args.creator
     )
 

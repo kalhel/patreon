@@ -12,8 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
 from firebase_tracker import FirebaseTracker, load_firebase_config
-from patreon_auth_selenium import PatreonAuthSelenium
-from patreon_scraper_v2 import PatreonScraperV2
+from phase2_detail_extractor import extract_post_details, authenticate
 import json
 import logging
 from find_youtube_posts import find_youtube_posts
@@ -44,7 +43,7 @@ def load_config():
     return config
 
 
-def rescrape_post(scraper: PatreonScraperV2, tracker: FirebaseTracker, post_id: str):
+def rescrape_post(scraper, tracker: FirebaseTracker, post_id: str):
     """
     Re-scrape a single post to update YouTube thumbnails
 
@@ -57,42 +56,29 @@ def rescrape_post(scraper: PatreonScraperV2, tracker: FirebaseTracker, post_id: 
         True if successful, False otherwise
     """
     try:
-        # Get existing post data
+        # Get existing post data from Firebase
         post = tracker.get_post(post_id)
         if not post:
             logger.error(f"❌ Post {post_id} not found in Firebase")
             return False
 
         creator_id = post.get('creator_id')
-        url = post.get('url')
 
-        if not url:
-            logger.error(f"❌ Post {post_id} has no URL")
+        if not creator_id:
+            logger.error(f"❌ Post {post_id} has no creator_id")
             return False
 
         logger.info(f"🔄 Re-scraping post {post_id} ({creator_id})...")
 
-        # Extract full details
-        result = scraper.extract_full_post_details(url, creator_id)
+        # Use the same extract_post_details function from phase2
+        # This will re-scrape and save to JSON with updated thumbnails
+        success = extract_post_details(scraper, tracker, post, save_to_json=True)
 
-        if result:
-            # Update Firebase with new data (including best_thumbnail)
-            tracker.update_post_details(post_id, result)
-
-            # Check if we found better thumbnails
-            youtube_blocks = [
-                b for b in result.get('content_blocks', [])
-                if b.get('type') == 'youtube_embed' and b.get('best_thumbnail')
-            ]
-
-            if youtube_blocks:
-                logger.info(f"✅ Updated {len(youtube_blocks)} YouTube thumbnail(s)")
-            else:
-                logger.info(f"✅ Re-scraped (no YouTube videos found)")
-
+        if success:
+            logger.info(f"✅ Successfully re-scraped post {post_id}")
             return True
         else:
-            logger.error(f"❌ Failed to extract details for post {post_id}")
+            logger.error(f"❌ Failed to re-scrape post {post_id}")
             return False
 
     except Exception as e:
@@ -199,18 +185,18 @@ Examples:
             logger.info(f"   ... and {len(post_ids_to_process) - 10} more")
         return
 
-    # Authenticate
+    # Authenticate using phase2's authenticate function
     logger.info("\n🔐 Authenticating with Patreon...")
-    auth = PatreonAuthSelenium(headless=args.headless)
-    credentials = config['patreon']
+    auth = authenticate(config, headless=args.headless)
 
-    if not auth.login(credentials['email'], credentials['password']):
+    if not auth:
         logger.error("❌ Failed to authenticate")
         return
 
     logger.info("✅ Authentication successful")
 
     # Create scraper
+    from patreon_scraper_v2 import PatreonScraperV2
     scraper = PatreonScraperV2(auth)
 
     # Process posts
