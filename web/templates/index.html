@@ -1474,12 +1474,8 @@
                         <!-- Header Negro -->
                         <div class="post-card-footer-black">
                             <div class="footer-creator-info">
-                                {% if post.creator_id == 'headonhistory' %}
-                                    <img src="{{ url_for('static', filename='headonhistory.jpg') }}" alt="{{ post.display_creator_name }}" class="footer-creator-avatar">
-                                {% elif post.creator_id == 'horoiproject' %}
-                                    <img src="{{ url_for('static', filename='horoiproject.jpg') }}" alt="{{ post.display_creator_name }}" class="footer-creator-avatar">
-                                {% elif post.creator_id == 'astrobymax' %}
-                                    <img src="{{ url_for('static', filename='astrobymax.jpg') }}" alt="{{ post.display_creator_name }}" class="footer-creator-avatar">
+                                {% if creator_avatars.get(post.creator_id) %}
+                                    <img src="{{ creator_avatars[post.creator_id] }}" alt="{{ post.display_creator_name }}" class="footer-creator-avatar">
                                 {% endif %}
                                 <span class="footer-creator-name">{{ post.display_creator_name }}</span>
                             </div>
