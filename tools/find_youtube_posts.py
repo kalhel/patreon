@@ -60,12 +60,13 @@ def load_posts_from_json(data_dir: Path, creator_id: str = None) -> Dict:
     return all_posts
 
 
-def find_youtube_posts(creator_id: str = None) -> Tuple[Dict, int, int]:
+def find_youtube_posts(creator_id: str = None, debug: bool = False) -> Tuple[Dict, int, int]:
     """
     Find all posts that contain YouTube videos
 
     Args:
         creator_id: Optional creator filter
+        debug: Print debug information about block types
 
     Returns:
         Tuple of (youtube_posts dict, total_posts, total_with_youtube)
@@ -84,23 +85,60 @@ def find_youtube_posts(creator_id: str = None) -> Tuple[Dict, int, int]:
     if not all_posts:
         return youtube_posts, total_posts, total_with_youtube
 
+    # Debug: collect all block types
+    if debug:
+        all_types = set()
+        video_types = set()
+
     # Group by creator and find YouTube videos
     for post_id, post in all_posts.items():
         total_posts += 1
         creator = post.get('creator_id', 'unknown')
         content_blocks = post.get('content_blocks', [])
 
-        # Check if any content block is a YouTube embed
-        has_youtube = any(
-            block.get('type') == 'youtube_embed'
-            for block in content_blocks
-        )
+        if debug:
+            for block in content_blocks:
+                block_type = block.get('type', 'unknown')
+                all_types.add(block_type)
+                # Check if it might be a video
+                if 'video' in block_type.lower() or 'youtube' in block_type.lower() or 'embed' in block_type.lower():
+                    video_types.add(block_type)
+                    if block_type not in ['youtube_embed']:
+                        logger.info(f"  Found video type: {block_type} in post {post_id}")
+
+        # Check if any content block is a YouTube/video embed
+        # Look for: youtube_embed, video, iframe with youtube URL
+        has_youtube = False
+        for block in content_blocks:
+            block_type = block.get('type', '')
+
+            if block_type == 'youtube_embed':
+                has_youtube = True
+                break
+
+            # Check for video blocks
+            if block_type == 'video':
+                url = block.get('url', '').lower()
+                if 'youtube' in url or 'youtu.be' in url:
+                    has_youtube = True
+                    break
+
+            # Check for iframes with YouTube
+            if block_type == 'iframe':
+                url = block.get('url', '').lower()
+                if 'youtube' in url or 'youtu.be' in url:
+                    has_youtube = True
+                    break
 
         if has_youtube:
             total_with_youtube += 1
             if creator not in youtube_posts:
                 youtube_posts[creator] = []
             youtube_posts[creator].append(post_id)
+
+    if debug:
+        logger.info(f"\n🔍 Debug - All block types found: {sorted(all_types)}")
+        logger.info(f"🎬 Debug - Video-related types: {sorted(video_types)}\n")
 
     return youtube_posts, total_posts, total_with_youtube
 
@@ -134,6 +172,8 @@ Examples:
                         help='Save post IDs to file (one per line)')
     parser.add_argument('--generate-command', action='store_true',
                         help='Generate bash command to re-scrape all YouTube posts')
+    parser.add_argument('--debug', action='store_true',
+                        help='Show debug information about block types found')
 
     args = parser.parse_args()
 
@@ -141,7 +181,8 @@ Examples:
 
     # Find YouTube posts
     youtube_posts, total_posts, total_with_youtube = find_youtube_posts(
-        creator_id=args.creator
+        creator_id=args.creator,
+        debug=args.debug
     )
 
     # Print summary
