@@ -589,10 +589,10 @@ def save_settings():
                 'message': 'ERROR: Patreon email and password are required. Not saving to prevent data loss.'
             }), 400
 
-        if not firebase.get('database_url'):
+        if not firebase.get('database_url') or not firebase.get('database_secret'):
             return jsonify({
                 'success': False,
-                'message': 'ERROR: Firebase database_url is required. Not saving to prevent data loss.'
+                'message': 'ERROR: Firebase database_url AND database_secret are required. Not saving to prevent data loss.'
             }), 400
 
         # Additional safety: check if credentials.json exists and compare
