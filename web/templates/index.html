@@ -206,20 +206,20 @@
 
         .posts-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
             gap: 2rem;
             margin-bottom: 4rem;
         }
 
         @media (min-width: 1200px) {
             .posts-grid {
-                grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
             }
         }
 
         @media (min-width: 1600px) {
             .posts-grid {
-                grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
             }
         }
 
@@ -946,6 +946,33 @@
             color: #666666;
         }
 
+        /* Creator breakdown stats */
+        .creator-breakdown {
+            margin-top: 0;
+            padding-top: 0;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .search-stat.creator-stat {
+            background: #fafafa;
+        }
+
+        .search-stat.creator-stat:hover {
+            background: #f0f0f0;
+        }
+
+        .search-stat.creator-stat.active {
+            background: #ffffff;
+            border-color: #d0d0d0;
+        }
+
+        .search-stat.creator-stat .creator-avatar {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
         /* Content filters */
         .content-filters {
             display: flex;
@@ -1389,6 +1416,11 @@
                         <span class="count" id="videoCount">0</span>
                     </div>
                 </div>
+
+                <!-- Creator breakdown statistics -->
+                <div class="search-stats creator-breakdown" id="creatorBreakdown" style="display: none;">
+                    <!-- Creator stats will be dynamically populated here -->
+                </div>
             </div>
 
             <!-- Content filters -->
@@ -1725,6 +1757,16 @@
     </div>
 
     <script>
+        // Creator data for search statistics
+        const creatorsData = {
+            {% for creator_id in creators.keys() %}
+            '{{ creator_id }}': {
+                name: '{{ creator_id | creator_name }}',
+                avatar: {% if creator_avatars.get(creator_id) %}'{{ creator_avatars[creator_id] }}'{% else %}null{% endif %}
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        };
+
         // Elements
         const searchInput = document.getElementById('searchInput');
         const resultsCount = document.getElementById('resultsCount');
@@ -1770,8 +1812,12 @@
                     this.classList.add('selected');
                 }
 
-                // Perform filtering
-                filterPosts();
+                // Perform filtering - use appropriate function based on current view
+                if (collectionsVisible) {
+                    loadAndShowCollections();
+                } else {
+                    filterPosts();
+                }
             });
         });
 
@@ -2071,7 +2117,8 @@
                 text: 0,
                 tags: 0,
                 comments: 0,
-                video: 0
+                video: 0,
+                creators: {}  // Track posts per creator
             };
 
             postCards.forEach(card => {
@@ -2160,6 +2207,11 @@
                     if (matchedIn.includes('tags')) searchStats.tags++;
                     if (matchedIn.includes('comments')) searchStats.comments++;
                     if (matchedIn.includes('subtitles')) searchStats.video++;
+
+                    // Track creator counts
+                    if (creatorId) {
+                        searchStats.creators[creatorId] = (searchStats.creators[creatorId] || 0) + 1;
+                    }
                 } else {
                     indicatorV2.classList.add('hidden');
                 }
@@ -2263,9 +2315,74 @@
                 document.getElementById('tagsCount').textContent = searchStats.tags;
                 document.getElementById('commentsCount').textContent = searchStats.comments;
                 document.getElementById('videoCount').textContent = searchStats.video;
+
+                // Update creator breakdown
+                const creatorBreakdownEl = document.getElementById('creatorBreakdown');
+                if (Object.keys(searchStats.creators).length > 0) {
+                    // Show creator breakdown
+                    creatorBreakdownEl.style.display = 'flex';
+
+                    // Clear existing creator stats
+                    creatorBreakdownEl.innerHTML = '';
+
+                    // Sort creators by count (descending)
+                    const sortedCreators = Object.entries(searchStats.creators)
+                        .sort((a, b) => b[1] - a[1]);
+
+                    // Create stat elements for each creator
+                    sortedCreators.forEach(([creatorId, count]) => {
+                        const creatorInfo = creatorsData[creatorId];
+                        if (!creatorInfo) return;
+
+                        const creatorStat = document.createElement('div');
+                        creatorStat.className = 'search-stat creator-stat';
+                        creatorStat.dataset.creatorId = creatorId;
+
+                        // Check if this creator is currently selected
+                        if (selectedCreators.has(creatorId)) {
+                            creatorStat.classList.add('active');
+                        }
+
+                        creatorStat.innerHTML = `
+                            ${creatorInfo.avatar ? `<img src="${creatorInfo.avatar}" alt="${creatorInfo.name}" class="creator-avatar">` : ''}
+                            <span class="label">${creatorInfo.name}:</span>
+                            <span class="count">${count}</span>
+                        `;
+
+                        // Make creator stat clickable to filter by creator
+                        creatorStat.addEventListener('click', function() {
+                            const creatorId = this.dataset.creatorId;
+                            const creatorCard = document.querySelector(`.creator-card[data-creator-id="${creatorId}"]`);
+
+                            if (selectedCreators.has(creatorId)) {
+                                // Deselect
+                                selectedCreators.delete(creatorId);
+                                this.classList.remove('active');
+                                if (creatorCard) creatorCard.classList.remove('selected');
+                            } else {
+                                // Select
+                                selectedCreators.add(creatorId);
+                                this.classList.add('active');
+                                if (creatorCard) creatorCard.classList.add('selected');
+                            }
+
+                            // Re-filter posts
+                            if (collectionsVisible) {
+                                loadAndShowCollections();
+                            } else {
+                                filterPostsImmediate();
+                            }
+                        });
+
+                        creatorBreakdownEl.appendChild(creatorStat);
+                    });
+                } else {
+                    creatorBreakdownEl.style.display = 'none';
+                }
             } else {
                 // Hide statistics when no search
                 searchStatsEl.style.display = 'none';
+                document.getElementById('creatorBreakdown').style.display = 'none';
             }
         }
 
