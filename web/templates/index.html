@@ -808,6 +808,71 @@
             font-weight: 300;
         }
 
+        /* Search statistics */
+        .search-stats {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        .search-stat {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 1rem;
+            background: #f8f8f8;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+            user-select: none;
+        }
+
+        .search-stat:hover {
+            background: #f0f0f0;
+        }
+
+        .search-stat.active {
+            border-color: currentColor;
+            background: #ffffff;
+            font-weight: 600;
+        }
+
+        .search-stat .icon svg {
+            width: 14px;
+            height: 14px;
+            fill: currentColor;
+        }
+
+        .search-stat.title-stat {
+            color: #10b981;
+        }
+
+        .search-stat.text-stat {
+            color: #3b82f6;
+        }
+
+        .search-stat.tags-stat {
+            color: #8b5cf6;
+        }
+
+        .search-stat.comments-stat {
+            color: #f59e0b;
+        }
+
+        .search-stat.video-stat {
+            color: #06b6d4;
+        }
+
+        .search-stat .count {
+            font-weight: 700;
+            font-size: 0.875rem;
+        }
+
         /* Content filters */
         .content-filters {
             display: flex;
@@ -1042,20 +1107,20 @@
         }
 
         .search-badge-v2.tags {
-            background: #ef4444;
+            background: #8b5cf6;  /* Purple - more professional than red */
         }
 
         /* Fixed tags badge - using different class name to avoid alignment issues */
         .search-badge-v2.tags-match {
-            background: #ef4444;
+            background: #8b5cf6;  /* Purple - more professional than red */
         }
 
         .search-badge-v2.comments {
-            background: #f59e0b;
+            background: #f59e0b;  /* Amber */
         }
 
         .search-badge-v2.subtitles {
-            background: #8b5cf6;
+            background: #06b6d4;  /* Cyan - better for video */
         }
 
         /* Tags in post cards */
@@ -1202,6 +1267,55 @@
                     <input type="text" class="search-input" id="searchInput" placeholder="Search posts by title, creator, or tags...">
                 </div>
                 <div class="search-results-count" id="resultsCount"></div>
+
+                <!-- Search statistics with filters -->
+                <div class="search-stats" id="searchStats" style="display: none;">
+                    <div class="search-stat title-stat" data-type="title">
+                        <span class="icon">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9 5v2m0 4v2m0 4v2M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3-7 3V5z"/>
+                            </svg>
+                        </span>
+                        <span class="label">Title:</span>
+                        <span class="count" id="titleCount">0</span>
+                    </div>
+                    <div class="search-stat text-stat" data-type="text">
+                        <span class="icon">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                        </span>
+                        <span class="label">Text:</span>
+                        <span class="count" id="textCount">0</span>
+                    </div>
+                    <div class="search-stat tags-stat" data-type="tags">
+                        <span class="icon">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                            </svg>
+                        </span>
+                        <span class="label">Tags:</span>
+                        <span class="count" id="tagsCount">0</span>
+                    </div>
+                    <div class="search-stat comments-stat" data-type="comments">
+                        <span class="icon">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                            </svg>
+                        </span>
+                        <span class="label">Comments:</span>
+                        <span class="count" id="commentsCount">0</span>
+                    </div>
+                    <div class="search-stat video-stat" data-type="video">
+                        <span class="icon">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                            </svg>
+                        </span>
+                        <span class="label">Video:</span>
+                        <span class="count" id="videoCount">0</span>
+                    </div>
+                </div>
             </div>
 
             <!-- Content filters -->
@@ -1546,6 +1660,7 @@
         // Selected filters
         let selectedCreators = new Set();
         let selectedTags = new Set();
+        let selectedMatchTypes = new Set();  // For filtering by match type (title, text, tags, comments, video)
         let contentFilters = {
             images: false,
             videos: false,
@@ -1868,6 +1983,15 @@
             // Array to store cards with their relevance for sorting
             const cardsWithRelevance = [];
 
+            // Statistics for search results by type
+            const searchStats = {
+                title: 0,
+                text: 0,
+                tags: 0,
+                comments: 0,
+                video: 0
+            };
+
             postCards.forEach(card => {
                 const title = card.dataset.title || '';
                 const creator = card.dataset.creator || '';
@@ -1914,41 +2038,59 @@
                     }
                 }
 
-                // Update search badges (v2 - with icons)
+                // Update search badges (v2 - with professional SVG icons)
                 const indicatorV2 = card.querySelector('.search-indicator-v2');
                 if (searchTerms.length > 0 && searchMatch && matchedIn.length > 0) {
                     const badgesV2 = [];
 
-                    // Icons for each badge type
+                    // Professional SVG icons for each badge type
                     const icons = {
-                        'title': '📌',
-                        'content': '📄',
-                        'tags': '🔖',
-                        'comments': '💬',
-                        'subtitles': '🎬'
+                        'title': '<svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:currentColor;margin-right:4px"><path d="M9 5v2m0 4v2m0 4v2M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3-7 3V5z"/></svg>',
+                        'content': '<svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:currentColor;margin-right:4px"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>',
+                        'tags': '<svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:currentColor;margin-right:4px"><path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>',
+                        'comments': '<svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:currentColor;margin-right:4px"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>',
+                        'subtitles': '<svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:currentColor;margin-right:4px"><path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>'
                     };
 
                     // Order: Title → Text → Tags → Comments → Subtitles
                     if (matchedIn.includes('title')) {
-                        badgesV2.push(`<span class="search-badge-v2 title">${icons['title']} Title</span>`);
+                        badgesV2.push(`<span class="search-badge-v2 title">${icons['title']}Title</span>`);
                     }
                     if (matchedIn.includes('content')) {
-                        badgesV2.push(`<span class="search-badge-v2 text">${icons['content']} Text</span>`);
+                        badgesV2.push(`<span class="search-badge-v2 text">${icons['content']}Text</span>`);
                     }
                     if (matchedIn.includes('tags')) {
-                        badgesV2.push(`<span class="search-badge-v2 tags-match">${icons['tags']} Tags</span>`);
+                        badgesV2.push(`<span class="search-badge-v2 tags-match">${icons['tags']}Tags</span>`);
                     }
                     if (matchedIn.includes('comments')) {
-                        badgesV2.push(`<span class="search-badge-v2 comments">${icons['comments']} Comments</span>`);
+                        badgesV2.push(`<span class="search-badge-v2 comments">${icons['comments']}Comments</span>`);
                     }
                     if (matchedIn.includes('subtitles')) {
-                        badgesV2.push(`<span class="search-badge-v2 subtitles">${icons['subtitles']} Video</span>`);
+                        badgesV2.push(`<span class="search-badge-v2 subtitles">${icons['subtitles']}Video</span>`);
                     }
 
                     indicatorV2.innerHTML = badgesV2.join('');
                     indicatorV2.classList.remove('hidden');
+
+                    // Update statistics
+                    if (matchedIn.includes('title')) searchStats.title++;
+                    if (matchedIn.includes('content')) searchStats.text++;
+                    if (matchedIn.includes('tags')) searchStats.tags++;
+                    if (matchedIn.includes('comments')) searchStats.comments++;
+                    if (matchedIn.includes('subtitles')) searchStats.video++;
                 } else {
                     indicatorV2.classList.add('hidden');
+                }
+
+                // Match type filter
+                let matchTypeMatch = true;
+                if (searchTerms.length > 0 && selectedMatchTypes.size > 0) {
+                    // If match type filters are active, check if this post matches any selected type
+                    matchTypeMatch = matchedIn.some(type => {
+                        // Map subtitles to video for filter
+                        const filterType = type === 'subtitles' ? 'video' : (type === 'content' ? 'text' : type);
+                        return selectedMatchTypes.has(filterType);
+                    });
                 }
 
                 // Creator filter match
@@ -1970,7 +2112,7 @@
                 }
 
                 // Show only if all conditions match
-                if (searchMatch && creatorMatch && contentMatch && tagMatch) {
+                if (searchMatch && matchTypeMatch && creatorMatch && contentMatch && tagMatch) {
                     card.classList.remove('hidden');
                     visibleCount++;
 
@@ -2026,10 +2168,47 @@
             } else {
                 resultsCount.textContent = '';
             }
+
+            // Update search statistics
+            const searchStatsEl = document.getElementById('searchStats');
+            if (searchTerms.length > 0) {
+                // Show statistics
+                searchStatsEl.style.display = 'flex';
+
+                // Update counts
+                document.getElementById('titleCount').textContent = searchStats.title;
+                document.getElementById('textCount').textContent = searchStats.text;
+                document.getElementById('tagsCount').textContent = searchStats.tags;
+                document.getElementById('commentsCount').textContent = searchStats.comments;
+                document.getElementById('videoCount').textContent = searchStats.video;
+            } else {
+                // Hide statistics when no search
+                searchStatsEl.style.display = 'none';
+            }
         }
 
         // Add event listener for real-time search
         searchInput.addEventListener('input', filterPosts);
+
+        // Match type filters (click on statistics to filter)
+        document.querySelectorAll('.search-stat').forEach(stat => {
+            stat.addEventListener('click', function() {
+                const type = this.dataset.type;
+
+                if (selectedMatchTypes.has(type)) {
+                    // Deselect
+                    selectedMatchTypes.delete(type);
+                    this.classList.remove('active');
+                } else {
+                    // Select
+                    selectedMatchTypes.add(type);
+                    this.classList.add('active');
+                }
+
+                // Re-filter posts
+                filterPostsImmediate();
+            });
+        });
 
         // Check if advanced search is available on page load
         checkAdvancedSearch().then(available => {
