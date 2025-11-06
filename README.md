@@ -3,6 +3,8 @@
 **Proyecto**: Scraping completo de contenido de Patreon → Organización en Notion
 **Fecha**: 2025-11-01
 
+> **📋 Latest Updates**: See [CHANGELOG.md](CHANGELOG.md) for recent changes and new features
+
 ---
 
 ## 📋 Objetivo
