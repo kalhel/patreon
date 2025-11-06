@@ -541,32 +541,108 @@
             word-wrap: break-word;
         }
 
-        /* Creator filtering styles */
+        /* Creator cards */
+        .creator-section {
+            margin-top: 4rem;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 3rem;
+        }
+
+        .creator-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 280px));
+            gap: 1.5rem;
+            justify-content: center;
+        }
+
         .creator-card {
-            cursor: pointer;
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 1.5rem;
             transition: all 0.3s ease;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            width: 100%;
+        }
+
+        .creator-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: #000000;
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+            border-radius: 12px 0 0 12px;
+        }
+
+        .creator-card:hover::before {
+            transform: scaleY(1);
+        }
+
+        .creator-card:hover {
+            background: #ffffff;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .creator-card:hover .creator-avatar {
+            border-color: #1a1a1a;
         }
 
         .creator-card.selected {
-            transform: scale(1.05);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            background: #1a1a1a;
+            border-color: #1a1a1a;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
         }
 
-        .creator-card.selected::after {
-            content: '✓';
-            position: absolute;
-            top: 0.5rem;
-            right: 0.5rem;
-            background: #1a1a1a;
-            color: white;
-            width: 24px;
-            height: 24px;
+        .creator-card.selected::before {
+            transform: scaleY(1);
+        }
+
+        .creator-card.selected h3,
+        .creator-card.selected .post-count,
+        .creator-card.selected .post-count::after {
+            color: #ffffff;
+        }
+
+        .creator-card.selected a {
+            color: #ffffff;
+            border-bottom-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .creator-card.selected .creator-avatar {
+            border-color: #1a1a1a;
+        }
+
+        .creator-card .creator-avatar {
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.75rem;
-            font-weight: bold;
+            object-fit: cover;
+            margin-bottom: 1rem;
+            border: 3px solid #e0e0e0;
+        }
+
+        .creator-card h3 {
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 0.75rem;
+            color: #1a1a1a;
+            letter-spacing: 0;
+        }
+
+        .creator-card .post-count {
+            color: #666666;
+            font-size: 1.125rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
         }
 
         @media (max-width: 768px) {
@@ -610,12 +686,12 @@
             <div class="creator-section">
                 <div class="creator-list">
                     {% for creator_id, posts in creators.items() %}
-                    <div class="creator-card" data-creator-id="{{ creator_id }}" data-color="{{ creator_colors.get(creator_id, '#4db8a0') }}">
+                    <div class="creator-card" data-creator-id="{{ creator_id }}">
                         {% if creator_avatars.get(creator_id) %}
                         <img src="{{ creator_avatars[creator_id] }}" alt="{{ creator_id }}" class="creator-avatar">
                         {% endif %}
                         <h3>{{ creator_id | creator_name }}</h3>
-                        <div class="post-count">{{ posts | length }} with this tag</div>
+                        <div class="post-count">{{ posts | length }}</div>
                     </div>
                     {% endfor %}
                 </div>
