@@ -29,10 +29,22 @@ media_downloader = MediaDownloader()
 
 
 def load_config():
-    """Load configuration from credentials.json"""
-    config_path = Path(__file__).parent.parent / "config" / "credentials.json"
-    with open(config_path) as f:
-        return json.load(f)
+    """Load configuration from credentials.json and creators.json"""
+    config_dir = Path(__file__).parent.parent / "config"
+
+    # Load credentials
+    credentials_path = config_dir / "credentials.json"
+    with open(credentials_path) as f:
+        config = json.load(f)
+
+    # Load creators from separate file
+    creators_path = config_dir / "creators.json"
+    if creators_path.exists():
+        with open(creators_path) as f:
+            creators_data = json.load(f)
+            config['patreon']['creators'] = creators_data.get('creators', [])
+
+    return config
 
 
 def authenticate(config, headless=True):
