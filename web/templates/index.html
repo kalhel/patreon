@@ -501,6 +501,8 @@
             aspect-ratio: 16 / 9;
             position: relative;
             overflow: hidden;
+            cursor: pointer;
+            background: #000;
         }
 
         .content-preview.youtube-preview iframe {
@@ -512,6 +514,60 @@
             border: none;
             z-index: 10;
             pointer-events: auto;
+        }
+
+        /* YouTube thumbnail */
+        .youtube-thumbnail {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            z-index: 20;
+            transition: opacity 0.3s;
+        }
+
+        .youtube-thumbnail.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Play button overlay */
+        .youtube-play-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 68px;
+            height: 48px;
+            background: rgba(255, 0, 0, 0.9);
+            border-radius: 12px;
+            z-index: 21;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .youtube-play-btn::before {
+            content: "";
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 11px 0 11px 19px;
+            border-color: transparent transparent transparent #fff;
+            margin-left: 4px;
+        }
+
+        .youtube-thumbnail:hover .youtube-play-btn {
+            background: rgba(255, 0, 0, 1);
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        .youtube-thumbnail.hidden .youtube-play-btn {
+            display: none;
         }
 
         .content-preview.audio-preview {
@@ -1545,9 +1601,14 @@
                             {% for block in post.content_blocks %}
                                 {% if not preview_shown.value and block.type == 'youtube_embed' %}
                                     {% set video_id = block.url.split('v=')[1].split('&')[0] if 'v=' in block.url else block.url.split('/')[-1] %}
-                                    <div class="content-preview youtube-preview">
+                                    <div class="content-preview youtube-preview" data-video-id="{{ video_id }}">
+                                        <!-- Thumbnail with play button (shown initially) -->
+                                        <div class="youtube-thumbnail" style="background-image: url('https://img.youtube.com/vi/{{ video_id }}/maxresdefault.jpg');">
+                                            <div class="youtube-play-btn"></div>
+                                        </div>
+                                        <!-- Iframe (loaded on click) -->
                                         <iframe
-                                            src="https://www.youtube.com/embed/{{ video_id }}"
+                                            data-src="https://www.youtube.com/embed/{{ video_id }}?autoplay=1"
                                             frameborder="0"
                                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                             allowfullscreen>
@@ -2233,6 +2294,25 @@
             } else {
                 console.log('⚠ Advanced search not available, using client-side search');
                 useAdvancedSearch = false;
+            }
+        });
+
+        // YouTube thumbnail click-to-play
+        document.querySelectorAll('.youtube-preview').forEach(container => {
+            const thumbnail = container.querySelector('.youtube-thumbnail');
+            const iframe = container.querySelector('iframe');
+
+            if (thumbnail && iframe) {
+                thumbnail.addEventListener('click', function() {
+                    // Load iframe source
+                    const src = iframe.dataset.src;
+                    if (src) {
+                        iframe.src = src;
+                    }
+
+                    // Hide thumbnail
+                    thumbnail.classList.add('hidden');
+                });
             }
         });
     </script>
