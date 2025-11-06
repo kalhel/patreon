@@ -1669,9 +1669,10 @@
                             {% for block in post.content_blocks %}
                                 {% if not preview_shown.value and block.type == 'youtube_embed' %}
                                     {% set video_id = block.url.split('v=')[1].split('&')[0] if 'v=' in block.url else block.url.split('/')[-1] %}
+                                    {% set thumbnail_url = block.best_thumbnail if block.best_thumbnail else 'https://img.youtube.com/vi/' + video_id + '/hqdefault.jpg' %}
                                     <div class="content-preview youtube-preview" data-video-id="{{ video_id }}">
-                                        <!-- Thumbnail with play button (shown initially) - using hqdefault (reliable, customizable by creators) -->
-                                        <div class="youtube-thumbnail" style="background-image: url('https://img.youtube.com/vi/{{ video_id }}/hqdefault.jpg');">
+                                        <!-- Thumbnail with play button (shown initially) - using pre-processed best thumbnail -->
+                                        <div class="youtube-thumbnail" style="background-image: url('{{ thumbnail_url }}');">
                                             <div class="youtube-play-btn"></div>
                                         </div>
                                         <!-- Iframe (loaded on click) -->
@@ -2471,21 +2472,12 @@
             }
         });
 
-        // YouTube thumbnail click-to-play with fallback
+        // YouTube thumbnail click-to-play (thumbnails are pre-processed during scraping)
         document.querySelectorAll('.youtube-preview').forEach(container => {
             const thumbnail = container.querySelector('.youtube-thumbnail');
             const iframe = container.querySelector('iframe');
-            const videoId = container.dataset.videoId;
 
-            if (thumbnail && iframe && videoId) {
-                // Test if hqdefault.jpg loads, fallback to maxresdefault.jpg if it fails
-                const img = new Image();
-                img.onerror = function() {
-                    // If hqdefault fails, use maxresdefault.jpg as fallback
-                    thumbnail.style.backgroundImage = `url('https://img.youtube.com/vi/${videoId}/maxresdefault.jpg')`;
-                };
-                img.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-
+            if (thumbnail && iframe) {
                 thumbnail.addEventListener('click', function() {
                     // Load iframe source
                     const src = iframe.dataset.src;

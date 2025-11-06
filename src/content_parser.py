@@ -6,13 +6,98 @@ Maintains order, formatting, and structure for later Notion conversion
 
 import json
 import logging
+import requests
 from typing import List, Dict, Optional
 from bs4 import BeautifulSoup
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.common.by import By
+from io import BytesIO
+from PIL import Image
+import numpy as np
 
 logger = logging.getLogger(__name__)
+
+
+def is_image_mostly_black(image_url: str, threshold: float = 0.15) -> bool:
+    """
+    Check if an image is mostly black/dark
+
+    Args:
+        image_url: URL of the image to check
+        threshold: Brightness threshold (0-1). Below this is considered dark.
+
+    Returns:
+        True if image is mostly black, False otherwise
+    """
+    try:
+        response = requests.get(image_url, timeout=5)
+        if response.status_code != 200:
+            return True  # Consider it black if we can't load it
+
+        img = Image.open(BytesIO(response.content))
+        img = img.convert('RGB')
+
+        # Resize to speed up processing
+        img.thumbnail((100, 100))
+
+        # Convert to numpy array and calculate average brightness
+        img_array = np.array(img)
+        avg_brightness = np.mean(img_array) / 255.0
+
+        return avg_brightness < threshold
+
+    except Exception as e:
+        logger.debug(f"Error checking image brightness for {image_url}: {e}")
+        return True  # Consider it black if we can't process it
+
+
+def find_best_youtube_thumbnail(video_id: str) -> str:
+    """
+    Find the best YouTube thumbnail that isn't mostly black
+
+    Tries in order:
+    1. hqdefault.jpg (high quality default)
+    2. mqdefault.jpg (medium quality)
+    3. 1.jpg, 2.jpg, 3.jpg (frame captures)
+    4. maxresdefault.jpg (fallback)
+
+    Args:
+        video_id: YouTube video ID
+
+    Returns:
+        URL of the best thumbnail
+    """
+    base_url = f'https://img.youtube.com/vi/{video_id}'
+
+    # Try thumbnails in order of preference
+    thumbnails_to_try = [
+        f'{base_url}/hqdefault.jpg',
+        f'{base_url}/mqdefault.jpg',
+        f'{base_url}/1.jpg',
+        f'{base_url}/2.jpg',
+        f'{base_url}/3.jpg',
+        f'{base_url}/maxresdefault.jpg',
+    ]
+
+    for thumbnail_url in thumbnails_to_try:
+        try:
+            # Check if thumbnail exists
+            response = requests.head(thumbnail_url, timeout=3)
+            if response.status_code == 200:
+                # Check if it's not mostly black
+                if not is_image_mostly_black(thumbnail_url):
+                    logger.info(f"Found good thumbnail for {video_id}: {thumbnail_url}")
+                    return thumbnail_url
+                else:
+                    logger.debug(f"Thumbnail too dark, trying next: {thumbnail_url}")
+        except Exception as e:
+            logger.debug(f"Error checking thumbnail {thumbnail_url}: {e}")
+            continue
+
+    # Fallback to hqdefault if all failed
+    logger.warning(f"All thumbnails failed for {video_id}, using hqdefault as fallback")
+    return f'{base_url}/hqdefault.jpg'
 
 
 class ContentBlockParser:
@@ -432,15 +517,31 @@ class ContentBlockParser:
                             # Check if this YouTube URL was already added
                             if embed_url not in self.youtube_urls:
                                 self.youtube_urls.add(embed_url)
+
+                                # Extract video ID and find best thumbnail
+                                video_id = None
+                                if 'embed/' in embed_url:
+                                    video_id = embed_url.split('embed/')[1].split('?')[0]
+                                elif 'v=' in embed_url:
+                                    video_id = embed_url.split('v=')[1].split('&')[0]
+
+                                best_thumbnail = None
+                                if video_id:
+                                    best_thumbnail = find_best_youtube_thumbnail(video_id)
+
                                 self.order += 1
-                                self.blocks.append({
+                                block_data = {
                                     'type': 'youtube_embed',
                                     'order': self.order,
                                     'url': embed_url,
                                     'thumbnail': data.get('thumbnailUrl', ''),
                                     'description': data.get('description', '')
-                                })
-                                logger.info(f"Found YouTube embed: {embed_url}")
+                                }
+                                if best_thumbnail:
+                                    block_data['best_thumbnail'] = best_thumbnail
+
+                                self.blocks.append(block_data)
+                                logger.info(f"Found YouTube embed: {embed_url} (thumbnail: {best_thumbnail})")
 
                 except json.JSONDecodeError as e:
                     logger.debug(f"Error parsing JSON-LD: {e}")
@@ -726,12 +827,30 @@ class ContentBlockParser:
                 embed_type = 'soundcloud_embed'
 
             self.order += 1
-            self.blocks.append({
+            block_data = {
                 'type': embed_type,
                 'order': self.order,
                 'url': src,
                 'title': element.get('title', '')
-            })
+            }
+
+            # For YouTube embeds, find the best thumbnail
+            if embed_type == 'youtube_embed':
+                video_id = None
+                if 'embed/' in src:
+                    video_id = src.split('embed/')[1].split('?')[0]
+                elif 'v=' in src:
+                    video_id = src.split('v=')[1].split('&')[0]
+                elif 'youtu.be/' in src:
+                    video_id = src.split('youtu.be/')[1].split('?')[0]
+
+                if video_id:
+                    best_thumbnail = find_best_youtube_thumbnail(video_id)
+                    if best_thumbnail:
+                        block_data['best_thumbnail'] = best_thumbnail
+                        logger.info(f"Found best thumbnail for YouTube {video_id}: {best_thumbnail}")
+
+            self.blocks.append(block_data)
 
     def _add_list_block(self, element, ordered: bool):
         """Add bulleted or numbered list"""
