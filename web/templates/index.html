@@ -868,39 +868,40 @@
         .search-stats {
             display: flex;
             justify-content: center;
-            gap: 0.75rem;
-            margin: 1.5rem 0;
-            flex-wrap: wrap;
-            padding: 1rem;
-            background: #1a1a1a;
-            border-radius: 8px;
+            gap: 0.5rem;
+            margin: 1rem 0;
+            flex-wrap: nowrap;
+            padding: 0.75rem;
+            background: transparent;
+            overflow-x: auto;
         }
 
         .search-stat {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: #2a2a2a;
+            gap: 0.35rem;
+            padding: 0.4rem 0.75rem;
+            background: #f8f8f8;
             border-radius: 6px;
-            font-size: 0.8125rem;
-            color: #ffffff;
+            font-size: 0.75rem;
+            color: #1a1a1a;
             cursor: pointer;
             transition: all 0.2s;
             border: 2px solid transparent;
             user-select: none;
+            white-space: nowrap;
         }
 
         .search-stat:hover {
-            background: #333333;
+            background: #f0f0f0;
             transform: translateY(-1px);
         }
 
         .search-stat.active {
-            border-color: currentColor;
-            background: #3a3a3a;
+            background: #ffffff;
+            border-color: #e0e0e0;
             font-weight: 600;
-            box-shadow: 0 0 0 1px currentColor;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         .search-stat .icon {
@@ -909,40 +910,40 @@
         }
 
         .search-stat .icon svg {
-            width: 16px;
-            height: 16px;
-            fill: currentColor;
+            width: 14px;
+            height: 14px;
         }
 
-        .search-stat.title-stat {
-            color: #10b981;
+        /* Solo los iconos tienen color */
+        .search-stat.title-stat .icon svg {
+            fill: #10b981;
         }
 
-        .search-stat.text-stat {
-            color: #3b82f6;
+        .search-stat.text-stat .icon svg {
+            fill: #3b82f6;
         }
 
-        .search-stat.tags-stat {
-            color: #8b5cf6;
+        .search-stat.tags-stat .icon svg {
+            fill: #8b5cf6;
         }
 
-        .search-stat.comments-stat {
-            color: #f59e0b;
+        .search-stat.comments-stat .icon svg {
+            fill: #f59e0b;
         }
 
-        .search-stat.video-stat {
-            color: #06b6d4;
+        .search-stat.video-stat .icon svg {
+            fill: #06b6d4;
         }
 
         .search-stat .count {
             font-weight: 700;
-            font-size: 1rem;
-            margin-left: 0.25rem;
+            font-size: 0.875rem;
+            color: #1a1a1a;
         }
 
         .search-stat .label {
             font-weight: 400;
-            opacity: 0.9;
+            color: #666666;
         }
 
         /* Content filters */
