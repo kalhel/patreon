@@ -273,28 +273,52 @@ python src/notion_integrator.py --upload-all
 
 ---
 
-## 🔄 Regular Updates (Monthly)
+## 🔄 Regular Updates (Daily/Weekly) - ⚡ INCREMENTAL MODE
 
-Once set up, you can update your Notion with new content:
+**NUEVO: Scrapers incrementales - 10-100x más rápido!**
+
+Once set up, you can update daily with ONLY new content:
 
 ```bash
 cd /home/javif/proyectos/astrologia/patreon
 source venv/bin/activate
 
-# 1. Re-authenticate if cookies expired (monthly)
-python src/main.py --auth-only
+# ========================================
+# WORKFLOW INCREMENTAL (Recomendado)
+# ========================================
 
-# 2. Scrape new posts only (incremental scraping - coming soon)
-python src/main.py --scrape-all --full-details --since-last-run
+# 1. Scrape solo posts NUEVOS (para al encontrar conocidos)
+python src/daily_incremental_scrape.py --all
+# ⚡ 10-100x más rápido que scrape completo
+# ⏱️  Segundos vs minutos
 
-# 3. Download new media
-python src/media_downloader.py --all
+# 2. Procesar solo posts pendientes
+python src/phase2_detail_extractor.py --all --headless
+# ✅ Solo procesa posts con estado "pending"
 
-# 4. Generate tags for new posts
-python src/tag_generator.py --all
+# 3. Actualizar solo collections nuevas/actualizadas
+python src/incremental_collections_scraper.py --all --headless
+# ⚡ Solo scrapea collections que cambiaron
 
-# 5. Upload new posts to Notion
-python src/notion_integrator.py --upload-new
+# ========================================
+# WORKFLOW COMPLETO (Primera vez / Añadir creator)
+# ========================================
+
+# 1. Scrape completo de URLs
+python src/phase1_url_collector.py --all
+
+# 2. Extraer detalles completos
+python src/phase2_detail_extractor.py --all --headless
+
+# 3. Scrape collections completo
+python src/phase3_collections_scraper.py --all --headless
+
+# ========================================
+# MANTENIMIENTO
+# ========================================
+
+# Re-autenticar si cookies expiran (cada ~1 mes)
+# Las cookies se renuevan automáticamente en cada scrape
 ```
 
 ---

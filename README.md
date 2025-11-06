@@ -96,6 +96,31 @@ patreon/
 - Actualiza posts con información de collections
 - Guarda en `data/processed/{creator}_collections.json`
 
+### ⚡ Scrapers Incrementales (Para Actualizaciones Diarias) 🆕
+**¡10-100x más rápido que scrape completo!**
+
+#### Fase 1 Incremental: `src/daily_incremental_scrape.py`
+- Solo scrapea posts NUEVOS
+- Para al encontrar posts conocidos
+- Perfecto para cron jobs diarios
+
+#### Fase 2: Ya es incremental por defecto
+- Solo procesa posts "pending" en Firebase
+- Salta posts ya procesados
+
+#### Fase 3 Incremental: `src/incremental_collections_scraper.py` 🆕
+- Solo scrapea collections NUEVAS o ACTUALIZADAS
+- Detecta cambios en post_count
+- Hace merge con datos existentes
+- Mucho más rápido que scrape completo
+
+**Workflow diario recomendado:**
+```bash
+python src/daily_incremental_scrape.py --all
+python src/phase2_detail_extractor.py --all --headless
+python src/incremental_collections_scraper.py --all --headless
+```
+
 ### Web Viewer: Visualización Local 🌐
 **Script**: `web/viewer.py`
 
