@@ -36,12 +36,8 @@ CREATOR_DISPLAY_NAMES = {
     'astrobymax': 'AstroByMax'
 }
 
-# Local avatar paths for creators
-CREATOR_AVATARS = {
-    'headonhistory': 'headonhistory.jpg',
-    'horoiproject': 'horoiproject.jpg',
-    'astrobymax': 'astrobymax.jpg'
-}
+# Local avatar paths for creators (dynamically loaded from creators.json)
+CREATOR_AVATARS = {}
 
 
 def load_creators_config():
@@ -53,8 +49,20 @@ def load_creators_config():
         try:
             with open(creators_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                return data.get('creators', [])
-        except:
+                creators_list = data.get('creators', [])
+
+                # Build CREATOR_AVATARS dynamically from creators.json
+                global CREATOR_AVATARS
+                CREATOR_AVATARS = {}
+                for creator in creators_list:
+                    creator_id = creator.get('creator_id')
+                    avatar = creator.get('avatar')
+                    if creator_id and avatar:
+                        CREATOR_AVATARS[creator_id] = avatar
+
+                return creators_list
+        except Exception as e:
+            print(f"Error loading creators config: {e}")
             pass
     return []
 
@@ -989,6 +997,10 @@ if __name__ == '__main__':
     print("=" * 60)
     print(f"📁 Raw data: {RAW_DATA_DIR}")
     print(f"📁 Processed data: {PROCESSED_DATA_DIR}")
+
+    # Load creators config and build CREATOR_AVATARS
+    creators = load_creators_config()
+    print(f"👥 Loaded {len(creators)} creators with avatars: {list(CREATOR_AVATARS.keys())}")
 
     posts = load_all_posts()
     print(f"📄 Loaded {len(posts)} posts")
