@@ -37,39 +37,35 @@ def find_youtube_posts(tracker: FirebaseTracker, creator_id: str = None):
     total_with_youtube = 0
 
     # Get all posts
+    all_posts = tracker.get_all_posts()
+
+    if not all_posts:
+        return youtube_posts, total_posts, total_with_youtube
+
+    # Filter by creator if specified
     if creator_id:
-        creators = [creator_id]
-    else:
-        # Get all creators
-        creators_data = tracker.get_all_creators()
-        creators = [c['creator_id'] for c in creators_data if 'creator_id' in c]
+        all_posts = {
+            post_id: post for post_id, post in all_posts.items()
+            if post.get('creator_id') == creator_id
+        }
 
-    for creator in creators:
-        posts = tracker.get_posts_by_creator(creator, status='processed')
+    # Group by creator
+    for post_id, post in all_posts.items():
+        total_posts += 1
+        creator = post.get('creator_id', 'unknown')
+        content_blocks = post.get('content_blocks', [])
 
-        if not posts:
-            continue
+        # Check if any content block is a YouTube embed
+        has_youtube = any(
+            block.get('type') == 'youtube_embed'
+            for block in content_blocks
+        )
 
-        youtube_posts[creator] = []
-
-        for post in posts:
-            total_posts += 1
-            post_id = post.get('post_id', '')
-            content_blocks = post.get('content_blocks', [])
-
-            # Check if any content block is a YouTube embed
-            has_youtube = any(
-                block.get('type') == 'youtube_embed'
-                for block in content_blocks
-            )
-
-            if has_youtube:
-                total_with_youtube += 1
-                youtube_posts[creator].append(post_id)
-
-        # Remove creators with no YouTube posts
-        if not youtube_posts[creator]:
-            del youtube_posts[creator]
+        if has_youtube:
+            total_with_youtube += 1
+            if creator not in youtube_posts:
+                youtube_posts[creator] = []
+            youtube_posts[creator].append(post_id)
 
     return youtube_posts, total_posts, total_with_youtube
 
