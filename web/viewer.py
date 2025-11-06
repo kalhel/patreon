@@ -560,43 +560,77 @@ def settings():
 
 @app.route('/api/settings/save', methods=['POST'])
 def save_settings():
-    """Save configuration from settings page"""
+    """Save configuration from settings page - ONLY saves credentials, NOT creators"""
     try:
         config_dir = Path(__file__).parent.parent / "config"
         config_dir.mkdir(parents=True, exist_ok=True)
 
         data = request.get_json()
 
-        # Save credentials ONLY if they contain actual data
-        if 'credentials' in data:
-            credentials = data['credentials']
+        # CRITICAL: This endpoint ONLY saves credentials
+        # Creators are managed by /api/creator/* endpoints
 
-            # Validate that credentials have required fields
-            patreon = credentials.get('patreon', {})
-            firebase = credentials.get('firebase', {})
+        if 'credentials' not in data:
+            return jsonify({
+                'success': False,
+                'message': 'No credentials data provided'
+            }), 400
 
-            # Only save if we have actual credential data (not empty)
-            if patreon.get('email') and patreon.get('password'):
-                credentials_file = config_dir / "credentials.json"
+        credentials = data['credentials']
 
-                # Create backup before overwriting
-                if credentials_file.exists():
-                    backup_file = credentials_file.with_suffix('.json.backup')
-                    import shutil
-                    shutil.copy2(credentials_file, backup_file)
+        # Validate that credentials have ALL required fields
+        patreon = credentials.get('patreon', {})
+        firebase = credentials.get('firebase', {})
 
-                with open(credentials_file, 'w', encoding='utf-8') as f:
-                    json.dump(credentials, f, indent=2)
-            else:
+        # Strict validation - ALL fields must be present and non-empty
+        if not patreon.get('email') or not patreon.get('password'):
+            return jsonify({
+                'success': False,
+                'message': 'ERROR: Patreon email and password are required. Not saving to prevent data loss.'
+            }), 400
+
+        if not firebase.get('database_url'):
+            return jsonify({
+                'success': False,
+                'message': 'ERROR: Firebase database_url is required. Not saving to prevent data loss.'
+            }), 400
+
+        # Additional safety: check if credentials.json exists and compare
+        credentials_file = config_dir / "credentials.json"
+        if credentials_file.exists():
+            # Load existing to compare
+            with open(credentials_file, 'r', encoding='utf-8') as f:
+                existing = json.load(f)
+
+            # If new credentials are "worse" than existing, reject
+            existing_patreon = existing.get('patreon', {})
+            if existing_patreon.get('email') and not patreon.get('email'):
                 return jsonify({
                     'success': False,
-                    'message': 'Patreon email and password are required'
+                    'message': 'ERROR: Cannot replace existing credentials with empty ones'
                 }), 400
 
-        return jsonify({'success': True, 'message': 'Configuration saved successfully'})
+            # Create backup before overwriting
+            backup_file = credentials_file.with_suffix('.json.backup')
+            import shutil
+            shutil.copy2(credentials_file, backup_file)
+            print(f"✅ Created backup: {backup_file}")
+
+        # Save credentials
+        with open(credentials_file, 'w', encoding='utf-8') as f:
+            json.dump(credentials, f, indent=2)
+
+        return jsonify({
+            'success': True,
+            'message': 'Credentials saved successfully. Backup created.',
+            'backup_created': True
+        })
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({
+            'success': False,
+            'message': f'Error saving credentials: {str(e)}'
+        }), 500
 
 
 @app.route('/api/creator/update', methods=['POST'])
