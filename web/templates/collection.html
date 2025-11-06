@@ -592,7 +592,7 @@
                             {% set first_video = post.video_local_paths[0] %}
                             <div class="content-preview video-preview">
                                 <video controls preload="metadata">
-                                    <source src="{{ url_for('media_file', filename=first_video) }}" type="video/mp4">
+                                    <source src="{{ url_for('media_file', filename=first_video) }}#t=3" type="video/mp4">
                                     Tu navegador no soporta el tag de video.
                                 </video>
                             </div>

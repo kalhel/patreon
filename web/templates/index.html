@@ -1622,7 +1622,7 @@
                             <!-- DEBUG ALL SUBTITLES: all_subtitles = {{ all_subtitles }} (count: {{ all_subtitles|length }}) -->
                             <div class="content-preview video-preview">
                                 <video controls preload="metadata">
-                                    <source src="{{ url_for('media_file', filename=first_video) }}#t=0.1" type="video/mp4">
+                                    <source src="{{ url_for('media_file', filename=first_video) }}#t=3" type="video/mp4">
                                     {% if all_subtitles and all_subtitles|length > 0 %}
                                         {% for subtitle_path in all_subtitles %}
                                             {# Detect language from filename #}
