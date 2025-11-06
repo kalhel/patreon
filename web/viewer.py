@@ -398,8 +398,10 @@ def view_tag(tag_name):
     """View all posts with a specific tag"""
     posts = load_all_posts()
 
-    # Filter posts that have this tag
+    # Filter posts that have this tag and group by creator
     tagged_posts = []
+    creators_with_tag = {}  # {creator_id: [posts]}
+
     for post in posts:
         tags = post.get('patreon_tags', [])
         if tag_name in tags:
@@ -413,6 +415,11 @@ def view_tag(tag_name):
 
             tagged_posts.append(post)
 
+            # Group by creator
+            if creator_id not in creators_with_tag:
+                creators_with_tag[creator_id] = []
+            creators_with_tag[creator_id].append(post)
+
     # Load creator colors from config
     creators_config = load_creators_config()
     creator_colors = {c['creator_id']: c.get('preview_color', '#4db8a0') for c in creators_config}
@@ -420,6 +427,7 @@ def view_tag(tag_name):
     return render_template('tag.html',
                           tag=tag_name,
                           posts=tagged_posts,
+                          creators=creators_with_tag,
                           creator_colors=creator_colors,
                           creator_avatars=CREATOR_AVATARS,
                           total=len(tagged_posts))
