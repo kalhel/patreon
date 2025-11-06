@@ -567,11 +567,31 @@ def save_settings():
 
         data = request.get_json()
 
-        # Save credentials
+        # Save credentials ONLY if they contain actual data
         if 'credentials' in data:
-            credentials_file = config_dir / "credentials.json"
-            with open(credentials_file, 'w', encoding='utf-8') as f:
-                json.dump(data['credentials'], f, indent=2)
+            credentials = data['credentials']
+
+            # Validate that credentials have required fields
+            patreon = credentials.get('patreon', {})
+            firebase = credentials.get('firebase', {})
+
+            # Only save if we have actual credential data (not empty)
+            if patreon.get('email') and patreon.get('password'):
+                credentials_file = config_dir / "credentials.json"
+
+                # Create backup before overwriting
+                if credentials_file.exists():
+                    backup_file = credentials_file.with_suffix('.json.backup')
+                    import shutil
+                    shutil.copy2(credentials_file, backup_file)
+
+                with open(credentials_file, 'w', encoding='utf-8') as f:
+                    json.dump(credentials, f, indent=2)
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': 'Patreon email and password are required'
+                }), 400
 
         return jsonify({'success': True, 'message': 'Configuration saved successfully'})
 
