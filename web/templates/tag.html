@@ -541,6 +541,34 @@
             word-wrap: break-word;
         }
 
+        /* Creator filtering styles */
+        .creator-card {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .creator-card.selected {
+            transform: scale(1.05);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+
+        .creator-card.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: #1a1a1a;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
         @media (max-width: 768px) {
             .header {
                 padding: 2rem 1rem;
@@ -577,19 +605,31 @@
     </div>
 
     <div class="wide-container">
+        <!-- Creator filter cards -->
+        {% if creators %}
+            <div class="creator-section">
+                <div class="creator-list">
+                    {% for creator_id, posts in creators.items() %}
+                    <div class="creator-card" data-creator-id="{{ creator_id }}" data-color="{{ creator_colors.get(creator_id, '#4db8a0') }}">
+                        {% if creator_avatars.get(creator_id) %}
+                        <img src="{{ creator_avatars[creator_id] }}" alt="{{ creator_id }}" class="creator-avatar">
+                        {% endif %}
+                        <h3>{{ creator_id | creator_name }}</h3>
+                        <div class="post-count">{{ posts | length }} with this tag</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
 
         <div class="posts-grid">
             {% for post in posts %}
-            <div class="post-card-compact">
+            <div class="post-card-compact" data-creator-id="{{ post.creator_id }}">
                 <!-- Black header with creator and icons -->
                 <div class="post-card-footer-black">
                     <div class="footer-creator-info">
-                        {% if post.creator_id == 'headonhistory' %}
-                            <img src="{{ url_for('static', filename='headonhistory.jpg') }}" alt="{{ post.display_creator_name }}" class="footer-creator-avatar">
-                        {% elif post.creator_id == 'horoiproject' %}
-                            <img src="{{ url_for('static', filename='horoiproject.jpg') }}" alt="{{ post.display_creator_name }}" class="footer-creator-avatar">
-                        {% elif post.creator_id == 'astrobymax' %}
-                            <img src="{{ url_for('static', filename='astrobymax.jpg') }}" alt="{{ post.display_creator_name }}" class="footer-creator-avatar">
+                        {% if creator_avatars.get(post.creator_id) %}
+                            <img src="{{ creator_avatars[post.creator_id] }}" alt="{{ post.display_creator_name }}" class="footer-creator-avatar">
                         {% endif %}
                         <span class="footer-creator-name">{{ post.display_creator_name }}</span>
                     </div>
@@ -927,6 +967,57 @@
             wavesurfersPreview[postId].setPlaybackRate(newSpeed);
             speedsPreview[postId] = newSpeed;
             button.textContent = newSpeed + 'x';
+        }
+    </script>
+
+    <!-- Creator filtering logic -->
+    <script>
+        // Track selected creators for filtering
+        const selectedCreators = new Set();
+
+        // Add click handlers to creator cards
+        document.addEventListener('DOMContentLoaded', function() {
+            const creatorCards = document.querySelectorAll('.creator-card');
+
+            creatorCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    const creatorId = this.getAttribute('data-creator-id');
+
+                    // Toggle selection
+                    if (selectedCreators.has(creatorId)) {
+                        selectedCreators.delete(creatorId);
+                        this.classList.remove('selected');
+                    } else {
+                        selectedCreators.add(creatorId);
+                        this.classList.add('selected');
+                    }
+
+                    // Apply filter
+                    filterPostsByCreator();
+                });
+            });
+        });
+
+        function filterPostsByCreator() {
+            const allPostCards = document.querySelectorAll('.post-card-compact');
+
+            // If no creators selected, show all posts
+            if (selectedCreators.size === 0) {
+                allPostCards.forEach(card => {
+                    card.style.display = '';
+                });
+                return;
+            }
+
+            // Filter posts: show only those from selected creators
+            allPostCards.forEach(card => {
+                const creatorId = card.getAttribute('data-creator-id');
+                if (selectedCreators.has(creatorId)) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
         }
     </script>
 </body>
