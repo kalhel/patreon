@@ -157,7 +157,6 @@ Examples:
         # Find YouTube posts
         logger.info("🔍 Finding posts with YouTube videos...\n")
         youtube_posts, total_posts, total_with_youtube = find_youtube_posts(
-            tracker,
             creator_id=args.creator
         )
 
