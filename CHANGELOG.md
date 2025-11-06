@@ -5,11 +5,17 @@ All notable changes to this project will be documented in this file.
 ## [2025-11-06] - Major Updates
 
 ### Added
-- **Daily Incremental Scraper** (`src/daily_incremental_scrape.py`)
-  - Optimized scraper for daily updates
-  - Only collects NEW posts (stops at first known post)
-  - 10-100x faster than full scrape
-  - Perfect for cron jobs
+- **Incremental Scrapers** (Phase 1 & Phase 3)
+  - **Phase 1**: `daily_incremental_scrape.py` - Only collects NEW posts
+    - Stops at first known post
+    - 10-100x faster than full scrape
+    - Perfect for cron jobs
+  - **Phase 3**: `incremental_collections_scraper.py` - Only scrapes NEW/UPDATED collections
+    - Detects new collections automatically
+    - Only re-scrapes collections with changed post count
+    - Skips unchanged collections
+    - Merges with existing data
+  - **Phase 2**: Already incremental (only processes "pending" posts from Firebase)
 
 - **Creator Management Tools** (in `src/`)
   - `add_creator.py` - Add creators from command line
@@ -64,8 +70,8 @@ python src/daily_incremental_scrape.py --all
 # 2. Process pending details
 python src/phase2_detail_extractor.py --all --headless
 
-# 3. Update collections
-python src/phase3_collections_scraper.py --all --headless
+# 3. Update collections (only new/updated)
+python src/incremental_collections_scraper.py --all --headless
 ```
 
 ### Initial/Full Scrape (When adding new creator)

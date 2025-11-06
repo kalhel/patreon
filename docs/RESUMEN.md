@@ -74,14 +74,15 @@ python src/daily_incremental_scrape.py --all
 # 2. Procesar los pendientes
 python src/phase2_detail_extractor.py --all --headless
 
-# 3. Actualizar collections
-python src/phase3_collections_scraper.py --all --headless
+# 3. Actualizar collections (solo nuevas/actualizadas)
+python src/incremental_collections_scraper.py --all --headless
 ```
 
 **Ventajas:**
 - ⚡ 10-100x más rápido (segundos vs minutos)
 - 💾 Ahorra ancho de banda
 - 🎯 Solo scrapea lo nuevo
+- 📚 Phase 3 también incremental (solo collections nuevas/actualizadas)
 
 ---
 
@@ -94,10 +95,15 @@ python src/phase3_collections_scraper.py --all --headless
 python src/add_creator.py
 # (Te preguntará: ID, nombre, URL, etc.)
 
-# 2. Scrape completo inicial
+# 2. Scrape completo inicial (primera vez)
 python src/phase1_url_collector.py --creator CREATOR_NAME
 python src/phase2_detail_extractor.py --creator CREATOR_NAME --headless
 python src/phase3_collections_scraper.py --creator CREATOR_NAME --headless
+
+# Actualizaciones diarias (después del inicial)
+python src/daily_incremental_scrape.py --all
+python src/phase2_detail_extractor.py --all --headless
+python src/incremental_collections_scraper.py --all --headless
 ```
 
 ---
@@ -277,11 +283,13 @@ rm config/patreon_cookies.json
 
 ## 🆕 Novedades Recientes
 
-### Daily Incremental Scraper
-- ⚡ **10-100x más rápido** que scrape completo
-- 🎯 Solo scrapea posts nuevos
-- ⏹️ Para al encontrar posts conocidos
+### Incremental Scrapers (Phase 1 y 3)
+- ⚡ **Phase 1**: `daily_incremental_scrape.py` - Solo posts nuevos (10-100x más rápido)
+- ⚡ **Phase 3**: `incremental_collections_scraper.py` - Solo collections nuevas/actualizadas
+- 🎯 Solo scrapea lo que cambió
+- ⏹️ Para al encontrar contenido conocido
 - 💾 Perfecto para cron jobs diarios
+- ✅ Phase 2 ya funciona incremental (solo procesa posts "pending")
 
 ### Collections View en Web
 - 📚 Toggle para ver collections
