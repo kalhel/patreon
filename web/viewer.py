@@ -389,6 +389,7 @@ def view_creator(creator_id):
     return render_template('creator.html',
                           creator_id=creator_id,
                           creator_avatar=creator_avatar,
+                          creator_avatars=CREATOR_AVATARS,
                           posts=creator_posts)
 
 
@@ -420,6 +421,7 @@ def view_tag(tag_name):
                           tag=tag_name,
                           posts=tagged_posts,
                           creator_colors=creator_colors,
+                          creator_avatars=CREATOR_AVATARS,
                           total=len(tagged_posts))
 
 
@@ -467,6 +469,7 @@ def view_collection(creator_id, collection_id):
                           creator_id=creator_id,
                           creator_display_name=creator_display_name,
                           creator_avatar=creator_avatar,
+                          creator_avatars=CREATOR_AVATARS,
                           collection=collection_info,
                           creator_colors=creator_colors,
                           posts=collection_posts,
