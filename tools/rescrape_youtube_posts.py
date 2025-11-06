@@ -7,8 +7,9 @@ Uses the new intelligent thumbnail processor
 import sys
 from pathlib import Path
 
-# Add parent directory to path
+# Add src and tools directories to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent))
 
 from firebase_tracker import FirebaseTracker, load_firebase_config
 from patreon_auth_selenium import PatreonAuthSelenium

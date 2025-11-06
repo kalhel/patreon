@@ -7,8 +7,8 @@ This helps identify which posts need thumbnail re-processing
 import sys
 from pathlib import Path
 
-# Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add src directory to path
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from firebase_tracker import FirebaseTracker, load_firebase_config
 import json
