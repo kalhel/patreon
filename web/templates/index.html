@@ -842,9 +842,14 @@
         /* Search bar */
         .search-container {
             margin: 3rem 0;
-            max-width: 600px;
+            max-width: 1600px;
             margin-left: auto;
             margin-right: auto;
+        }
+
+        .search-box {
+            max-width: 600px;
+            margin: 0 auto;
         }
 
         .search-box {
@@ -891,7 +896,7 @@
             padding: 0.75rem;
             background: transparent;
             overflow-x: auto;
-            max-width: 1200px;
+            max-width: 100%;
             margin-left: auto;
             margin-right: auto;
             width: 100%;
@@ -973,7 +978,7 @@
             padding-top: 0;
             flex-wrap: wrap !important;
             overflow-x: visible !important;
-            max-width: 1200px !important;
+            max-width: 100% !important;
             margin-left: auto !important;
             margin-right: auto !important;
             width: 100% !important;
@@ -1665,8 +1670,8 @@
                                 {% if not preview_shown.value and block.type == 'youtube_embed' %}
                                     {% set video_id = block.url.split('v=')[1].split('&')[0] if 'v=' in block.url else block.url.split('/')[-1] %}
                                     <div class="content-preview youtube-preview" data-video-id="{{ video_id }}">
-                                        <!-- Thumbnail with play button (shown initially) -->
-                                        <div class="youtube-thumbnail" style="background-image: url('https://img.youtube.com/vi/{{ video_id }}/maxresdefault.jpg');">
+                                        <!-- Thumbnail with play button (shown initially) - using frame 2 for better preview after intros -->
+                                        <div class="youtube-thumbnail" style="background-image: url('https://img.youtube.com/vi/{{ video_id }}/2.jpg');">
                                             <div class="youtube-play-btn"></div>
                                         </div>
                                         <!-- Iframe (loaded on click) -->
@@ -2451,12 +2456,29 @@
             }
         });
 
-        // YouTube thumbnail click-to-play
+        // YouTube thumbnail click-to-play with fallback
         document.querySelectorAll('.youtube-preview').forEach(container => {
             const thumbnail = container.querySelector('.youtube-thumbnail');
             const iframe = container.querySelector('iframe');
+            const videoId = container.dataset.videoId;
 
-            if (thumbnail && iframe) {
+            if (thumbnail && iframe && videoId) {
+                // Test if thumbnail 2.jpg loads, otherwise fallback to 3.jpg or maxresdefault.jpg
+                const img = new Image();
+                img.onerror = function() {
+                    // If 2.jpg fails, try 3.jpg
+                    const img3 = new Image();
+                    img3.onerror = function() {
+                        // If 3.jpg fails, use maxresdefault.jpg
+                        thumbnail.style.backgroundImage = `url('https://img.youtube.com/vi/${videoId}/maxresdefault.jpg')`;
+                    };
+                    img3.onload = function() {
+                        thumbnail.style.backgroundImage = `url('https://img.youtube.com/vi/${videoId}/3.jpg')`;
+                    };
+                    img3.src = `https://img.youtube.com/vi/${videoId}/3.jpg`;
+                };
+                img.src = `https://img.youtube.com/vi/${videoId}/2.jpg`;
+
                 thumbnail.addEventListener('click', function() {
                     // Load iframe source
                     const src = iframe.dataset.src;
