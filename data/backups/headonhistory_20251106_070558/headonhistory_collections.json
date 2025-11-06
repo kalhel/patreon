@@ -1,0 +1,39 @@
+{
+  "creator_id": "headonhistory",
+  "creator_name": "Head-On History",
+  "scraped_at": "2025-11-05T20:27:41.115671",
+  "collections": [
+    {
+      "collection_id": "872429",
+      "collection_name": "Patreon feed",
+      "collection_url": "https://www.patreon.com/collection/872429",
+      "collection_image": "https://c10.patreonusercontent.com/4/patreon-media/p/campaign/5071619/a88da84433bb43bdbbc3850919326e72/eyJ3Ijo2MjB9/2.jpg?token-hash=1BKa0GLsmwBpmtJOlfSvvYLreLWWqSGrBGi2fVUxmJA%3D&token-time=1763596800",
+      "description": null,
+      "post_count": 20,
+      "post_ids": [
+        "142686588",
+        "142518617",
+        "140532574",
+        "138375125",
+        "135649966",
+        "135096014",
+        "131021827",
+        "129865925",
+        "115103641",
+        "112135408",
+        "108144948",
+        "106761311",
+        "104568165",
+        "103366636",
+        "98734996",
+        "96938082",
+        "94849882",
+        "92766219",
+        "91901434",
+        "89780067"
+      ],
+      "scraped_at": "2025-11-05T20:27:35.239585",
+      "collection_image_local": "collections/headonhistory/collection_872429.jpg"
+    }
+  ]
+}

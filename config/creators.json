@@ -26,6 +26,15 @@
       "avatar": "headonhistory.jpg",
       "collections_enabled": true,
       "preview_color": "#4ba3e8"
+    },
+    {
+      "creator_id": "skyscript",
+      "name": "Skyscript",
+      "url": "https://www.patreon.com/c/skyscript/posts",
+      "collections_url": "https://www.patreon.com/c/skyscript/collections",
+      "collections_enabled": true,
+      "preview_color": "#0c0a61",
+      "avatar": "skyscript.png"
     }
   ]
 }
