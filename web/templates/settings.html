@@ -362,19 +362,19 @@
             <h2 class="section-title">Firebase Configuration</h2>
 
             <div class="form-group">
-                <label for="firebase-credentials">Credentials Path</label>
-                <input type="text" id="firebase-credentials"
-                       value="{{ credentials.get('firebase', {}).get('credentials_path', '') }}"
-                       placeholder="path/to/firebase-credentials.json">
-                <small>Ruta al archivo JSON con credenciales de Firebase</small>
-            </div>
-
-            <div class="form-group">
                 <label for="firebase-url">Database URL</label>
                 <input type="text" id="firebase-url"
                        value="{{ credentials.get('firebase', {}).get('database_url', '') }}"
                        placeholder="https://your-project.firebaseio.com">
-                <small>URL de la base de datos Firebase Realtime Database</small>
+                <small>URL de la base de datos Firebase Realtime Database (requerido)</small>
+            </div>
+
+            <div class="form-group">
+                <label for="firebase-secret">Database Secret</label>
+                <input type="password" id="firebase-secret"
+                       value="{{ credentials.get('firebase', {}).get('database_secret', '') }}"
+                       placeholder="Tu Firebase database secret">
+                <small>Secret de Firebase (requerido) - Encuéntralo en: Firebase Console → Settings → Service accounts → Database secrets</small>
             </div>
 
             <div class="info-box">
@@ -664,8 +664,8 @@
                         password: document.getElementById('patreon-password').value
                     },
                     firebase: {
-                        credentials_path: document.getElementById('firebase-credentials').value,
-                        database_url: document.getElementById('firebase-url').value
+                        database_url: document.getElementById('firebase-url').value,
+                        database_secret: document.getElementById('firebase-secret').value
                     }
                 };
 
