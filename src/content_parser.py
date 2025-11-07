@@ -753,9 +753,16 @@ class ContentBlockParser:
             })
 
     def _add_image_block(self, element):
-        """Add image block"""
+        """Add image block - ONLY content images with data-media-id"""
         src = element.get('src', '')
         alt = element.get('alt', '')
+        media_id = element.get('data-media-id', '')
+
+        # CRITICAL: Only add images with data-media-id attribute
+        # This filters out ALL thumbnails, avatars, and UI images
+        if not media_id:
+            logger.debug(f"  ⏭️ Skipping image without data-media-id: {src[:80] if src else 'no src'}...")
+            return
 
         # Only add if it's a Patreon image
         if 'patreonusercontent.com' in src:
@@ -764,8 +771,10 @@ class ContentBlockParser:
                 'type': 'image',
                 'order': self.order,
                 'url': src,
-                'caption': alt
+                'caption': alt,
+                'media_id': media_id
             })
+            logger.info(f"  ✓ Content image with media_id={media_id}: {src[:80]}...")
 
     def _add_video_block(self, element):
         """Add video block"""
