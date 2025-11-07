@@ -154,8 +154,14 @@ class SchemaV2Migration:
         backup_file = backup_dir / f"schema_v1_backup_{timestamp}.sql"
 
         # Extract connection details
-        from urllib.parse import urlparse
+        from urllib.parse import urlparse, unquote
         parsed = urlparse(self.db_url)
+
+        # Debug: Show connection details (without password)
+        self.log(f"  Host: {parsed.hostname or 'localhost'}")
+        self.log(f"  Port: {parsed.port or 5432}")
+        self.log(f"  User: {parsed.username}")
+        self.log(f"  Database: {parsed.path.lstrip('/')}")
 
         # Run pg_dump
         cmd = [
@@ -174,13 +180,28 @@ class SchemaV2Migration:
             env = os.environ.copy()
             if parsed.password:
                 env['PGPASSWORD'] = parsed.password
+            else:
+                self.error("No password found in DATABASE_URL")
+                return False
 
-            subprocess.run(cmd, check=True, env=env)
+            # Run with stderr capture for better error messages
+            result = subprocess.run(
+                cmd,
+                check=True,
+                env=env,
+                capture_output=True,
+                text=True
+            )
+
             self.log(f"✅ Backup created: {backup_file}")
             self.report['backup_file'] = str(backup_file)
             return True
         except subprocess.CalledProcessError as e:
             self.error(f"Backup failed: {e}")
+            if e.stderr:
+                self.error(f"pg_dump stderr: {e.stderr}")
+            if e.stdout:
+                self.error(f"pg_dump stdout: {e.stdout}")
             return False
 
     def create_new_tables(self):
