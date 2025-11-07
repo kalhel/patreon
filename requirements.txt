@@ -36,3 +36,31 @@ flask>=3.0.0
 # Advanced Search System
 whoosh>=2.7.4
 webvtt-py>=0.5.0
+
+# ============================================================================
+# Phase 0: Infrastructure (PostgreSQL, Redis, Celery)
+# ============================================================================
+
+# Database
+psycopg2-binary>=2.9.9  # PostgreSQL adapter
+sqlalchemy>=2.0.23      # ORM
+alembic>=1.13.0         # Database migrations
+pgvector>=0.2.3         # Vector similarity search
+
+# Task Queue
+celery[redis]>=5.3.4    # Async task queue
+redis>=5.0.1            # In-memory cache and message broker
+flower>=2.0.1           # Celery monitoring
+
+# Authentication & Security
+flask-login>=0.6.3      # User session management
+flask-security-too>=5.3.2  # Complete security solution
+pyotp>=2.9.0            # TOTP for 2FA
+bcrypt>=4.1.2           # Password hashing
+
+# Caching
+flask-caching>=2.1.0    # Flask cache extension
+
+# Transcription & Embeddings (optional, for Phase 6)
+# openai>=1.6.0         # OpenAI API for embeddings & whisper
+# openai-whisper>=20231117  # Local transcription (requires ffmpeg)
