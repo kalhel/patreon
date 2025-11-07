@@ -6,13 +6,12 @@
 
 BEGIN;
 
--- Step 1: Rename column (without foreign key yet)
+\echo ''
+\echo '✅ Step 1: Renaming column creator_id → source_id...'
 ALTER TABLE scraping_status RENAME COLUMN creator_id TO source_id;
-RAISE NOTICE '✅ Step 1: Column renamed creator_id → source_id';
 
--- Step 2: Update source_id values based on firebase_data->>'creator_id'
--- Map firebase creator_id to new creator_sources.id
-
+\echo ''
+\echo '✅ Step 2: Creating mapping table...'
 -- Create temporary mapping
 CREATE TEMP TABLE creator_mapping AS
 SELECT
@@ -21,40 +20,40 @@ SELECT
 FROM creator_sources cs
 WHERE cs.platform = 'patreon';
 
-RAISE NOTICE '✅ Step 2: Created mapping table';
+\echo ''
+\echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+\echo '  Mapping: firebase_creator_id → source_id'
+\echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+SELECT firebase_creator_id, source_id FROM creator_mapping ORDER BY firebase_creator_id;
 
--- Show mapping
-SELECT 'Mapping:' as info, firebase_creator_id, source_id FROM creator_mapping;
-
--- Update scraping_status using firebase_data
+\echo ''
+\echo '✅ Step 3: Updating source_id values based on firebase_data...'
 UPDATE scraping_status ss
 SET source_id = cm.source_id
 FROM creator_mapping cm
 WHERE ss.firebase_data->>'creator_id' = cm.firebase_creator_id;
 
-RAISE NOTICE '✅ Step 3: Updated source_id values based on firebase_data';
-
--- Verify update
+\echo ''
+\echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+\echo '  Distribution after update'
+\echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
 SELECT
-    'After Update:' as info,
     source_id,
     COUNT(*) as post_count
 FROM scraping_status
 GROUP BY source_id
 ORDER BY source_id;
 
--- Step 3: Now add foreign key constraint
+\echo ''
+\echo '✅ Step 4: Adding foreign key constraint...'
 ALTER TABLE scraping_status
     ADD CONSTRAINT scraping_status_source_id_fkey
     FOREIGN KEY (source_id) REFERENCES creator_sources(id) ON DELETE CASCADE;
 
-RAISE NOTICE '✅ Step 4: Foreign key constraint added';
-
--- Step 4: Update indexes
+\echo ''
+\echo '✅ Step 5: Updating indexes...'
 DROP INDEX IF EXISTS idx_scraping_status_creator;
 CREATE INDEX idx_scraping_status_source ON scraping_status(source_id);
-
-RAISE NOTICE '✅ Step 5: Indexes updated';
 
 COMMIT;
 
