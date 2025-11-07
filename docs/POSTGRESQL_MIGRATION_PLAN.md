@@ -154,29 +154,32 @@ psql $DATABASE_URL -f database/schema_posts.sql
 
 ---
 
-### 2.3 Phase 3 Collections Scraper (`src/phase3_collections_scraper.py`)
+### 2.3 Phase 3 Collections Scraper ✅ (`src/phase3_collections_scraper.py`)
 
 **Current behavior:**
 - Scrapes collections from creator pages
 - Saves to: `data/processed/{creator}_collections.json`
 - Updates posts with collection info in JSON
 
-**New behavior:**
+**New behavior (IMPLEMENTED):**
 - Scrape collections
 - Insert into PostgreSQL `collections` table
 - Create relationships in `post_collections` table
-- Update post collection references
-- **DUAL MODE:** Also save to JSON as backup (temporary)
+- **DUAL MODE:** Always saves to JSON + PostgreSQL if flag enabled
 
-**Changes needed:**
-- Import database connection
-- Insert collections into PostgreSQL
-- Create many-to-many relationships
-- Add flag check: `config/use_postgresql.flag`
+**Changes completed:**
+- ✅ Import database connection (sqlalchemy, dotenv)
+- ✅ Added `use_postgresql()` function to check flag
+- ✅ Added `save_collections_to_postgres()` function
+- ✅ Inserts collections with ON CONFLICT to handle duplicates
+- ✅ Creates many-to-many relationships in `post_collections` table
+- ✅ Maintains `order_in_collection` for proper sorting
+- ✅ Modified `save_collections_data()` to use dual mode
 
 **Rollback:**
-- Git revert the commit
+- Git revert commit `1f4a2b1`
 - JSON files remain untouched
+- Or simply remove `config/use_postgresql.flag`
 
 ---
 
@@ -290,8 +293,8 @@ git revert <commit-hash>
 
 1. ✅ **FASE 0:** Backups + branch + tag + documentation
 2. ✅ **FASE 1:** Migrate posts and collections to PostgreSQL
-3. ⏳ **FASE 2.3:** Update Phase 3 collections scraper (next)
-4. 🔄 **FASE 2.2:** Update Phase 2 detail extractor
+3. ✅ **FASE 2.3:** Update Phase 3 collections scraper
+4. ⏳ **FASE 2.2:** Update Phase 2 detail extractor (next)
 5. 🔄 **FASE 2.1:** Update Phase 1 URL collector
 6. 🌐 **FASE 3:** Update web viewer with dual mode
 7. ✅ **FASE 4:** Complete testing and validation
@@ -318,10 +321,10 @@ git revert <commit-hash>
 - ✅ FASE 1: Data migration completed
   - ✅ Posts migrated (982 posts)
   - ✅ Collections migrated (30 collections, 259 relationships)
-- ⏳ FASE 2: Update scraping scripts (next step)
-  - Phase 3 collections scraper
-  - Phase 2 detail extractor
-  - Phase 1 URL collector
+- ⏳ FASE 2: Update scraping scripts (in progress)
+  - ✅ Phase 3 collections scraper (dual mode implemented)
+  - ⏳ Phase 2 detail extractor (next)
+  - 🔄 Phase 1 URL collector
 
 ---
 
