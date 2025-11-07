@@ -1591,7 +1591,7 @@
 
                             <!-- Fecha -->
                             <div class="post-card-date">
-                                {{ post.post_metadata.published_date if post.post_metadata else 'N/A' }}
+                                {{ post.published_date or post.post_metadata.published_date if post.post_metadata else post.published_at or 'N/A' }}
                             </div>
 
                         {# Content preview: priority local video > youtube > image > audio > text #}
