@@ -8,8 +8,30 @@ Este directorio contiene archivos obsoletos y código legacy que fueron reemplaz
 archive/
 ├── docs/                    ← Documentación obsoleta (pre-migración)
 ├── phase1-firebase/         ← Código Firebase (será añadido en Phase 2)
-└── scripts-old/             ← Scripts antiguos reemplazados
+├── scripts-old/             ← Scripts antiguos reemplazados
+├── avatars-old/             ← Avatares antiguos del root (NO usados por web viewer)
+├── backups/                 ← Backups y JSONs duplicados
+└── temp-scripts/            ← Scripts temporales/test
 ```
+
+### 📂 Detalles de Carpetas
+
+**avatars-old/** (7 archivos, 523 KB)
+- Avatares antiguos que estaban en root directory
+- El web viewer usa `web/static/{creator_id}.jpg` en su lugar
+- Incluye: astrobymax.jpg, horoi.jpg, olomihead on history.jpg, prueba*.jpeg
+- **Puede borrarse**: No afecta funcionalidad actual
+
+**backups/** (3 archivos, 34 MB)
+- backup_jsons_20251107.tar.gz (15 MB)
+- web_backup_20251103_065805.tar.gz (4 MB)
+- headonhistory_posts_detailed.json (15 MB - duplicado de data/processed/)
+- **Revisar antes de borrar**: Verificar que no contienen datos únicos
+
+**temp-scripts/** (1 archivo)
+- test_json_adapter.py (632 bytes)
+- Scripts temporales de prueba
+- **Puede borrarse**: Scripts de desarrollo temporal
 
 ## ⚠️ IMPORTANTE
 
