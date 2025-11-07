@@ -1,0 +1,55 @@
+{
+  "media": {
+    "images": {
+      "download": false,
+      "download_content_images": false,
+      "store_urls": true,
+      "note": "Images disabled - avatars/covers already in web/static/avatars/"
+    },
+    "patreon": {
+      "videos": {
+        "download": true,
+        "quality": "best",
+        "format": "mp4",
+        "fallback_message": "Ver en Patreon"
+      },
+      "audios": {
+        "download": true,
+        "format": "mp3"
+      }
+    },
+    "youtube": {
+      "mode": "embed",
+      "download_if_embed_fails": false,
+      "download_settings": {
+        "quality": "best",
+        "subtitles": ["en", "es"],
+        "auto_subtitles": true,
+        "format": "mp4"
+      },
+      "note": "mode: 'embed' (fast, no download) or 'download' (slow, requires yt-dlp)"
+    },
+    "deduplication": {
+      "enabled": true,
+      "hash_algorithm": "sha256",
+      "use_database": true,
+      "note": "Prevent downloading same file twice using SHA256 hash"
+    }
+  },
+  "scraping": {
+    "max_retries": 3,
+    "retry_delay": 60,
+    "timeout": 300,
+    "headless": true
+  },
+  "celery": {
+    "enabled": false,
+    "broker": "redis://localhost:6379/0",
+    "workers": {
+      "phase1": 2,
+      "phase2": 1,
+      "phase3": 2
+    },
+    "note": "Celery queues for production - disabled for local development"
+  }
+}
