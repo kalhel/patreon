@@ -272,7 +272,9 @@ def load_posts_from_postgres():
                     pc.collection_id,
                     c.title as collection_name,
                     c.collection_url,
-                    pc.order_in_collection
+                    pc.order_in_collection,
+                    c.collection_image,
+                    c.collection_image_local
                 FROM post_collections pc
                 JOIN collections c ON pc.collection_id = c.collection_id
                 WHERE c.deleted_at IS NULL
@@ -290,7 +292,9 @@ def load_posts_from_postgres():
                     'collection_id': coll_row[1],
                     'collection_name': coll_row[2],
                     'collection_url': coll_row[3],
-                    'order': coll_row[4]
+                    'order': coll_row[4],
+                    'collection_image': coll_row[5],
+                    'collection_image_local': coll_row[6]
                 }
 
                 if post_id not in collections_by_post:
