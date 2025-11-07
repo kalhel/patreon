@@ -29,20 +29,23 @@ import re
 
 @app.template_filter('markdown')
 def markdown_filter(text):
-    """Convert basic markdown to HTML"""
+    """Convert basic markdown to HTML (preserves HTML tags like <u>)"""
     if not text:
         return ''
 
-    # Bold: **text** or __text__ -> <strong>text</strong>
-    text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
-    text = re.sub(r'__(.+?)__', r'<strong>\1</strong>', text)
-
-    # Italic: *text* or _text_ -> <em>text</em>
-    text = re.sub(r'\*(.+?)\*', r'<em>\1</em>', text)
-    text = re.sub(r'_(.+?)_', r'<em>\1</em>', text)
-
-    # Links: [text](url) -> <a href="url">text</a>
+    # Links FIRST: [text](url) -> <a href="url">text</a>
     text = re.sub(r'\[([^\]]+)\]\(([^\)]+)\)', r'<a href="\2" target="_blank">\1</a>', text)
+
+    # Bold: **text** -> <strong>text</strong>
+    text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
+
+    # Italic: *text* -> <em>text</em>
+    text = re.sub(r'\*(.+?)\*', r'<em>\1</em>', text)
+
+    # HTML tags like <u>text</u> are already valid, leave as is
+
+    # Line breaks: \n -> <br>
+    text = text.replace('\n', '<br>')
 
     return text
 

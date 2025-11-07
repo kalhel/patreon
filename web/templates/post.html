@@ -802,7 +802,7 @@
                                                 <span style="color: #999; font-weight: normal; font-size: 0.8125rem;"> ↳ replied</span>
                                             {% endif %}
                                         </div>
-                                        <div class="comment-text">{{ block.text }}</div>
+                                        <div class="comment-text">{{ block.text | markdown | safe }}</div>
                                     </div>
                                 {% endif %}
                             {% endfor %}

@@ -928,48 +928,56 @@ class ContentBlockParser:
         Converts:
         - <strong>, <b> -> **text**
         - <em>, <i> -> *text*
-        - <u> -> __text__
+        - <u> -> <u>text</u> (HTML, no hay underline en markdown)
         - <a> -> [text](url)
 
-        Returns formatted text with markdown
+        Returns formatted text with markdown/HTML mix
         """
         if not element:
             return ""
 
-        result = []
+        def process_node(node):
+            """Recursively process nodes preserving structure"""
+            if isinstance(node, str):
+                # Text node - preserve as is (don't strip)
+                return node
 
-        # Process all children (text nodes and tags)
-        for child in element.children:
-            if isinstance(child, str):
-                # Plain text node
-                text = child.strip()
-                if text:
-                    result.append(text)
+            if not hasattr(node, 'name'):
+                return ''
+
+            tag = node.name.lower() if node.name else None
+
+            # Process children recursively
+            children_text = ''.join(process_node(child) for child in node.children)
+
+            # Apply formatting based on tag
+            if tag in ['strong', 'b']:
+                return f"**{children_text}**"
+            elif tag in ['em', 'i']:
+                return f"*{children_text}*"
+            elif tag == 'u':
+                return f"<u>{children_text}</u>"  # HTML underline
+            elif tag == 'a':
+                href = node.get('href', '')
+                if href:
+                    return f"[{children_text}]({href})"
+                return children_text
+            elif tag == 'br':
+                return '\n'
+            elif tag in ['span', 'div', 'p']:
+                # Preserve structure tags
+                return children_text
             else:
-                # Element node
-                tag = child.name.lower() if child.name else None
-                inner_text = child.get_text(strip=True)
+                return children_text
 
-                if not inner_text:
-                    continue
+        result = process_node(element)
 
-                if tag in ['strong', 'b']:
-                    result.append(f"**{inner_text}**")
-                elif tag in ['em', 'i']:
-                    result.append(f"*{inner_text}*")
-                elif tag == 'u':
-                    result.append(f"__{inner_text}__")
-                elif tag == 'a':
-                    href = child.get('href', '')
-                    if href:
-                        result.append(f"[{inner_text}]({href})")
-                    else:
-                        result.append(inner_text)
-                else:
-                    # Unknown tag, just get text
-                    result.append(inner_text)
+        # Clean up excessive whitespace but preserve intentional spacing
+        import re
+        result = re.sub(r'\n\s*\n\s*\n+', '\n\n', result)  # Max 2 newlines
+        result = re.sub(r' +', ' ', result)  # Single spaces only
 
-        return ' '.join(result) if result else element.get_text(strip=True)
+        return result.strip()
 
 
 def parse_post_content(content_element: WebElement) -> List[Dict]:
