@@ -14,28 +14,84 @@ Mejorar `phase2_detail_extractor.py` con optimizaciones de rendimiento, deduplic
 
 ## 📋 Requirements del Usuario
 
-### 1. **NO Descargar Imágenes** 🚫🖼️
+### 1. **Descargar SOLO Imágenes Necesarias** 🖼️✅
 
-**Razón**: Las imágenes no son necesarias para el propósito del sistema, solo ocupan espacio en disco.
+**Problema Actual**: El script descarga imágenes que NO se usan (avatares, covers, thumbnails) además de las que SÍ se usan (imágenes del contenido del post).
 
-**Implementación**:
+**Objetivo**: Solo descargar imágenes que están **dentro del contenido del post** y se muestran en la web.
+
+#### **Tipos de Imágenes**:
+
+| Tipo | ¿Descargar? | Razón |
+|------|-------------|-------|
+| **Imágenes del contenido** | ✅ SÍ | Se muestran en el post de la web |
+| Avatar del creator | ❌ NO | Ya tenemos en `web/static/avatars/` |
+| Cover/thumbnail del post | ❌ NO | No se usa en la web |
+| Preview images | ❌ NO | No se usa en la web |
+
+#### **Implementación**:
+
+**Identificar qué imágenes son "del contenido"**:
 ```python
 # EN: phase2_detail_extractor.py
-# Comentar o eliminar código de descarga de imágenes
-# Solo guardar URLs de imágenes en la base de datos
 
-# ANTES:
-download_image(url, path)
+# Las imágenes del contenido suelen venir en:
+# - post['content']['blocks'] con type='image'
+# - post['content']['images']
+# - Dentro de HTML del content
 
-# DESPUÉS:
-# Solo guardar URL, no descargar
-post_data['images'] = [{'url': url, 'downloaded': False}]
+# DESCARGAR estas:
+content_images = extract_content_images(post['content'])
+for img in content_images:
+    # Descargar con deduplicación
+    file_path = download_image_with_dedup(img['url'])
+    post_data['content_images'].append({
+        'url': img['url'],
+        'path': file_path,
+        'caption': img.get('caption')
+    })
+
+# NO DESCARGAR estas:
+# - post['cover_image_url']  ← Cover, no descargar
+# - post['creator']['avatar_url']  ← Avatar, no descargar
+# - post['thumbnail_url']  ← Thumbnail, no descargar
+```
+
+**Función helper**:
+```python
+def extract_content_images(content):
+    """
+    Extract only images that are part of post content
+    (not covers, avatars, or thumbnails)
+    """
+    images = []
+
+    # Si content es HTML
+    if isinstance(content, str):
+        soup = BeautifulSoup(content, 'html.parser')
+        for img in soup.find_all('img'):
+            images.append({
+                'url': img['src'],
+                'alt': img.get('alt', ''),
+                'caption': img.get('title', '')
+            })
+
+    # Si content es estructura JSON con blocks
+    elif isinstance(content, dict) and 'blocks' in content:
+        for block in content['blocks']:
+            if block['type'] == 'image':
+                images.append({
+                    'url': block['url'],
+                    'caption': block.get('caption', '')
+                })
+
+    return images
 ```
 
 **Beneficios**:
-- ✅ Ahorro de espacio en disco
-- ✅ Scraping más rápido
-- ✅ Menor ancho de banda
+- ✅ Solo descargar lo necesario (imágenes del contenido)
+- ✅ Ahorro de espacio (no descargar covers, avatars, thumbnails)
+- ✅ Las imágenes se siguen mostrando en la web correctamente
 
 ---
 
