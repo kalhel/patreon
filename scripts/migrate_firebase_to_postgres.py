@@ -113,7 +113,7 @@ def migrate_firebase_to_postgres(firebase_data, conn):
         try:
             # Extract Firebase data
             creator_name = post_data.get('creator', 'unknown')
-            post_url = post_data.get('url', '')
+            post_url = post_data.get('url') or f"https://www.patreon.com/posts/{post_id}"
             status = post_data.get('status', 'pending')
 
             # Get or create creator
