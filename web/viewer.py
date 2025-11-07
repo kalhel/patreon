@@ -13,12 +13,12 @@ from flask import Flask, render_template, jsonify, request, send_from_directory
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-# Import Firebase tracker for live status
+# Import PostgreSQL tracker for live status
 try:
-    from firebase_tracker import FirebaseTracker, load_firebase_config
-    FIREBASE_AVAILABLE = True
+    from postgres_tracker import PostgresTracker
+    POSTGRES_AVAILABLE = True
 except:
-    FIREBASE_AVAILABLE = False
+    POSTGRES_AVAILABLE = False
 
 app = Flask(__name__,
             template_folder='templates',
@@ -532,31 +532,29 @@ def settings():
             creators_data = json.load(f)
             creators_list = creators_data.get('creators', [])
 
-    # Try to load Firebase stats if available
-    firebase_stats = {}
-    firebase_enabled = False
-    if FIREBASE_AVAILABLE:
+    # Try to load PostgreSQL stats if available
+    db_stats = {}
+    db_enabled = False
+    if POSTGRES_AVAILABLE:
         try:
-            database_url, database_secret = load_firebase_config()
-            if database_url and database_secret:
-                tracker = FirebaseTracker(database_url, database_secret)
-                all_stats = tracker.get_all_creator_stats()
-                firebase_stats = all_stats if all_stats else {}
-                firebase_enabled = True
+            tracker = PostgresTracker()
+            all_stats = tracker.get_all_creator_stats()
+            db_stats = all_stats if all_stats else {}
+            db_enabled = True
         except Exception as e:
-            print(f"Warning: Could not load Firebase stats: {e}")
-            firebase_enabled = False
+            print(f"Warning: Could not load PostgreSQL stats: {e}")
+            db_enabled = False
 
     # Get processing status for each creator
     processing_status = []
     for creator in creators_list:
         creator_id = creator['creator_id']
 
-        # Get Firebase stats if available
-        fb_stats = firebase_stats.get(creator_id, {})
-        phase1_total = fb_stats.get('total_posts', 0)
-        phase1_pending = fb_stats.get('pending_posts', 0)
-        phase1_processed = fb_stats.get('processed_posts', 0)
+        # Get database stats if available
+        creator_stats = db_stats.get(creator_id, {})
+        phase1_total = creator_stats.get('total_posts', 0)
+        phase1_pending = creator_stats.get('pending_posts', 0)
+        phase1_processed = creator_stats.get('processed_posts', 0)
 
         # Check Phase 2: Posts detailed (from JSON files)
         posts_file = PROCESSED_DATA_DIR / f"{creator_id}_posts_detailed.json"
@@ -602,7 +600,7 @@ def settings():
                           credentials=credentials,
                           creators=creators_list,
                           processing_status=processing_status,
-                          firebase_enabled=firebase_enabled)
+                          db_enabled=db_enabled)
 
 
 @app.route('/api/settings/save', methods=['POST'])
@@ -627,19 +625,12 @@ def save_settings():
 
         # Validate that credentials have ALL required fields
         patreon = credentials.get('patreon', {})
-        firebase = credentials.get('firebase', {})
 
         # Strict validation - ALL fields must be present and non-empty
         if not patreon.get('email') or not patreon.get('password'):
             return jsonify({
                 'success': False,
                 'message': 'ERROR: Patreon email and password are required. Not saving to prevent data loss.'
-            }), 400
-
-        if not firebase.get('database_url') or not firebase.get('database_secret'):
-            return jsonify({
-                'success': False,
-                'message': 'ERROR: Firebase database_url AND database_secret are required. Not saving to prevent data loss.'
             }), 400
 
         # Additional safety: check if credentials.json exists and compare
