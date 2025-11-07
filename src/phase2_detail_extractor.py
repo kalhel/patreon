@@ -78,6 +78,7 @@ def update_post_details_in_postgres(post_data: Dict):
                     title = :title,
                     full_content = :full_content,
                     content_blocks = CAST(:content_blocks AS jsonb),
+                    post_metadata = CAST(:post_metadata AS jsonb),
                     published_at = :published_at,
                     video_streams = CAST(:video_streams AS jsonb),
                     video_subtitles = CAST(:video_subtitles AS jsonb),
@@ -104,6 +105,7 @@ def update_post_details_in_postgres(post_data: Dict):
                 'title': post_data.get('title'),
                 'full_content': full_content,
                 'content_blocks': json.dumps(post_data.get('content_blocks', [])),
+                'post_metadata': json.dumps(post_data.get('post_metadata', {})),
                 'published_at': post_data.get('published_at'),
                 'video_streams': json.dumps(post_data.get('video_streams', [])),
                 'video_subtitles': json.dumps(post_data.get('video_subtitles', [])),
@@ -237,12 +239,27 @@ def extract_post_details(
         full_post_data['downloaded_media'] = download_result
         if download_result.get('videos_relative'):
             full_post_data['video_local_paths'] = download_result['videos_relative']
-        if download_result.get('video_subtitles_relative'):
-            full_post_data['video_subtitles_relative'] = download_result['video_subtitles_relative']
         if download_result.get('audios_relative'):
             full_post_data['audio_local_paths'] = download_result['audios_relative']
         if download_result.get('images_relative'):
             full_post_data['image_local_paths'] = download_result['images_relative']
+
+        # Structure video_subtitles as array of objects with both paths
+        if download_result.get('video_subtitles') or download_result.get('video_subtitles_relative'):
+            abs_subs = download_result.get('video_subtitles', [])
+            rel_subs = download_result.get('video_subtitles_relative', [])
+
+            # Create structured array
+            subtitles = []
+            for i in range(max(len(abs_subs), len(rel_subs))):
+                sub_obj = {}
+                if i < len(abs_subs):
+                    sub_obj['path'] = abs_subs[i]
+                if i < len(rel_subs):
+                    sub_obj['relative_path'] = rel_subs[i]
+                subtitles.append(sub_obj)
+
+            full_post_data['video_subtitles'] = subtitles
 
         # Save to JSON file if requested
         if save_to_json:

@@ -205,6 +205,7 @@ def load_posts_from_postgres():
                     title,
                     full_content,
                     content_blocks,
+                    post_metadata,
                     published_at,
                     created_at,
                     updated_at,
@@ -234,7 +235,7 @@ def load_posts_from_postgres():
             posts = []
             for row in rows:
                 # Extract video_subtitles_relative from video_subtitles JSONB
-                video_subtitles = row[21] if row[21] else []
+                video_subtitles = row[22] if row[22] else []
                 video_subtitles_relative = []
                 if isinstance(video_subtitles, list):
                     # If video_subtitles is a list of objects with 'path' or 'relative_path'
@@ -248,6 +249,12 @@ def load_posts_from_postgres():
                                 if 'media/' in path:
                                     video_subtitles_relative.append(path.split('media/')[-1])
 
+                # Load post_metadata (row[6])
+                post_metadata = row[6] if row[6] else {}
+
+                # Extract published_date from metadata (the real published date from HTML)
+                published_date = post_metadata.get('published_date') if post_metadata else None
+
                 post = {
                     'post_id': row[0],
                     'creator_id': row[1],
@@ -255,28 +262,29 @@ def load_posts_from_postgres():
                     'title': row[3],
                     'full_content': row[4],
                     'content_blocks': row[5],
-                    'published_at': row[6].isoformat() if row[6] else None,
-                    'published_date': row[6].isoformat() if row[6] else None,  # Alias for compatibility
-                    'created_at': row[7].isoformat() if row[7] else None,
-                    'updated_at': row[8].isoformat() if row[8] else None,
-                    'creator_name': row[9],
-                    'creator_avatar': row[10],
-                    'like_count': row[11],
-                    'likes_count': row[11],  # Alias for compatibility
-                    'comment_count': row[12],
-                    'comments_count': row[12],  # Alias for compatibility
-                    'images': row[13] if row[13] else [],
-                    'videos': row[14] if row[14] else [],
-                    'audios': row[15] if row[15] else [],
-                    'attachments': row[16] if row[16] else [],
-                    'image_local_paths': row[17] if row[17] else [],
-                    'video_local_paths': row[18] if row[18] else [],
-                    'audio_local_paths': row[19] if row[19] else [],
-                    'video_streams': row[20] if row[20] else [],
+                    'post_metadata': post_metadata,  # Now loaded from PostgreSQL
+                    'published_date': published_date,  # Real date from HTML (e.g., "27 Feb 2024")
+                    'published_at': row[7].isoformat() if row[7] else None,
+                    'created_at': row[8].isoformat() if row[8] else None,
+                    'updated_at': row[9].isoformat() if row[9] else None,
+                    'creator_name': row[10],
+                    'creator_avatar': row[11],
+                    'like_count': row[12],
+                    'likes_count': row[12],  # Alias for compatibility
+                    'comment_count': row[13],
+                    'comments_count': row[13],  # Alias for compatibility
+                    'images': row[14] if row[14] else [],
+                    'videos': row[15] if row[15] else [],
+                    'audios': row[16] if row[16] else [],
+                    'attachments': row[17] if row[17] else [],
+                    'image_local_paths': row[18] if row[18] else [],
+                    'video_local_paths': row[19] if row[19] else [],
+                    'audio_local_paths': row[20] if row[20] else [],
+                    'video_streams': row[21] if row[21] else [],
                     'video_subtitles': video_subtitles,
                     'video_subtitles_relative': video_subtitles_relative,  # Extracted from JSONB
-                    'patreon_tags': row[22] if row[22] else [],
-                    'status': row[23] if row[23] else {},
+                    'patreon_tags': row[23] if row[23] else [],
+                    'status': row[24] if row[24] else {},
                     'collections': []  # Will be populated below
                 }
                 posts.append(post)
