@@ -209,9 +209,42 @@ mv test_*.py scripts/
 ## 📝 Notas Importantes
 
 - **NO tocar limpieza de archivos** hasta que Phase 2 esté completa
-- Los avatares probablemente se usan en algún script, **verificar primero**
+- ~~Los avatares probablemente se usan en algún script, **verificar primero**~~ ✅ **VERIFICADO (2025-11-07)**: Los 7 avatares en root **NO son usados** por el web viewer. El web viewer usa `web/static/{creator_id}.jpg`. Los del root son antiguos/backups y pueden moverse a `archive/` sin problema.
 - Los backups pueden ser importantes, **NO borrar sin revisar**
 - `firebase_tracker.py` NO eliminar, solo mover a `archive/` cuando todo funcione
+
+### 🔍 Hallazgos de Auditoría (2025-11-07)
+
+**Avatares**:
+- Web viewer usa `web/static/{creator_id}.jpg` (ver `web/viewer.py:802-808`)
+- Settings permite upload de avatares que se guardan en `web/static/`
+- Los 7 avatares en root (astrobymax.jpg, horoi.jpg, "olomihead on history.jpg", prueba*.jpeg) son antiguos
+- **Acción**: Mover a `archive/avatars-old/` en Phase 3
+
+**Web Viewer** (web/):
+- Flask app muy completo con settings avanzado
+- CRUD de creators ya implementado
+- Upload de avatares funcionando
+- Vista de estado de procesamiento (Phase 1, 2, 3)
+- Integración con Firebase para stats en vivo
+
+**Flujo de Procesamiento Actual**:
+```
+Phase 1: URL Collection
+  Script: src/phase1_url_collector.py
+  Tracking: Firebase Realtime Database
+  Output: URLs de posts recolectados
+
+Phase 2: Detail Extraction
+  Script: src/phase2_detail_extractor.py
+  Tracking: Firebase Realtime Database
+  Output: data/processed/{creator_id}_posts_detailed.json
+
+Phase 3: Collections
+  Script: src/phase3_collections_scraper.py
+  Tracking: Firebase Realtime Database (opcional)
+  Output: data/processed/{creator_id}_collections.json
+```
 
 ---
 
