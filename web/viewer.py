@@ -1405,8 +1405,28 @@ def api_search_stats():
 
 @app.route('/media/<path:filename>')
 def media_file(filename):
-    """Serve downloaded media files"""
+    """Serve downloaded media files with hash-based filename fallback"""
     safe_path = (MEDIA_ROOT / filename).resolve()
+
+    # If file doesn't exist, try to find it with hash prefix
+    if not safe_path.exists():
+        # Extract post_id from filename (e.g., "141079936" from "audio/astrobymax/141079936_00_1.mp3")
+        import re
+        from pathlib import Path
+
+        # Try to extract post_id pattern (numbers followed by underscore)
+        match = re.search(r'/(\d{8,})_', filename)
+        if match:
+            post_id = match.group(1)
+            parent_dir = (MEDIA_ROOT / filename).parent
+
+            if parent_dir.exists():
+                # Look for files containing the post_id
+                matching_files = list(parent_dir.glob(f"*{post_id}*"))
+                if matching_files:
+                    # Use the first match
+                    safe_path = matching_files[0].resolve()
+
     if not safe_path.exists() or MEDIA_ROOT not in safe_path.parents and safe_path != MEDIA_ROOT:
         return "File not found", 404
     relative = safe_path.relative_to(MEDIA_ROOT)
