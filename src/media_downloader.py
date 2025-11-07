@@ -10,9 +10,10 @@ import os
 import shutil
 import subprocess
 import time
+import hashlib
 from pathlib import Path
 from pathlib import PurePosixPath
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from urllib.parse import urlparse, unquote
 import tempfile
 
@@ -43,19 +44,20 @@ except ImportError:
 class MediaDownloader:
     """Downloads media files from Patreon posts"""
 
-    def __init__(self, output_dir: str = "data/media", cookies_path: Optional[str] = "config/patreon_cookies.json"):
+    def __init__(self, output_dir: str = "data/media", cookies_path: Optional[str] = "config/patreon_cookies.json", settings_path: Optional[str] = "config/settings.json"):
         """
         Initialize downloader
 
         Args:
             output_dir: Base directory for media downloads (data/media)
             cookies_path: Optional path to Patreon cookies captured by Selenium
+            settings_path: Optional path to settings.json for configuration
 
-        Directory structure:
-            data/media/images/{creator_id}/{post_id}_00_image.jpg
-            data/media/videos/{creator_id}/{post_id}_00_video.mp4
-            data/media/videos/{creator_id}/{post_id}_00_subtitle.vtt
-            data/media/audio/{creator_id}/{post_id}_00_audio.mp3
+        Directory structure (NEW):
+            data/media/images/{creator_id}/{hash16}_{postID}_{index}.jpg
+            data/media/videos/{creator_id}/{hash16}_{postID}_{index}.mp4
+            data/media/videos/{creator_id}/{hash16}_{postID}_{index}_subtitle_en.vtt
+            data/media/audio/{creator_id}/{hash16}_{postID}_{index}.mp3
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -64,6 +66,13 @@ class MediaDownloader:
         self.images_dir = self.output_dir / "images"
         self.videos_dir = self.output_dir / "videos"
         self.audio_dir = self.output_dir / "audio"
+
+        # Load settings
+        self.settings = self._load_settings(settings_path)
+
+        # Deduplication index: hash -> file_path
+        self.dedup_index_path = self.output_dir / ".dedup_index.json"
+        self.dedup_index = self._load_dedup_index()
 
         # Session for downloads
         self.session = requests.Session()
@@ -80,9 +89,9 @@ class MediaDownloader:
 
         # Download statistics
         self.stats = {
-            'images': {'total': 0, 'downloaded': 0, 'failed': 0, 'skipped': 0},
-            'videos': {'total': 0, 'downloaded': 0, 'failed': 0, 'skipped': 0},
-            'audios': {'total': 0, 'downloaded': 0, 'failed': 0, 'skipped': 0}
+            'images': {'total': 0, 'downloaded': 0, 'failed': 0, 'skipped': 0, 'deduplicated': 0},
+            'videos': {'total': 0, 'downloaded': 0, 'failed': 0, 'skipped': 0, 'deduplicated': 0},
+            'audios': {'total': 0, 'downloaded': 0, 'failed': 0, 'skipped': 0, 'deduplicated': 0}
         }
         self.min_video_size_bytes = 15 * 1024 * 1024  # 15 MB threshold to detect previews
 
@@ -113,6 +122,92 @@ class MediaDownloader:
             loaded += 1
 
         logger.info(f"🍪 Loaded {loaded} cookies from {path}")
+
+    def _load_settings(self, settings_path: Optional[str]) -> Dict:
+        """Load settings from settings.json"""
+        if not settings_path:
+            logger.warning("⚠️  No settings path provided, using defaults")
+            return self._get_default_settings()
+
+        path = Path(settings_path)
+        if not path.exists():
+            logger.warning(f"⚠️  Settings file not found: {path}, using defaults")
+            return self._get_default_settings()
+
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                settings = json.load(f)
+            logger.info(f"⚙️  Loaded settings from {path}")
+            return settings
+        except Exception as e:
+            logger.error(f"❌ Error loading settings: {e}, using defaults")
+            return self._get_default_settings()
+
+    def _get_default_settings(self) -> Dict:
+        """Get default settings if settings.json not found"""
+        return {
+            "media": {
+                "images": {
+                    "download_content_images": True,
+                    "skip_avatars": True,
+                    "skip_covers": True,
+                    "skip_thumbnails": True,
+                    "min_size": {"width": 400, "height": 400},
+                    "deduplication": True
+                },
+                "patreon": {
+                    "videos": {"download": True, "quality": "best", "format": "mp4"},
+                    "audios": {"download": True, "format": "mp3"}
+                },
+                "youtube": {"mode": "embed"},
+                "deduplication": {"enabled": True, "hash_algorithm": "sha256"}
+            }
+        }
+
+    def _load_dedup_index(self) -> Dict:
+        """Load deduplication index from disk"""
+        if not self.dedup_index_path.exists():
+            return {}
+
+        try:
+            with open(self.dedup_index_path, 'r', encoding='utf-8') as f:
+                index = json.load(f)
+            logger.debug(f"📇 Loaded dedup index: {len(index)} entries")
+            return index
+        except Exception as e:
+            logger.warning(f"⚠️  Error loading dedup index: {e}")
+            return {}
+
+    def _save_dedup_index(self):
+        """Save deduplication index to disk"""
+        try:
+            with open(self.dedup_index_path, 'w', encoding='utf-8') as f:
+                json.dump(self.dedup_index, f, indent=2)
+        except Exception as e:
+            logger.error(f"❌ Error saving dedup index: {e}")
+
+    def calculate_hash(self, file_path: Path, algorithm: str = 'sha256') -> str:
+        """Calculate file hash"""
+        hash_obj = hashlib.new(algorithm)
+        with open(file_path, 'rb') as f:
+            while chunk := f.read(8192):
+                hash_obj.update(chunk)
+        return hash_obj.hexdigest()
+
+    def calculate_content_hash(self, content: bytes, algorithm: str = 'sha256') -> str:
+        """Calculate hash of content bytes"""
+        hash_obj = hashlib.new(algorithm)
+        hash_obj.update(content)
+        return hash_obj.hexdigest()
+
+    def check_duplicate(self, file_hash: str) -> Optional[str]:
+        """Check if file with this hash already exists"""
+        return self.dedup_index.get(file_hash)
+
+    def register_file(self, file_hash: str, file_path: str):
+        """Register a file in the deduplication index"""
+        self.dedup_index[file_hash] = file_path
+        self._save_dedup_index()
 
     def sync_cookies_from_driver(self, driver, clear_existing: bool = False):
         """
