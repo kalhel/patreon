@@ -897,8 +897,22 @@ class ContentBlockParser:
             })
 
     def _add_quote_block(self, element):
-        """Add quote block"""
-        text = self._extract_formatted_text(element)
+        """Add quote block - preserve paragraph breaks"""
+        # Get all paragraphs in blockquote
+        paragraphs = element.find_all('p', recursive=False)
+
+        if paragraphs:
+            # Join paragraphs with double line breaks
+            texts = []
+            for p in paragraphs:
+                p_text = self._extract_formatted_text(p)
+                if p_text:
+                    texts.append(p_text)
+            text = '\n\n'.join(texts)
+        else:
+            # No <p> tags, extract as-is
+            text = self._extract_formatted_text(element)
+
         if text:
             self.order += 1
             self.blocks.append({

@@ -36,6 +36,14 @@ def markdown_filter(text):
     # Links FIRST: [text](url) -> <a href="url">text</a>
     text = re.sub(r'\[([^\]]+)\]\(([^\)]+)\)', r'<a href="\2" target="_blank">\1</a>', text)
 
+    # Auto-link bare URLs: http://example.com or https://example.com
+    # Negative lookbehind to avoid double-linking already processed URLs
+    text = re.sub(
+        r'(?<!\()(?<!href=")(https?://[^\s<>"]+)',
+        r'<a href="\1" target="_blank">\1</a>',
+        text
+    )
+
     # Bold: **text** -> <strong>text</strong>
     text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
 
