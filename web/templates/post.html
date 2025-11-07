@@ -739,7 +739,15 @@
                     </div>
                     {% endif %}
 
-                    {% if post.images %}
+                    {# Show downloaded images (local paths) if available, otherwise show remote URLs #}
+                    {% if post.image_local_paths %}
+                        {% for img_path in post.image_local_paths %}
+                        <div class="content-block image">
+                            <img src="{{ url_for('media_file', filename=img_path) }}" alt="Post image" loading="lazy">
+                        </div>
+                        {% endfor %}
+                    {% elif post.images %}
+                        {# Fallback to remote URLs (may have expired tokens) #}
                         {% for img_url in post.images %}
                         <div class="content-block image">
                             <img src="{{ img_url }}" alt="Post image" loading="lazy">
