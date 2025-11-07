@@ -190,7 +190,7 @@ def get_database_url() -> str:
 
 
 def load_posts_from_postgres():
-    """Load all posts from PostgreSQL database"""
+    """Load all posts from PostgreSQL database with collections"""
     try:
         print("🐘 Loading posts from PostgreSQL...")
         engine = create_engine(get_database_url())
@@ -241,31 +241,76 @@ def load_posts_from_postgres():
                     'full_content': row[4],
                     'content_blocks': row[5],
                     'published_at': row[6].isoformat() if row[6] else None,
+                    'published_date': row[6].isoformat() if row[6] else None,  # Alias for compatibility
                     'created_at': row[7].isoformat() if row[7] else None,
                     'updated_at': row[8].isoformat() if row[8] else None,
                     'creator_name': row[9],
                     'creator_avatar': row[10],
                     'like_count': row[11],
+                    'likes_count': row[11],  # Alias for compatibility
                     'comment_count': row[12],
-                    'images': row[13],
-                    'videos': row[14],
-                    'audios': row[15],
-                    'attachments': row[16],
-                    'image_local_paths': row[17],
-                    'video_local_paths': row[18],
-                    'audio_local_paths': row[19],
-                    'video_streams': row[20],
-                    'video_subtitles': row[21],
-                    'patreon_tags': row[22],
-                    'status': row[23]
+                    'comments_count': row[12],  # Alias for compatibility
+                    'images': row[13] if row[13] else [],
+                    'videos': row[14] if row[14] else [],
+                    'audios': row[15] if row[15] else [],
+                    'attachments': row[16] if row[16] else [],
+                    'image_local_paths': row[17] if row[17] else [],
+                    'video_local_paths': row[18] if row[18] else [],
+                    'audio_local_paths': row[19] if row[19] else [],
+                    'video_streams': row[20] if row[20] else [],
+                    'video_subtitles': row[21] if row[21] else [],
+                    'patreon_tags': row[22] if row[22] else [],
+                    'status': row[23] if row[23] else {},
+                    'collections': []  # Will be populated below
                 }
                 posts.append(post)
 
+            # Now load collections for all posts
+            collections_query = text("""
+                SELECT
+                    pc.post_id,
+                    pc.collection_id,
+                    c.title as collection_name,
+                    c.collection_url,
+                    pc.order_in_collection
+                FROM post_collections pc
+                JOIN collections c ON pc.collection_id = c.collection_id
+                WHERE c.deleted_at IS NULL
+                ORDER BY pc.post_id, pc.order_in_collection
+            """)
+
+            coll_result = conn.execute(collections_query)
+            coll_rows = coll_result.fetchall()
+
+            # Build collections map: post_id -> [collections]
+            collections_by_post = {}
+            for coll_row in coll_rows:
+                post_id = coll_row[0]
+                collection_data = {
+                    'collection_id': coll_row[1],
+                    'collection_name': coll_row[2],
+                    'collection_url': coll_row[3],
+                    'order': coll_row[4]
+                }
+
+                if post_id not in collections_by_post:
+                    collections_by_post[post_id] = []
+                collections_by_post[post_id].append(collection_data)
+
+            # Assign collections to posts
+            for post in posts:
+                post_id = post['post_id']
+                if post_id in collections_by_post:
+                    post['collections'] = collections_by_post[post_id]
+
             print(f"✅ Loaded {len(posts)} posts from PostgreSQL")
+            print(f"✅ Loaded collections for {len(collections_by_post)} posts")
             return posts
 
     except Exception as e:
         print(f"❌ Error loading from PostgreSQL: {e}")
+        import traceback
+        print(traceback.format_exc())
         print(f"   Falling back to JSON...")
         return None
 
