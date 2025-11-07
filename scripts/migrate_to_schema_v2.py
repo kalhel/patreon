@@ -360,7 +360,7 @@ class SchemaV2Migration:
                         :phase1_status, :phase1_completed_at,
                         :phase2_status, :phase2_completed_at, :phase2_attempts,
                         :has_images, :has_videos, :has_audio,
-                        :firebase_migrated, :firebase_data::jsonb
+                        :firebase_migrated, :firebase_data
                     )
                     ON CONFLICT (source_id, post_id) DO NOTHING
                 """), {
