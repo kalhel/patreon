@@ -240,6 +240,7 @@ class PostgresTracker:
     def mark_uploaded_to_notion(self, post_id: str, notion_page_id: str = None) -> bool:
         """
         Mark post as uploaded to Notion (phase3 completed)
+        Note: Only works if phase3 columns exist in schema
 
         Args:
             post_id: Platform post ID
@@ -250,13 +251,24 @@ class PostgresTracker:
         """
         session = self.Session()
         try:
-            session.execute(text("""
-                UPDATE scraping_status
-                SET phase3_status = 'completed',
-                    phase3_completed_at = NOW(),
-                    updated_at = NOW()
-                WHERE post_id = :post_id
-            """), {"post_id": post_id})
+            # Check if phase3 columns exist
+            result = session.execute(text("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'scraping_status' AND column_name = 'phase3_status'
+            """))
+
+            if result.fetchone():
+                # Phase3 columns exist
+                session.execute(text("""
+                    UPDATE scraping_status
+                    SET phase3_status = 'completed',
+                        phase3_completed_at = NOW(),
+                        updated_at = NOW()
+                    WHERE post_id = :post_id
+                """), {"post_id": post_id})
+            else:
+                # No phase3 columns, just log
+                logger.warning(f"phase3 columns don't exist, skipping mark_uploaded_to_notion for {post_id}")
 
             session.commit()
             return True
@@ -505,6 +517,7 @@ class PostgresTracker:
     def get_posts_needing_notion_upload(self, creator_id: str = None) -> List[Dict]:
         """
         Get posts that need to be uploaded to Notion (phase3 pending)
+        Note: Only works if phase3 columns exist in schema
 
         Args:
             creator_id: Optional filter by creator
@@ -514,6 +527,16 @@ class PostgresTracker:
         """
         session = self.Session()
         try:
+            # Check if phase3 columns exist
+            result = session.execute(text("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'scraping_status' AND column_name = 'phase3_status'
+            """))
+
+            if not result.fetchone():
+                logger.debug("phase3 columns don't exist, returning empty list")
+                return []
+
             query = """
                 SELECT
                     ss.post_id,
@@ -681,15 +704,34 @@ class PostgresTracker:
         """
         session = self.Session()
         try:
+            # Check if phase3 columns exist (backwards compatibility)
             result = session.execute(text("""
-                SELECT
-                    COUNT(*) as total_posts,
-                    SUM(CASE WHEN phase1_status = 'completed' THEN 1 ELSE 0 END) as url_collected,
-                    SUM(CASE WHEN phase2_status = 'completed' THEN 1 ELSE 0 END) as details_extracted,
-                    SUM(CASE WHEN phase3_status = 'completed' THEN 1 ELSE 0 END) as uploaded_to_notion
-                FROM scraping_status
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'scraping_status' AND column_name = 'phase3_status'
             """))
+            has_phase3 = result.fetchone() is not None
 
+            if has_phase3:
+                query = """
+                    SELECT
+                        COUNT(*) as total_posts,
+                        SUM(CASE WHEN phase1_status = 'completed' THEN 1 ELSE 0 END) as url_collected,
+                        SUM(CASE WHEN phase2_status = 'completed' THEN 1 ELSE 0 END) as details_extracted,
+                        SUM(CASE WHEN phase3_status = 'completed' THEN 1 ELSE 0 END) as uploaded_to_notion
+                    FROM scraping_status
+                """
+            else:
+                # Fallback for schema without phase3
+                query = """
+                    SELECT
+                        COUNT(*) as total_posts,
+                        SUM(CASE WHEN phase1_status = 'completed' THEN 1 ELSE 0 END) as url_collected,
+                        SUM(CASE WHEN phase2_status = 'completed' THEN 1 ELSE 0 END) as details_extracted,
+                        0 as uploaded_to_notion
+                    FROM scraping_status
+                """
+
+            result = session.execute(text(query))
             row = result.fetchone()
 
             total_posts = row[0] or 0
@@ -703,8 +745,9 @@ class PostgresTracker:
                 "details_extracted": details_extracted,
                 "uploaded_to_notion": uploaded_to_notion,
                 "pending_details": url_collected - details_extracted,
-                "pending_upload": details_extracted - uploaded_to_notion,
-                "creators": self.get_all_creator_stats()
+                "pending_upload": details_extracted - uploaded_to_notion if has_phase3 else 0,
+                "creators": self.get_all_creator_stats(),
+                "has_phase3": has_phase3
             }
 
         except Exception as e:
@@ -716,7 +759,8 @@ class PostgresTracker:
                 "uploaded_to_notion": 0,
                 "pending_details": 0,
                 "pending_upload": 0,
-                "creators": {}
+                "creators": {},
+                "has_phase3": False
             }
         finally:
             session.close()
