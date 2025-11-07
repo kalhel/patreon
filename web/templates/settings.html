@@ -396,7 +396,7 @@
                                 <div style="display: flex; align-items: center; gap: 1rem;">
                                     {% if creator.avatar %}
                                     <img src="{{ url_for('static', filename=creator.avatar) }}"
-                                         style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #333;">
+                                         style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #333;" loading="lazy">
                                     {% endif %}
                                     <div class="url-display">{{ creator.avatar if creator.avatar else 'No avatar' }}</div>
                                 </div>
@@ -435,7 +435,7 @@
                                     <div id="avatar-preview-{{ creator.creator_id }}" style="display: flex; align-items: center; gap: 0.5rem;">
                                         {% if creator.avatar %}
                                         <img src="{{ url_for('static', filename=creator.avatar) }}"
-                                             style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #333;">
+                                             style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #333;" loading="lazy">
                                         {% endif %}
                                     </div>
                                 </div>
@@ -1111,7 +1111,7 @@
                 reader.onload = function(e) {
                     previewDiv.innerHTML = `
                         <img src="${e.target.result}"
-                             style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #2196F3;">
+                             style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #2196F3;" loading="lazy">
                         <small style="color: #4CAF50;">New avatar ready to upload</small>
                     `;
                 };

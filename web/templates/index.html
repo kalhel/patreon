@@ -1383,7 +1383,7 @@
                     {% for creator_id, posts in creators.items() %}
                     <div class="creator-card" data-creator-id="{{ creator_id }}">
                         {% if creator_avatars.get(creator_id) %}
-                        <img src="{{ creator_avatars[creator_id] }}" alt="{{ creator_id }}" class="creator-avatar">
+                        <img src="{{ creator_avatars[creator_id] }}" alt="{{ creator_id }}" class="creator-avatar" loading="lazy">
                         {% endif %}
                         <h3>{{ creator_id | creator_name }}</h3>
                         <div class="post-count">{{ posts | length }}</div>
@@ -1539,7 +1539,7 @@
                         <div class="post-card-footer-black">
                             <div class="footer-creator-info">
                                 {% if creator_avatars.get(post.creator_id) %}
-                                    <img src="{{ creator_avatars[post.creator_id] }}" alt="{{ post.display_creator_name }}" class="footer-creator-avatar">
+                                    <img src="{{ creator_avatars[post.creator_id] }}" alt="{{ post.display_creator_name }}" class="footer-creator-avatar" loading="lazy">
                                 {% endif %}
                                 <span class="footer-creator-name">{{ post.display_creator_name }}</span>
                             </div>
@@ -1733,9 +1733,9 @@
                             {% set audio_path = local_audios[0] %}
                             <div class="audio-player-container">
                                 {% if post.collections and post.collections|length > 0 and post.collections[0].collection_image_local %}
-                                    <img src="{{ url_for('media_file', filename=post.collections[0].collection_image_local) }}" alt="{{ post.collections[0].collection_name }}" class="audio-avatar">
+                                    <img src="{{ url_for('media_file', filename=post.collections[0].collection_image_local) }}" alt="{{ post.collections[0].collection_name }}" class="audio-avatar" loading="lazy">
                                 {% elif creator_avatars.get(post.creator_id) %}
-                                    <img src="{{ creator_avatars[post.creator_id] }}" alt="Audio" class="audio-avatar">
+                                    <img src="{{ creator_avatars[post.creator_id] }}" alt="Audio" class="audio-avatar" loading="lazy">
                                 {% endif %}
                                 <div class="audio-player-main">
                                     <button class="audio-btn" onclick="playPauseSimple('{{ post.post_id }}')">▶</button>
@@ -1992,7 +1992,7 @@
                 <!-- Header Negro (igual que posts) -->
                 <div class="post-card-footer-black">
                     <div class="footer-creator-info">
-                        ${creatorAvatar ? `<img src="${creatorAvatar}" alt="${collection.creator_name}" class="footer-creator-avatar">` : ''}
+                        ${creatorAvatar ? `<img src="${creatorAvatar}" alt="${collection.creator_name}" class="footer-creator-avatar" loading="lazy">` : ''}
                         <span class="footer-creator-name">${collection.creator_name || collection.creator_id}</span>
                     </div>
                     <div class="footer-meta-icons">
@@ -2011,7 +2011,7 @@
                     ${imageUrl ? `
                     <!-- Imagen de preview cuadrada y pequeña -->
                     <div class="content-preview image-preview" style="width: 150px; height: 150px; overflow: hidden; margin: 0 auto 0.75rem; border-radius: 4px;">
-                        <img src="/media/${collection.collection_image_local}" alt="${collection.collection_name}" style="width: 150px; height: 150px; object-fit: cover; object-position: center;">
+                        <img src="/media/${collection.collection_image_local}" alt="${collection.collection_name}" style="width: 150px; height: 150px; object-fit: cover; object-position: center;" loading="lazy">
                     </div>
                     ` : ''}
                 </div>
@@ -2415,7 +2415,7 @@
                         }
 
                         creatorStat.innerHTML = `
-                            ${creatorInfo.avatar ? `<img src="${creatorInfo.avatar}" alt="${creatorInfo.name}" class="creator-avatar">` : ''}
+                            ${creatorInfo.avatar ? `<img src="${creatorInfo.avatar}" alt="${creatorInfo.name}" class="creator-avatar" loading="lazy">` : ''}
                             <span class="label">${creatorInfo.name}:</span>
                             <span class="count">${count}</span>
                         `;

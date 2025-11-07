@@ -221,7 +221,7 @@
 <body>
     <div class="header">
         {% if creator_avatar %}
-        <img src="{{ creator_avatar }}" alt="{{ creator_id }}" class="header-avatar">
+        <img src="{{ creator_avatar }}" alt="{{ creator_id }}" class="header-avatar" loading="lazy">
         {% endif %}
         <h1>{{ creator_id | creator_name }}</h1>
         <div class="subtitle">{{ posts | length }} posts available</div>
