@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Content Parser - Extracts structured content blocks from Patreon posts
-Maintains order, formatting, and structure for later Notion conversion
+Maintains order, formatting, and structure for processing
 """
 
 import json

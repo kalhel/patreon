@@ -449,7 +449,6 @@ Examples:
                 logger.info(f"💡 Next steps:")
                 logger.info(f"   1. Download media: python src/media_downloader.py --all")
                 logger.info(f"   2. Generate tags: python src/tag_generator.py --all")
-                logger.info(f"   3. Upload to Notion: python src/notion_integrator.py --all")
             else:
                 logger.info(f"\n✅ No new posts found. Everything is up to date!")
 
