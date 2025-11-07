@@ -103,3 +103,6 @@ temp/
 tmp/
 *:Zone.Identifier
 *.mp4
+
+# Archive directory (deprecated files)
+# archive/

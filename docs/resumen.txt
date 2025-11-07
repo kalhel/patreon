@@ -1,0 +1,108 @@
+Ahora sí, aquí están todos los comandos que necesitas ejecutar en orden:
+
+📋 Comandos para Reprocesar Todo
+Paso 0: Verificar Configuración ⚠️
+Antes de empezar, asegúrate de que tienes las credenciales configuradas:
+
+# Verifica que tienes email y password en credentials.json
+cat config/credentials.json
+Si están vacías, necesitas rellenarlas antes con tu email/password de Patreon y datos de Firebase.
+
+Paso 1: Ejecutar Fase 1 - Recolectar URLs 🔍
+Este comando escaneará Patreon y recogerá TODAS las URLs de posts (incluyendo nuevos):
+
+cd /home/user/patreon
+python src/phase1_url_collector.py --all
+Opciones alternativas:
+
+# Si solo quieres un creador específico:
+python src/phase1_url_collector.py --creator astrobymax
+
+# Si quieres limitar a X posts por creador (para testing):
+python src/phase1_url_collector.py --all --limit 10
+
+# Para ver el resumen actual de Firebase:
+python src/phase1_url_collector.py --summary
+Nota: Al terminar te pedirá que presiones ENTER para cerrar el navegador.
+
+Paso 2: Resetear Posts a Estado "No Procesado" 🔄
+Este comando marcará TODOS los posts en Firebase como "pendientes" para que Fase 2 los reprocese:
+
+python reset_processed_posts.py
+Este script:
+
+Encuentra todos los posts marcados como procesados
+Los marca como pendientes
+Actualiza las estadísticas de cada creator
+Paso 3: Ejecutar Fase 2 - Extraer Detalles 📄
+Este comando procesará TODOS los posts pendientes y extraerá contenido completo:
+
+python src/phase2_detail_extractor.py --all
+Opciones alternativas:
+
+# Si solo quieres un creador específico:
+python src/phase2_detail_extractor.py --creator astrobymax
+
+# Si quieres procesar solo X posts (para testing):
+python src/phase2_detail_extractor.py --all --limit 5
+
+# Para procesar un post específico:
+python src/phase2_detail_extractor.py --post 142518617
+
+# Para ver el resumen:
+python src/phase2_detail_extractor.py --summary
+Nota: Este proceso descarga imágenes, videos y audios. Puede tardar bastante dependiendo de cuántos posts tengas.
+
+Paso 4: Ejecutar Fase 3 - Scrape Collections 🗂️
+Este comando scrapeará TODAS las collections de todos los creadores:
+
+python src/phase3_collections_scraper.py --all --update-posts
+Opciones alternativas:
+
+# Si solo quieres un creador específico:
+python src/phase3_collections_scraper.py --creator astrobymax --update-posts
+
+# Sin actualizar posts (solo scrape collections):
+python src/phase3_collections_scraper.py --all
+Importante: El flag --update-posts es necesario para que actualice los posts existentes con la información de collections.
+
+Paso 5: Verificar Resultados ✅
+Después de todo, verifica que funcionó:
+
+# Inicia el viewer
+python web/viewer.py
+
+# Ve a http://localhost:5000
+# Deberías ver:
+# - Todos los posts actualizados
+# - Collections visibles
+# - Posts en las vistas de collections
+🎯 Resumen Rápido (Copy-Paste)
+Si quieres ejecutar todo de una vez sin parar:
+
+cd /home/user/patreon
+
+# Fase 1: Recolectar URLs
+python src/phase1_url_collector.py --all
+# (presiona ENTER cuando termine)
+
+# Fase 2: Resetear posts
+python reset_processed_posts.py
+
+# Fase 3: Extraer detalles
+python src/phase2_detail_extractor.py --all
+# (presiona ENTER cuando termine)
+
+# Fase 4: Scrape collections
+python src/phase3_collections_scraper.py --all --update-posts
+# (presiona ENTER cuando termine)
+
+# Verificar
+python web/viewer.py
+⚠️ Notas Importantes
+Credenciales: Asegúrate de tener email/password de Patreon en config/credentials.json
+Firebase: Necesitas Firebase configurado para Phase 1 y 2
+Tiempo: El proceso completo puede tardar horas dependiendo de cuántos posts tengas
+Navegador: Por defecto corre en modo headless. Si quieres ver el navegador, añade --no-headless
+Errores: Si algún paso falla, revisa los logs en logs/phase*.log
+¿Quieres que te explique algún comando en más detalle o prefieres empezar ya?
