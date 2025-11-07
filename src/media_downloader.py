@@ -1185,7 +1185,11 @@ class MediaDownloader:
 
     def download_youtube_videos_from_post(self, post: Dict, creator_id: str) -> Dict[str, List[str]]:
         """
-        Download YouTube videos from youtube_embed blocks
+        Download YouTube videos from youtube_embed blocks (based on settings)
+
+        Modes:
+        - "embed": Keep as embed, don't download (fast, saves bandwidth)
+        - "download": Download with yt-dlp (slow, local playback)
 
         Args:
             post: Post dictionary with content_blocks
@@ -1198,6 +1202,10 @@ class MediaDownloader:
         downloaded_subtitles = []
         relatives_videos = []
         relatives_subtitles = []
+
+        # Check YouTube settings
+        youtube_settings = self.settings.get('media', {}).get('youtube', {})
+        youtube_mode = youtube_settings.get('mode', 'embed')
 
         # Find youtube_embed blocks
         youtube_blocks = []
@@ -1217,7 +1225,17 @@ class MediaDownloader:
                 'subtitles_relative': []
             }
 
-        logger.info(f"  🎬 [YOUTUBE] Found {len(youtube_blocks)} YouTube video(s) to download")
+        # If mode is "embed", just keep the embeds and don't download
+        if youtube_mode == 'embed':
+            logger.info(f"  🎬 [YOUTUBE] Found {len(youtube_blocks)} YouTube video(s) - keeping as embeds (mode: embed)")
+            return {
+                'absolute': [],
+                'relative': [],
+                'subtitles_absolute': [],
+                'subtitles_relative': []
+            }
+
+        logger.info(f"  🎬 [YOUTUBE] Found {len(youtube_blocks)} YouTube video(s) to download (mode: download)")
 
         # Create creator subdirectory
         creator_dir = self.videos_dir / creator_id
@@ -1264,10 +1282,22 @@ class MediaDownloader:
             # Output filename pattern
             filename_base = f"{post_id}_yt{idx:02d}"
 
+            # Get quality and format settings
+            download_settings = youtube_settings.get('download_settings', {})
+            quality = download_settings.get('quality', 'best')
+            output_format = download_settings.get('format', 'mp4')
+
+            # Build format string based on quality setting
+            if quality == 'best':
+                format_str = f'bestvideo[ext={output_format}]+bestaudio[ext=m4a]/best[ext={output_format}]/best'
+            else:
+                # For other quality settings, use the specified quality
+                format_str = quality
+
             # First, download video without subtitles (to avoid subtitle errors blocking video)
             video_command = base_command + [
-                '--format', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-                '--merge-output-format', 'mp4',
+                '--format', format_str,
+                '--merge-output-format', output_format,
                 '--no-mtime',
                 '--no-warnings',
                 '-o', str(creator_dir / f'{filename_base}.%(ext)s'),
@@ -1308,13 +1338,23 @@ class MediaDownloader:
 
                     # Now try to download subtitles separately (each language independently)
                     # This way if one fails (rate limit), the other can still succeed
-                    logger.info(f"  📝 [YOUTUBE] Attempting to download subtitles...")
+                    download_settings = youtube_settings.get('download_settings', {})
+                    subtitle_langs = download_settings.get('subtitles', ['en', 'es'])
+                    auto_subtitles = download_settings.get('auto_subtitles', True)
 
-                    for lang in ['es', 'en']:
+                    logger.info(f"  📝 [YOUTUBE] Attempting to download subtitles ({', '.join(subtitle_langs)})...")
+
+                    for lang in subtitle_langs:
                         subtitle_command = base_command + [
                             '--skip-download',        # Don't re-download the video
                             '--write-subs',           # Manual subtitles
-                            '--write-auto-subs',      # Auto-generated subtitles
+                        ]
+
+                        # Add auto-subs if enabled in settings
+                        if auto_subtitles:
+                            subtitle_command.append('--write-auto-subs')
+
+                        subtitle_command.extend([
                             '--sub-langs', lang,      # One language at a time
                             '--sub-format', 'vtt',
                             '--convert-subs', 'vtt',
@@ -1322,7 +1362,7 @@ class MediaDownloader:
                             '--no-warnings',
                             '-o', str(creator_dir / f'{filename_base}.%(ext)s'),
                             url
-                        ]
+                        ])
 
                         try:
                             sub_result = subprocess.run(
