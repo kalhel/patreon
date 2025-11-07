@@ -141,6 +141,7 @@ def test_sqlalchemy():
 
         # Try to create engine with explicit TCP connection
         from sqlalchemy import create_engine
+        from urllib.parse import quote_plus
 
         # Build connection URL with query parameters to force TCP
         db_user = os.getenv('DB_USER', 'patreon_user')
@@ -149,9 +150,12 @@ def test_sqlalchemy():
         db_port = int(os.getenv('DB_PORT', '5432'))
         db_name = os.getenv('DB_NAME', 'patreon')
 
+        # URL-encode password to handle special characters like @
+        encoded_password = quote_plus(db_password)
+
         # Use connect_args to explicitly set host parameter for TCP connection
         engine = create_engine(
-            f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}",
+            f"postgresql://{db_user}:{encoded_password}@{db_host}:{db_port}/{db_name}",
             connect_args={'host': db_host, 'port': db_port}
         )
 
