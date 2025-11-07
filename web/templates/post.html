@@ -656,16 +656,6 @@
                     {% endfor %}
                 {% endif %}
 
-                {# Show images from local files #}
-                {% set local_images = post.image_local_paths if post.image_local_paths is defined and post.image_local_paths else [] %}
-                {% if local_images %}
-                    {% for img_path in local_images %}
-                        <div class="content-block image">
-                            <img src="{{ url_for('media_file', filename=img_path) }}" alt="Post image" loading="lazy">
-                        </div>
-                    {% endfor %}
-                {% endif %}
-
                 {# Show videos from local files #}
                 {% set local_videos = post.video_local_paths if post.video_local_paths is defined and post.video_local_paths else [] %}
                 {% set local_subtitles = post.video_subtitles_relative if post.video_subtitles_relative is defined and post.video_subtitles_relative else [] %}
@@ -784,6 +774,18 @@
 
                         {% endif %}
                     {% endfor %}
+
+                    {# Check if content_blocks has any image blocks #}
+                    {% set has_image_blocks = post.content_blocks | selectattr('type', 'equalto', 'image') | list | length > 0 %}
+
+                    {# If no image blocks found but we have local images, show them at the end #}
+                    {% if not has_image_blocks and post.image_local_paths %}
+                        {% for img_path in post.image_local_paths %}
+                            <div class="content-block image">
+                                <img src="{{ url_for('media_file', filename=img_path) }}" alt="Post image" loading="lazy">
+                            </div>
+                        {% endfor %}
+                    {% endif %}
 
                 {% else %}
                     <!-- Fallback for old format without blocks -->

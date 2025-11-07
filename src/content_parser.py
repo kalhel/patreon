@@ -753,28 +753,44 @@ class ContentBlockParser:
             })
 
     def _add_image_block(self, element):
-        """Add image block - ONLY content images with data-media-id"""
+        """Add image block - content images from patreonusercontent.com"""
         src = element.get('src', '')
         alt = element.get('alt', '')
         media_id = element.get('data-media-id', '')
 
-        # CRITICAL: Only add images with data-media-id attribute
-        # This filters out ALL thumbnails, avatars, and UI images
-        if not media_id:
-            logger.debug(f"  ⏭️ Skipping image without data-media-id: {src[:80] if src else 'no src'}...")
+        # Only add if it's a Patreon content image
+        if not src or 'patreonusercontent.com' not in src:
             return
 
-        # Only add if it's a Patreon image
-        if 'patreonusercontent.com' in src:
-            self.order += 1
-            self.blocks.append({
-                'type': 'image',
-                'order': self.order,
-                'url': src,
-                'caption': alt,
-                'media_id': media_id
-            })
-            logger.info(f"  ✓ Content image with media_id={media_id}: {src[:80]}...")
+        # Extract media_id from URL if not in attribute
+        # URL format: https://c10.patreonusercontent.com/4/patreon-media/p/post/123456789/...
+        if not media_id and '/p/post/' in src:
+            try:
+                # Extract post_id from URL as media identifier
+                url_parts = src.split('/p/post/')
+                if len(url_parts) > 1:
+                    post_part = url_parts[1].split('/')[0]
+                    media_id = f"post_{post_part}_{src.split('/')[-1].split('?')[0]}"
+            except:
+                pass
+
+        # If still no media_id, generate one from URL
+        if not media_id:
+            # Use last part of URL (filename) as identifier
+            try:
+                media_id = src.split('/')[-1].split('?')[0]
+            except:
+                media_id = ''
+
+        self.order += 1
+        self.blocks.append({
+            'type': 'image',
+            'order': self.order,
+            'url': src,
+            'caption': alt,
+            'media_id': media_id or 'unknown'
+        })
+        logger.info(f"  ✓ Content image (media_id={media_id or 'extracted'}): {src[:80]}...")
 
     def _add_video_block(self, element):
         """Add video block"""

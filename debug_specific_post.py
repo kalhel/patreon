@@ -166,8 +166,8 @@ def debug_post(post_id):
                         print(f"       Media ID: {block.get('media_id')}")
                         print(f"       URL: {block.get('url', '')[:60]}")
                     elif btype == 'paragraph' and i <= 5:  # Show first 5 paragraphs
-                        text = block.get('text', '')[:50]
-                        print(f"       Text: {text}...")
+                        para_text = block.get('text', '')[:50]
+                        print(f"       Text: {para_text}...")
         else:
             print(f"  ⚠️  EMPTY or NULL")
         print()
