@@ -11,7 +11,8 @@ archive/
 ├── scripts-old/             ← Scripts antiguos reemplazados
 ├── avatars-old/             ← Avatares antiguos del root (NO usados por web viewer)
 ├── backups/                 ← Backups y JSONs duplicados
-└── temp-scripts/            ← Scripts temporales/test
+├── temp-scripts/            ← Scripts temporales/test
+└── debug-scripts/           ← Scripts de debug temporal (Phase 1.5)
 ```
 
 ### 📂 Detalles de Carpetas
@@ -32,6 +33,12 @@ archive/
 - test_json_adapter.py (632 bytes)
 - Scripts temporales de prueba
 - **Puede borrarse**: Scripts de desarrollo temporal
+
+**debug-scripts/** (2 archivos, 3 KB)
+- debug_db_config.py (2105 bytes) - Script para diagnosticar configuración de DATABASE_URL
+- test_pg_connection.sh (1096 bytes) - Script para probar conexión PostgreSQL
+- Scripts usados durante troubleshooting de migración Schema V2
+- **Puede borrarse**: Ya no son necesarios, migración completada exitosamente
 
 ## ⚠️ IMPORTANTE
 
