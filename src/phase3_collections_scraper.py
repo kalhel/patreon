@@ -2,6 +2,8 @@
 """
 Phase 3: Collections Scraper
 Scrapes collection metadata and updates posts with collection membership
+
+DUAL MODE: Saves to both JSON (always) and PostgreSQL (if flag enabled)
 """
 
 import json
@@ -9,14 +11,22 @@ import argparse
 import logging
 import time
 import requests
+import os
 from pathlib import Path
 from typing import List, Dict, Optional
 from datetime import datetime
+from dotenv import load_dotenv
+from urllib.parse import quote_plus
 from patreon_auth_selenium import PatreonAuthSelenium
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -29,6 +39,161 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+# ============================================================================
+# PostgreSQL Integration (Dual Mode)
+# ============================================================================
+
+def use_postgresql() -> bool:
+    """Check if PostgreSQL mode is enabled via flag file"""
+    flag_path = Path("config/use_postgresql.flag")
+    return flag_path.exists()
+
+
+def get_database_url() -> str:
+    """Build PostgreSQL connection URL from environment variables"""
+    db_user = os.getenv('DB_USER', 'postgres')
+    db_password = os.getenv('DB_PASSWORD')
+    db_host = os.getenv('DB_HOST', 'localhost')
+    db_port = os.getenv('DB_PORT', '5432')
+    db_name = os.getenv('DB_NAME', 'alejandria')
+
+    if not db_password:
+        raise ValueError("DB_PASSWORD not found in .env file")
+
+    encoded_password = quote_plus(db_password)
+    return f"postgresql://{db_user}:{encoded_password}@{db_host}:{db_port}/{db_name}"
+
+
+def save_collections_to_postgres(creator_id: str, collections_data: Dict):
+    """
+    Save collections data to PostgreSQL database
+
+    Args:
+        creator_id: Creator identifier
+        collections_data: Collections data dictionary from scraping
+    """
+    try:
+        logger.info("  🐘 Saving to PostgreSQL...")
+
+        # Create database engine and session
+        engine = create_engine(get_database_url())
+        Session = sessionmaker(bind=engine)
+        session = Session()
+
+        stats = {
+            'collections_inserted': 0,
+            'collections_skipped': 0,
+            'relationships_inserted': 0,
+            'relationships_skipped': 0
+        }
+
+        for collection in collections_data.get('collections', []):
+            collection_id = collection['collection_id']
+
+            try:
+                # Insert or update collection
+                insert_sql = text("""
+                    INSERT INTO collections (
+                        collection_id,
+                        creator_id,
+                        title,
+                        description,
+                        collection_url,
+                        post_count,
+                        scraped_at,
+                        created_at
+                    ) VALUES (
+                        :collection_id,
+                        :creator_id,
+                        :title,
+                        :description,
+                        :collection_url,
+                        :post_count,
+                        :scraped_at,
+                        NOW()
+                    )
+                    ON CONFLICT (collection_id) DO UPDATE SET
+                        title = EXCLUDED.title,
+                        description = EXCLUDED.description,
+                        collection_url = EXCLUDED.collection_url,
+                        post_count = EXCLUDED.post_count,
+                        scraped_at = EXCLUDED.scraped_at,
+                        updated_at = NOW()
+                    RETURNING id
+                """)
+
+                result = session.execute(insert_sql, {
+                    'collection_id': collection_id,
+                    'creator_id': creator_id,
+                    'title': collection['collection_name'],
+                    'description': collection.get('description'),
+                    'collection_url': collection.get('collection_url'),
+                    'post_count': collection.get('post_count', 0),
+                    'scraped_at': collection.get('scraped_at')
+                })
+                session.commit()
+
+                if result.rowcount > 0:
+                    stats['collections_inserted'] += 1
+                    logger.info(f"    ✓ Collection saved: {collection['collection_name']}")
+                else:
+                    stats['collections_skipped'] += 1
+
+                # Insert post-collection relationships
+                for order, post_id in enumerate(collection.get('post_ids', []), start=1):
+                    try:
+                        rel_sql = text("""
+                            INSERT INTO post_collections (
+                                post_id,
+                                collection_id,
+                                order_in_collection,
+                                added_at
+                            ) VALUES (
+                                :post_id,
+                                :collection_id,
+                                :order_in_collection,
+                                NOW()
+                            )
+                            ON CONFLICT (post_id, collection_id) DO UPDATE SET
+                                order_in_collection = EXCLUDED.order_in_collection,
+                                added_at = NOW()
+                        """)
+
+                        session.execute(rel_sql, {
+                            'post_id': post_id,
+                            'collection_id': collection_id,
+                            'order_in_collection': order
+                        })
+                        session.commit()
+                        stats['relationships_inserted'] += 1
+
+                    except Exception as e:
+                        logger.warning(f"    ⚠️  Could not insert relationship for post {post_id}: {e}")
+                        stats['relationships_skipped'] += 1
+                        session.rollback()
+                        continue
+
+            except Exception as e:
+                logger.error(f"    ❌ Error saving collection {collection_id}: {e}")
+                session.rollback()
+                continue
+
+        session.close()
+
+        logger.info(f"  ✅ PostgreSQL save complete:")
+        logger.info(f"     Collections: {stats['collections_inserted']} saved")
+        logger.info(f"     Relationships: {stats['relationships_inserted']} saved")
+
+    except Exception as e:
+        logger.error(f"  ❌ PostgreSQL error: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+
+
+# ============================================================================
+# Original Functions
+# ============================================================================
 
 def load_config():
     """Load configuration from credentials.json and creators.json"""
@@ -445,12 +610,17 @@ def scrape_collections_for_creator(
 
 def save_collections_data(creator_id: str, collections_data: Dict):
     """
-    Save collections data to JSON file
+    Save collections data to JSON file and PostgreSQL (if enabled)
+
+    DUAL MODE:
+    - Always saves to JSON (backward compatibility)
+    - Also saves to PostgreSQL if config/use_postgresql.flag exists
 
     Args:
         creator_id: Creator identifier
         collections_data: Collections data dictionary
     """
+    # Always save to JSON (backward compatibility)
     output_dir = Path("data/processed")
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -459,7 +629,15 @@ def save_collections_data(creator_id: str, collections_data: Dict):
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(collections_data, f, indent=2, ensure_ascii=False)
 
-    logger.info(f"💾 Saved collections to: {output_file}")
+    logger.info(f"💾 Saved collections to JSON: {output_file}")
+
+    # Also save to PostgreSQL if flag is enabled
+    if use_postgresql():
+        logger.info(f"🐘 PostgreSQL mode enabled - saving to database...")
+        save_collections_to_postgres(creator_id, collections_data)
+    else:
+        logger.info(f"📝 PostgreSQL mode disabled (no flag found)")
+        logger.info(f"   To enable: touch config/use_postgresql.flag")
 
 
 def update_posts_with_collections(creator_id: str):
