@@ -309,7 +309,7 @@ class PostMigrator:
                     :post_url,
                     :title,
                     :full_content,
-                    :content_blocks::jsonb,
+                    CAST(:content_blocks AS jsonb),
                     :published_at,
                     :created_at,
                     :updated_at,
@@ -326,10 +326,10 @@ class PostMigrator:
                     :video_local_paths,
                     :audio_local_paths,
                     :video_downloads,
-                    :video_streams::jsonb,
-                    :video_subtitles::jsonb,
+                    CAST(:video_streams AS jsonb),
+                    CAST(:video_subtitles AS jsonb),
                     :patreon_tags,
-                    :status::jsonb
+                    CAST(:status AS jsonb)
                 )
             """)
 
