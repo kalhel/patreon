@@ -1,29 +1,58 @@
-# 🎯 Patreon to Notion - Content Scraper & Organizer
+# 🎯 Patreon Multi-Source Content Aggregator
 
-**Proyecto**: Scraping completo de contenido de Patreon → Organización en Notion
-**Fecha**: 2025-11-01
+**Sistema escalable de scraping y organización de contenido de múltiples plataformas**
 
-> **📋 Latest Updates**: See [CHANGELOG.md](CHANGELOG.md) for recent changes and new features
+---
+
+## 🚀 Estado Actual
+
+**Fase**: Migración Firebase → PostgreSQL en progreso
+
+- ✅ **Phase 0**: Infrastructure Setup (PostgreSQL 16, Redis, Celery) - **COMPLETO**
+- ✅ **Phase 1**: Data Migration (982 posts migrados de Firebase) - **COMPLETO**
+- 🔄 **Phase 2**: Core Backend (Migrar scripts a PostgreSQL) - **EN CURSO**
+
+> 📊 **Tracking detallado**: Ver [PROGRESS.md](PROGRESS.md) para seguimiento completo de la migración
 
 ---
 
 ## 📋 Objetivo
 
-Extraer TODO el contenido de múltiples creadores de Patreon y organizarlo automáticamente en Notion con:
-- ✅ Textos completos
-- ✅ Imágenes
-- ✅ Videos
-- ✅ Audios
-- ✅ Sistema de tags automático
-- ✅ Organización por creador
+Sistema multi-fuente para extraer, procesar y organizar contenido de plataformas como Patreon, YouTube, Substack, etc.
+
+**Características principales**:
+- 🔍 Scraping automatizado con sistema de 3 fases
+- 🗄️ Base de datos PostgreSQL con pgvector (embeddings)
+- 🎯 Sistema de tracking de estado por post
+- 🏷️ Generación automática de tags con IA
+- 📦 Descarga y almacenamiento de multimedia
+- 🌐 Web viewer para previsualización local
+- 🔄 Scrapers incrementales para actualizaciones diarias
 
 ---
 
-## 🎨 Creadores a Scrapear
+## 🏗️ Arquitectura
 
-1. **Head-On History** - https://www.patreon.com/c/headonhistory/posts
-2. **AstroByMax** - https://www.patreon.com/c/astrobymax/posts
-3. **Horoi Project** - https://www.patreon.com/cw/horoiproject
+### Stack Tecnológico Actual
+
+**Backend**:
+- PostgreSQL 16 + pgvector (vectores de embeddings)
+- Redis 7 (caché y message broker)
+- Celery (procesamiento asíncrono)
+- SQLAlchemy 2.0 (ORM)
+- Python 3.10+
+
+**Scraping**:
+- Selenium (autenticación y navegación)
+- BeautifulSoup4 + lxml (parsing HTML)
+- Requests (HTTP client)
+
+**IA & Processing**:
+- Gemini AI (generación de tags)
+- Whisper (transcripción de audio - futuro)
+- Sentence Transformers (embeddings - futuro)
+
+> 📐 **Diseño completo**: Ver [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) para arquitectura detallada
 
 ---
 
@@ -31,286 +60,245 @@ Extraer TODO el contenido de múltiples creadores de Patreon y organizarlo autom
 
 ```
 patreon/
-├── src/
-│   ├── patreon_auth.py          ← Autenticación con Patreon
-│   ├── patreon_scraper.py       ← Scraper principal de posts
-│   ├── media_downloader.py      ← Descarga de multimedia
-│   ├── tag_generator.py         ← Generación automática de tags
-│   ├── notion_integrator.py     ← Integración con Notion
-│   └── main.py                  ← Script principal
-├── data/
-│   ├── raw/                     ← JSONs de posts sin procesar
-│   ├── processed/               ← JSONs procesados con tags
+├── README.md                    ← Este archivo (entrada principal)
+├── PROGRESS.md                  ← Tracking oficial de migración
+├── src/                         ← Código fuente Python
+│   ├── phase1_url_collector.py
+│   ├── phase2_detail_extractor.py
+│   ├── phase3_collections_scraper.py
+│   └── ...
+├── scripts/                     ← Scripts de utilidad y migración
+│   ├── test_connections.py
+│   ├── migrate_firebase_to_postgres.py
+│   └── ...
+├── database/                    ← Schema y migraciones PostgreSQL
+│   ├── schema.sql              ← 14 tablas, 2 vistas, 44 índices
+│   └── migrations/
+├── docs/                        ← Documentación técnica
+│   ├── ARCHITECTURE.md         ← Diseño técnico completo
+│   └── PHASE0_INSTALLATION.md  ← Guía de instalación
+├── data/                        ← Datos y media (gitignored)
+│   ├── raw/
+│   ├── processed/
 │   └── media/
-│       ├── images/              ← Imágenes descargadas
-│       ├── videos/              ← Videos descargados
-│       └── audio/               ← Audios descargados
-├── config/
-│   └── credentials.json         ← Credenciales Patreon + Notion
-├── logs/                        ← Logs de ejecución
-└── docs/                        ← Documentación
-
+├── config/                      ← Configuración y credenciales
+├── web/                         ← Web viewer (Flask)
+├── docker-compose.yml           ← Setup de producción
+└── archive/                     ← Código y docs obsoletos
 ```
 
 ---
 
-## 🔧 Tecnologías
+## 🚀 Quick Start
 
-- **Python 3.10+**
-- **Requests** - HTTP requests
-- **BeautifulSoup4** - HTML parsing
-- **Selenium** (opcional) - Si es necesario JS rendering
-- **Notion API** - Integración con Notion
-- **Gemini AI** (opcional) - Generación inteligente de tags
+### Prerequisitos
+
+- Python 3.10+
+- PostgreSQL 16+ con pgvector
+- Redis 7+
+- Git
+
+### Instalación
+
+```bash
+# Clonar repositorio
+git clone <repo-url>
+cd patreon
+
+# Crear entorno virtual
+python3 -m venv venv
+source venv/bin/activate
+
+# Instalar dependencias
+pip install -r requirements.txt
+
+# Configurar .env
+cp .env.example .env
+nano .env  # Configurar credenciales
+```
+
+### Aplicar Schema PostgreSQL
+
+```bash
+# Crear base de datos
+sudo -u postgres createdb patreon
+sudo -u postgres createuser patreon_user
+
+# Aplicar schema
+psql -U patreon_user -d patreon -h 127.0.0.1 -f database/schema.sql
+```
+
+### Verificar Instalación
+
+```bash
+python3 scripts/test_connections.py
+# Debe mostrar: ✅ 4/4 tests passed
+```
+
+> 📖 **Instalación completa**: Ver [docs/PHASE0_INSTALLATION.md](docs/PHASE0_INSTALLATION.md)
 
 ---
 
-## 🚀 Flujo de Trabajo - Sistema de 3 Fases
+## 🔧 Uso
 
-### Fase 1: Recolección de URLs ✅
-**Script**: `src/phase1_url_collector.py`
+### Sistema de 3 Fases
 
-- Navega por el feed de cada creador
-- Recolecta URLs de todos los posts disponibles
-- Guarda lista de URLs en `data/raw/{creator}_post_urls.json`
-- Manejo de infinite scroll automático
-
-### Fase 2: Extracción de Detalles ✅
-**Script**: `src/phase2_detail_extractor.py`
-
-- Lee URLs de Fase 1
-- Extrae contenido completo de cada post:
-  - Título, fecha, contenido en bloques estructurados
-  - Metadata (likes, comments, fecha de publicación)
-  - URLs de imágenes, videos, audios
-  - Tags de Patreon
-- Descarga automática de multimedia local
-- Guarda en `data/processed/{creator}_posts_detailed.json`
-
-### Fase 3: Collections y Organización ✅
-**Script**: `src/phase3_collections_scraper.py`
-
-- Extrae collections de cada creador
-- Descarga imágenes de portada de collections
-- Mapea qué posts pertenecen a qué collections
-- Actualiza posts con información de collections
-- Guarda en `data/processed/{creator}_collections.json`
-
-### ⚡ Scrapers Incrementales (Para Actualizaciones Diarias) 🆕
-**¡10-100x más rápido que scrape completo!**
-
-#### Fase 1 Incremental: `src/daily_incremental_scrape.py`
-- Solo scrapea posts NUEVOS
-- Para al encontrar posts conocidos
-- Perfecto para cron jobs diarios
-
-#### Fase 2: Ya es incremental por defecto
-- Solo procesa posts "pending" en Firebase
-- Salta posts ya procesados
-
-#### Fase 3 Incremental: `src/incremental_collections_scraper.py` 🆕
-- Solo scrapea collections NUEVAS o ACTUALIZADAS
-- Detecta cambios en post_count
-- Hace merge con datos existentes
-- Mucho más rápido que scrape completo
-
-**Workflow diario recomendado:**
+**Fase 1: Recolección de URLs**
 ```bash
+python src/phase1_url_collector.py --all
+# Navega feeds y recolecta URLs de posts
+```
+
+**Fase 2: Extracción de Detalles**
+```bash
+python src/phase2_detail_extractor.py --all --headless
+# Extrae contenido completo de cada post
+```
+
+**Fase 3: Collections**
+```bash
+python src/phase3_collections_scraper.py --all --headless
+# Organiza posts en collections
+```
+
+### Scrapers Incrementales (Actualizaciones Diarias)
+
+```bash
+# Solo posts nuevos (10-100x más rápido)
 python src/daily_incremental_scrape.py --all
 python src/phase2_detail_extractor.py --all --headless
 python src/incremental_collections_scraper.py --all --headless
 ```
 
-### Web Viewer: Visualización Local 🌐
-**Script**: `web/viewer.py`
-
-- Servidor Flask local para previsualizar contenido
-- Vista de biblioteca completa con filtros
-- Vista individual de posts con contenido completo
-- Vista de collections con posts agrupados
-- Sistema de navegación intuitivo
-- **Ver documentación completa**: `docs/WEB_VIEWER.md`
-
-### Integración con Notion (Futuro)
-**Script**: `src/notion_integrator.py`
-
-- Subida automática a Notion
-- Creación de bases de datos relacionadas
-- Sistema de tags y relaciones
-
----
-
-## 📊 Bases de Datos Notion
-
-**Sistema Mejorado: 6 Bases de Datos Interrelacionadas**
-
-### 1. Posts (Artículos Completos)
-Contenido completo con texto enriquecido, tags híbridos (Patreon + IA), relaciones a media
-
-### 2. Creators (Creadores)
-Información de cada creador con estadísticas
-
-### 3. Tags (Sistema de Etiquetado)
-Tags de Patreon + Tags generados por IA, organizados por categoría
-
-### 4. Images (Galería de Imágenes) ⭐ NUEVO
-Metadata completa de cada imagen con relaciones a posts, creators y tags
-
-### 5. Videos (Biblioteca de Videos) ⭐ NUEVO
-Catálogo de videos con metadata y relaciones
-
-### 6. Audio (Colección de Audio) ⭐ NUEVO
-Archivos de audio catalogados con metadata
-
-**Ventajas**:
-- Búsqueda flexible (por post, por media, por tag, por creador)
-- Reutilización de contenido
-- Análisis y estadísticas avanzadas
-- Gestión eficiente de media
-
-**Ver diseño completo**: `docs/NOTION_DATABASE_DESIGN.md`
-
----
-
-## ⚙️ Configuración
-
-### 1. Setup Automático (Recomendado)
+### Web Viewer Local
 
 ```bash
-cd /home/javif/proyectos/astrologia/patreon
-
-# Ejecutar script de setup
-./setup.sh
-```
-
-Esto creará el entorno virtual e instalará todas las dependencias automáticamente.
-
-### 2. Setup Manual
-
-```bash
-cd /home/javif/proyectos/astrologia/patreon
-
-# Crear entorno virtual
-python3 -m venv venv
-
-# Activar entorno virtual
-source venv/bin/activate
-
-# Instalar dependencias
-pip install -r requirements.txt
-```
-
-### 2. Configurar Credenciales
-
-Editar `config/credentials.json`:
-- ✅ Patreon email/password (YA configurado)
-- ⏳ Notion API key (pendiente)
-- ⏳ Notion Database IDs (pendiente)
-
-### 3. Activar Entorno Virtual
-
-```bash
-source venv/bin/activate
-```
-
-### 4. Ejecutar Scraping
-
-**Ejemplos de uso**:
-
-```bash
-# Solo autenticarse y guardar cookies (primera vez)
-python src/main.py --auth-only
-
-# Scrapear todos los creadores (5 posts de prueba c/u)
-python src/main.py --scrape-all --limit 5
-
-# Scrapear UN creador específico
-python src/main.py --creator headonhistory --limit 10
-
-# Scrapear TODOS los posts de TODOS los creadores
-python src/main.py --scrape-all
-
-# Scrapear con detalles completos (imágenes, videos, audio)
-python src/main.py --scrape-all --full-details
-
-# Scrapear un creador con todos los detalles
-python src/main.py --creator astrobymax --full-details
+cd web
+python viewer.py
+# Abrir http://localhost:5000
 ```
 
 ---
 
-## 🎯 Estado Actual
+## 📊 Base de Datos PostgreSQL
 
-### ✅ Completado
+### Tablas Principales
 
-- [x] **Fase 1**: URL Collector - Recolección completa de URLs de posts
-- [x] **Fase 2**: Detail Extractor - Extracción de contenido detallado
-- [x] **Fase 3**: Collections Scraper - Sistema de collections implementado
-- [x] **Web Viewer**: Servidor local Flask con navegación completa
-  - [x] Vista de biblioteca (index) con filtros
-  - [x] Vista individual de posts
-  - [x] Vista de collections
-  - [x] Vista por tags
-  - [x] Sistema de navegación contextual
-  - [x] Diseño responsive y elegante
-- [x] Autenticación con Patreon (Selenium)
-- [x] Descarga de multimedia local
-- [x] Generación de tags con IA (Gemini)
+- **creators**: Creadores (con campo `platform` para multi-fuente)
+- **posts**: Posts de todos los creadores
+- **scraping_status**: Tracking de estado de scraping
+- **media_files**: Archivos multimedia (imágenes, videos, audio)
+- **collections**: Agrupaciones de posts
+- **transcriptions**: Transcripciones de audio/video (con embeddings)
+- **users**: Sistema de usuarios (futuro)
+- **user_lists**: Listas personalizadas (futuro)
 
-### 🔄 En Progreso
+### Vistas
 
-- [ ] Integración con Notion
-- [ ] Sistema de actualización incremental
+- **posts_with_media**: Posts con conteo de media
+- **collection_posts_view**: Collections con posts relacionados
 
-### 📚 Documentación
-
-- [x] README principal
-- [x] Workflow completo (WORKFLOW.md)
-- [x] Documentación de Web Viewer (docs/WEB_VIEWER.md)
-- [x] Plan de Collections (COLLECTIONS_PLAN.md)
-- [x] Diseño de base de datos Notion (docs/NOTION_DATABASE_DESIGN.md)
-- [x] **Roadmap de mejoras futuras** (ROADMAP.md) 🆕
-- [x] **Arquitectura técnica integral** (docs/ARCHITECTURE.md) 🆕
+> 📐 **Schema completo**: Ver [database/schema.sql](database/schema.sql)
 
 ---
 
-## 📝 Notas Importantes
+## 📚 Documentación
 
-### Patreon API
+### Documentación Oficial (Actualizada)
 
-- **Session Cookie**: Válido por ~1 mes
-- **API Key pública**: `1745177328c8a1d48100a9b14a1d38c1`
-- **Endpoints principales**:
-  - POST `/login` - Autenticación
-  - GET `/current_user` - Usuario actual
-  - GET `/post/:postid` - Post individual
-  - GET `/post/:postid/attachments` - Media files
+- **[PROGRESS.md](PROGRESS.md)**: Tracking detallado de migración PostgreSQL
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**: Diseño técnico completo
+- **[docs/PHASE0_INSTALLATION.md](docs/PHASE0_INSTALLATION.md)**: Guía de instalación
 
-### Rate Limiting
+### Archivo de Documentación Obsoleta
 
-- Implementar delays entre requests (1-2 segundos)
-- Guardar progreso regularmente
-- Reintentos automáticos en caso de error
-
-### Legal
-
-- Este scraper es para uso personal de contenido del cual eres suscriptor
-- Respeta los derechos de autor de los creadores
-- No redistribuyas contenido privado
+- **[archive/docs/](archive/docs/)**: Docs pre-migración (Firebase, Notion, etc.)
 
 ---
 
-## 🔄 Próximos Pasos
+## 🗺️ Roadmap
 
-1. Implementar autenticación con Patreon
-2. Probar scraping de un post individual
-3. Escalar a todos los posts de un creador
-4. Implementar descarga de multimedia
-5. Crear sistema de tags con IA
-6. Configurar Notion
-7. Integración completa
+### Completado ✅
+
+- [x] Phase 0: Infrastructure Setup (PostgreSQL, Redis, Celery)
+- [x] Phase 1: Data Migration (982 posts de Firebase → PostgreSQL)
+- [x] Sistema de scraping de 3 fases
+- [x] Descarga de multimedia
+- [x] Web viewer local
+- [x] Scrapers incrementales
+
+### En Progreso 🔄
+
+- [ ] Phase 2: Core Backend (migrar scripts a PostgreSQL)
+- [ ] Celery workers para procesamiento asíncrono
+- [ ] Sistema de embeddings con pgvector
+
+### Próximamente 📅
+
+- [ ] Phase 3: Advanced Features (búsqueda semántica, transcripciones)
+- [ ] Phase 4: Web App (interfaz web completa)
+- [ ] Phase 5: Production Deployment
+- [ ] Extensión a otras plataformas (YouTube, Substack, etc.)
 
 ---
 
-**Desarrollado**: Claude + Javier
-**Última actualización**: 2025-11-01
+## 🐛 Troubleshooting
+
+### Problemas Comunes
+
+**PostgreSQL no conecta**:
+```bash
+# Verificar que escucha en TCP
+sudo ss -tulpn | grep 5432
+
+# Usar 127.0.0.1 en vez de localhost
+DB_HOST=127.0.0.1
+```
+
+**Redis no responde**:
+```bash
+sudo systemctl start redis-server
+redis-cli ping  # Debe responder PONG
+```
+
+**Test de conexiones falla**:
+```bash
+python3 scripts/test_connections.py
+# Revisar output para identificar el problema
+```
+
+> 🐛 **Issues resueltos**: Ver sección "Issues & Soluciones" en [PROGRESS.md](PROGRESS.md)
+
+---
+
+## 📝 Contribuir
+
+Este proyecto está en migración activa. Para contribuir:
+
+1. Lee [PROGRESS.md](PROGRESS.md) para entender el estado actual
+2. Revisa [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) para el diseño técnico
+3. Crea una rama desde `claude/phase0-infrastructure-011CUt1Xs6FxZQdr2GWoA9nS`
+4. Haz tu PR apuntando a la misma rama
+
+---
+
+## 📄 Licencia
+
+Uso personal. Respeta los derechos de autor de los creadores de contenido.
+
+---
+
+## 👥 Créditos
+
+**Desarrollado por**: Javier + Claude
+**Última actualización**: 2025-11-07
+**Estado**: Phase 1 completa, Phase 2 en progreso
+
+---
+
+## 🔗 Enlaces Rápidos
+
+- 📊 [Tracking de Migración](PROGRESS.md)
+- 📐 [Arquitectura Técnica](docs/ARCHITECTURE.md)
+- 🚀 [Guía de Instalación](docs/PHASE0_INSTALLATION.md)
+- 📦 [Docs Obsoletas](archive/docs/)
