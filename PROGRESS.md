@@ -600,19 +600,43 @@ engine = create_engine(f"postgresql://{db_user}:{encoded_password}@{db_host}:{db
   - Fecha: 2025-11-07 11:31:51 Local
   - Backup creado: schema_v1_backup_20251107_113149.sql
   - Script ejecutado: `python scripts/migrate_to_schema_v2.py`
-  - Resultado: **EXITOSO** ✅
+  - Resultado inicial: Parcialmente exitoso (solo 1 creator en lugar de 4)
 
-- [x] **Fix inconsistencia de schema** ✅
-  - Problema detectado: `scraping_status` tenía `creator_id` (V1) en lugar de `source_id` (V2)
-  - SQL fix aplicado: Renombrar columna + actualizar foreign keys e índices
-  - Archivo: `fix_scraping_status_column.sql` (aplicado y archivado)
-  - Fecha: 2025-11-07 11:42 Local
+- [x] **Diagnóstico y corrección de problemas** ✅
+  - **Problema 1**: Solo se creó 1 creator "Unknown" en lugar de 4 creators
+    - Causa: Schema V1 solo tenía 1 creator o datos mal poblados
+    - Diagnóstico: `diagnose_migration_issue.sh` mostró 4 creators en firebase_data
+    - Distribución real: horoiproject (380), headonhistory (342), skyscript (180), astrobymax (80)
+
+  - **Problema 2**: Intento de fix con `fix_creators_population.py` causó pérdida de datos
+    - Script eliminó creator "Unknown" → CASCADE borró 982 posts de scraping_status
+    - Lección aprendida: ⚠️ NUNCA eliminar datos sin considerar CASCADE
+
+  - **Recuperación**: Restore desde backup con `restore_last_backup.sh`
+    - Backup restaurado tenía los 4 creators correctos
+    - 982 posts recuperados exitosamente
+
+  - **Problema 3**: `scraping_status` tenía `creator_id` (V1) en lugar de `source_id` (V2)
+    - SQL fix aplicado: `fix_scraping_status_complete.sql`
+    - Renombró columna: creator_id → source_id
+    - Actualizó valores basándose en firebase_data->>'creator_id'
+    - Añadió foreign key a creator_sources(id)
+    - Actualizó índices
+    - Fecha: 2025-11-07 (final)
 
 - [x] **Verificar migración completada** ✅
-  - 1 creator migrado (Unknown → platform-agnostic)
-  - 1 creator_source creado (Patreon platform)
-  - 982 scraping_status migrados (con `source_id` correcto ✅)
-  - 0 posts (correcto - se llenarán en Phase 2 con el scraper)
+  - **4 creators** migrados correctamente:
+    - AstroByMax (id=2)
+    - HOROI Project (id=3)
+    - Ali A Olomi (id=4)
+    - Skyscript (id=5)
+  - **4 creator_sources** creados (todos Patreon platform)
+  - **982 scraping_status** correctamente distribuidos:
+    - AstroByMax: 80 posts
+    - HOROI Project: 380 posts
+    - Ali A Olomi: 342 posts
+    - Skyscript: 180 posts
+  - 0 posts table (correcto - se llenarán en Phase 2 con el scraper)
   - Todas las tablas v2 creadas correctamente
   - Script verificación: `scripts/verify_schema_v2.sh` - **TODOS LOS CHECKS PASAN** ✅
 
@@ -630,8 +654,12 @@ engine = create_engine(f"postgresql://{db_user}:{encoded_password}@{db_host}:{db
 - ✅ `database/schema_v2.sql` (560 líneas - schema multi-source completo)
 - ✅ `scripts/migrate_to_schema_v2.py` (600+ líneas - migración automatizada)
 - ✅ `scripts/backup_database.sh` (150 líneas - backup con compresión)
+- ✅ `scripts/verify_schema_v2.sh` (verificación completa de migración)
 - ✅ `docs/SCHEMA_REFACTOR_PLAN.md` (450 líneas - diseño y decisiones)
+- ✅ `docs/PHASE2_CORE_BACKEND.md` (833 líneas - plan completo Phase 2)
+- ✅ `CREATOR_FIX_README.md` (documentación de problemas y fixes)
 - ✅ `archive/avatars-old/` + `archive/backups/` + `archive/temp-scripts/`
+- ✅ `archive/phase1.5-fixes/` (scripts de diagnóstico y corrección archivados)
 
 ### Decisiones Técnicas Clave (Phase 1.5)
 
