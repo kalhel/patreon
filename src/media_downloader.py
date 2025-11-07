@@ -832,6 +832,7 @@ class MediaDownloader:
                     logger.debug(f"Could not remove existing file before retry: {unlink_error}")
 
             download_success = False
+            final_video_path = None
             for idx, candidate in enumerate(candidate_urls):
                 if idx > 0 and output_path.exists() and suffix in video_extensions:
                     try:
@@ -842,8 +843,24 @@ class MediaDownloader:
                     except Exception as unlink_error:
                         logger.debug(f"Could not remove existing file before retry: {unlink_error}")
 
-                if self.download_file(candidate, output_path, 'video', referer=referer):
+                # Enable hash-based deduplication for videos
+                video_settings = self.settings.get('media', {}).get('patreon', {}).get('videos', {})
+                check_dedup = video_settings.get('deduplication', True) if 'deduplication' in video_settings else self.settings.get('media', {}).get('deduplication', {}).get('enabled', True)
+
+                success, final_path = self.download_file(
+                    candidate, output_path, 'video',
+                    referer=referer,
+                    check_dedup=check_dedup,
+                    post_id=post_id,
+                    index=i
+                )
+
+                if success:
                     download_success = True
+                    final_video_path = final_path
+                    # Update output_path to the final hash-based path for subsequent checks
+                    if final_path:
+                        output_path = Path(final_path)
                     break
 
             # Fallback to yt-dlp if direct download failed
@@ -1086,21 +1103,31 @@ class MediaDownloader:
             self.stats['audios']['total'] += 1
 
             filename = self._get_filename_from_url(url, '.mp3')
-            filename = f"{post_id}_{i:02d}_{filename}"
+            output_path = creator_dir / filename  # Temporary name, will be renamed with hash
 
-            output_path = creator_dir / filename
+            # Enable hash-based deduplication for audio
+            audio_settings = self.settings.get('media', {}).get('patreon', {}).get('audios', {})
+            check_dedup = audio_settings.get('deduplication', True) if 'deduplication' in audio_settings else self.settings.get('media', {}).get('deduplication', {}).get('enabled', True)
 
-            if self.download_file(url, output_path, 'audio', referer=referer):
-                abs_path = str(output_path)
+            success, final_path = self.download_file(
+                url, output_path, 'audio',
+                referer=referer,
+                check_dedup=check_dedup,
+                post_id=post_id,
+                index=i
+            )
+
+            if success and final_path:
+                abs_path = final_path
                 if abs_path not in downloaded:
                     downloaded.append(abs_path)
                     try:
-                        relatives.append(output_path.relative_to(self.output_dir).as_posix())
+                        relatives.append(Path(final_path).relative_to(self.output_dir).as_posix())
                     except ValueError:
                         relatives.append(abs_path)
 
                     # Generate waveform JSON for this audio file
-                    self.generate_waveform(output_path)
+                    self.generate_waveform(Path(final_path))
 
             time.sleep(0.5)
 

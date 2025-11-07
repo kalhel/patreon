@@ -18,11 +18,15 @@
         "download": true,
         "quality": "best",
         "format": "mp4",
-        "fallback_message": "Ver en Patreon"
+        "fallback_message": "Ver en Patreon",
+        "deduplication": true,
+        "note": "Hash-based deduplication prevents downloading identical videos"
       },
       "audios": {
         "download": true,
-        "format": "mp3"
+        "format": "mp3",
+        "deduplication": true,
+        "note": "Hash-based deduplication prevents downloading identical audio files"
       }
     },
     "youtube": {
