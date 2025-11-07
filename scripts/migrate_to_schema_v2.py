@@ -113,13 +113,13 @@ class SchemaV2Migration:
             # Get creator details
             result = conn.execute(text("""
                 SELECT
-                    creator_id,
-                    name,
-                    COUNT(*) as post_count
+                    c.creator_id,
+                    c.name,
+                    COUNT(ss.id) as post_count
                 FROM creators c
                 LEFT JOIN scraping_status ss ON ss.creator_id = c.id
                 GROUP BY c.id, c.creator_id, c.name
-                ORDER BY name
+                ORDER BY c.name
             """))
             creators = result.fetchall()
 
