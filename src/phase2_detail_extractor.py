@@ -181,10 +181,15 @@ def extract_post_details(
         # Mark as extracted in database
         tracker.mark_details_extracted(post_id, success=True)
 
+        # Filter videos to only include actual video files (not images)
+        video_extensions = ('.mp4', '.webm', '.ogg', '.mov', '.avi', '.m3u8', '.ts')
+        actual_videos = [v for v in post_detail.get('videos', [])
+                        if any(v.lower().split('?')[0].endswith(ext) for ext in video_extensions)]
+
         logger.info(f"   ✅ Successfully extracted details for post {post_id}")
         logger.info(f"      - Title: {post_detail.get('title', 'N/A')}")
         logger.info(f"      - Images: {len(post_detail.get('images', []))}")
-        logger.info(f"      - Videos: {len(post_detail.get('videos', []))}")
+        logger.info(f"      - Videos: {len(actual_videos)}")
         logger.info(f"      - Audios: {len(post_detail.get('audios', []))}")
         logger.info(f"      - Tags: {len(post_detail.get('patreon_tags', []))}")
 
