@@ -114,14 +114,26 @@ def migrate_firebase_to_postgres(firebase_data, conn):
             # Extract Firebase data
             creator_name = post_data.get('creator', 'unknown')
             post_url = post_data.get('url') or f"https://www.patreon.com/posts/{post_id}"
-            status = post_data.get('status', 'pending')
+
+            # Extract status from Firebase structure
+            status_obj = post_data.get('status', {})
+            if isinstance(status_obj, dict):
+                # Firebase has complex status object, extract simple state
+                if status_obj.get('details_extracted'):
+                    phase2_status = 'completed'
+                elif status_obj.get('errors'):
+                    phase2_status = 'failed'
+                else:
+                    phase2_status = 'pending'
+            else:
+                # Simple string status
+                phase2_status = status_obj if status_obj in ['pending', 'completed', 'failed'] else 'pending'
 
             # Get or create creator
             creator_id = get_creator_id(cursor, creator_name)
 
             # Map Firebase status to phase statuses
             phase1_status = 'completed'  # If it's in Firebase, phase1 was completed
-            phase2_status = status  # Firebase status is phase2 status
 
             # Insert into scraping_status
             cursor.execute("""
