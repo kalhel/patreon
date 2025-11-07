@@ -30,11 +30,14 @@
       }
     },
     "youtube": {
-      "mode": "embed",
+      "mode": "download",
       "download_if_embed_fails": false,
       "download_settings": {
         "quality": "best",
-        "subtitles": ["en", "es"],
+        "subtitles": [
+          "en",
+          "es"
+        ],
         "auto_subtitles": true,
         "format": "mp4"
       },
