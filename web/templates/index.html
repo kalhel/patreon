@@ -1688,22 +1688,30 @@
                             {% endfor %}
                         {% endif %}
 
-                        {# 2. Check for image (skip Patreon thumbnails) #}
+                        {# 2. Check for image - use local path if available #}
                         {% if post.content_blocks and not preview_shown.value %}
                             {% for block in post.content_blocks %}
                                 {% if not preview_shown.value and block.type == 'image' %}
-                                    {# Skip Patreon thumbnail images #}
-                                    {% set skip_image = false %}
-                                    {% set url_lower = block.url.lower() %}
-                                    {% if 'patreonusercontent.com' in url_lower and ('/1.png' in url_lower or '/2.png' in url_lower or '/3.png' in url_lower) %}
-                                        {% set skip_image = true %}
+                                    {# Find local path for this image by media_id #}
+                                    {% set local_img = namespace(path='') %}
+                                    {% if block.media_id and post.image_local_paths %}
+                                        {% for img_path in post.image_local_paths %}
+                                            {% if block.media_id in img_path or block.url.split('/')[-2] in img_path %}
+                                                {% set local_img.path = img_path %}
+                                            {% endif %}
+                                        {% endfor %}
                                     {% endif %}
 
-                                    {% if not skip_image %}
-                                    <div class="content-preview image-preview">
-                                        <img src="{{ block.url }}" alt="{{ block.caption or '' }}" loading="lazy">
-                                    </div>
-                                    {% set preview_shown.value = true %}
+                                    {# Show image using local path or fallback to remote URL #}
+                                    {% if block.media_id %}
+                                        <div class="content-preview image-preview">
+                                            {% if local_img.path %}
+                                                <img src="{{ url_for('media_file', filename=local_img.path) }}" alt="{{ block.caption or '' }}" loading="lazy">
+                                            {% else %}
+                                                <img src="{{ block.url }}" alt="{{ block.caption or '' }}" loading="lazy">
+                                            {% endif %}
+                                        </div>
+                                        {% set preview_shown.value = true %}
                                     {% endif %}
                                 {% endif %}
                             {% endfor %}

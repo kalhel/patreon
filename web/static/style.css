@@ -24,7 +24,7 @@ body {
     background-color: var(--bg-page);
     color: var(--text-primary);
     line-height: 1.6;
-    font-size: 15px;
+    font-size: 16px; /* Patreon usa 16px, no 15px */
 }
 
 /* Header */
@@ -224,14 +224,18 @@ body {
     color: var(--text-primary);
 }
 
-/* Quotes */
+/* Quotes - Estilo de Patreon */
 .content-block.quote blockquote {
-    border-left: 3px solid var(--patreon-coral);
-    padding-left: 1.25rem;
+    border-left: 4px solid var(--patreon-coral); /* Más grosor como Patreon */
+    padding-left: 1.5rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
     margin: 1.5rem 0;
-    font-style: italic;
-    color: var(--text-secondary);
-    font-size: 1.0625rem;
+    font-style: normal; /* Patreon no usa cursiva en quotes */
+    color: var(--text-primary); /* Mismo color que texto normal */
+    font-size: 1rem; /* 16px como Patreon */
+    line-height: 1.7;
+    background-color: rgba(255, 255, 255, 0.02); /* Fondo sutil */
 }
 
 /* YouTube embeds and iframes */
