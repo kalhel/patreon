@@ -13,7 +13,8 @@
             padding: 20px;
             background: #fafafa;
             color: #2b2b2b;
-            line-height: 1.6;
+            font-size: 16px; /* Tamaño Patreon */
+            line-height: 1.7; /* Line-height Patreon */
         }
 
         .post-header {
@@ -346,8 +347,22 @@
         .content-block h2 { font-size: 24px; margin: 30px 0 15px 0; font-weight: 600; }
         .content-block h3 { font-size: 20px; margin: 25px 0 12px 0; font-weight: 600; }
 
-        /* Paragraphs */
-        .content-block.paragraph p { line-height: 1.7; margin: 15px 0; }
+        /* Paragraphs - Estilo Patreon */
+        .content-block.paragraph p {
+            font-size: 16px !important;
+            line-height: 1.7 !important;
+            margin: 15px 0;
+            color: #2b2b2b;
+        }
+
+        /* Aplicar a todo el texto de contenido */
+        .post-content,
+        .post-content p,
+        .post-content div,
+        .content-block {
+            font-size: 16px;
+            line-height: 1.7;
+        }
 
         /* Comments */
         .comments-section {
