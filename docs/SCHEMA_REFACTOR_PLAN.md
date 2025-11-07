@@ -332,30 +332,63 @@ CREATE TABLE creators (
 );
 ```
 
-### 2. **Avatares** ✅ RESPONDIDO
+### 2. **Avatares** ✅ RESPONDIDO - **APROBADO POR USUARIO**
 
-**Decisión**: **Opción C** - Avatar principal + avatar por plataforma (flexibilidad máxima)
+**Decisión**: **Opción 3 - Híbrido (Filesystem + DB reference)**
 
-**Razón**: Después de investigar `web/viewer.py`:
-- Los avatares actualmente se guardan en `web/static/{creator_id}.jpg`
-- Settings permite upload de avatar por creator
-- Cada plataforma puede tener su propio avatar (YouTube vs Patreon pueden ser diferentes)
+**Almacenamiento**:
+- Archivos físicos en: `web/static/avatars/{creator_id}.{ext}`
+- DB almacena solo filename: `avatar_filename = "astrobymax.jpg"`
+- URL servida: `/static/avatars/astrobymax.jpg`
 
+**Razón de la elección**:
+- ✅ Balance perfecto: DB pequeña, archivos servidos rápidamente
+- ✅ Standard en aplicaciones web (Flask, Django, Rails)
+- ✅ Fácil cachear (browser cache, CDN futuro)
+- ✅ Ya configurado en web viewer actual
+- ✅ Pocos avatares (3-5 creators), acceso frecuente
+- ✅ Fácil migrar a S3/CloudFlare después si crece
+
+**Schema final**:
 ```sql
 CREATE TABLE creators (
     ...
-    avatar_filename VARCHAR(255),  -- Avatar principal (ej: "astrobymax.jpg")
+    avatar_filename VARCHAR(255),  -- "astrobymax.jpg" (NULL si usa default)
+    -- Archivo en: web/static/avatars/{avatar_filename}
 );
 
 CREATE TABLE creator_sources (
     ...
-    platform_avatar_url VARCHAR(500),  -- Avatar específico de la plataforma (opcional)
+    platform_avatar_url VARCHAR(500),  -- URL externa opcional (ej: YouTube API)
+    -- Si existe, usar este. Si no, usar creators.avatar_filename
 );
 ```
 
-**Lógica de display**: Si `platform_avatar_url` existe, usar ese. Si no, usar `creators.avatar_filename`.
+**Lógica de display en web viewer**:
+```python
+def get_creator_avatar(creator, source=None):
+    # 1. Si hay source con avatar específico de plataforma
+    if source and source.platform_avatar_url:
+        return source.platform_avatar_url
 
-**HALLAZGO IMPORTANTE**: Los 7 avatares en root directory (`astrobymax.jpg`, `horoi.jpg`, etc.) **NO son usados** por el web viewer actual. Son antiguos/backups y pueden moverse a `archive/` sin problema.
+    # 2. Si el creator tiene avatar personalizado
+    if creator.avatar_filename:
+        return f"/static/avatars/{creator.avatar_filename}"
+
+    # 3. Default avatar
+    return "/static/avatars/default.jpg"
+```
+
+**Organización de archivos**:
+```
+web/static/avatars/
+├── astrobymax.jpg          ← Avatar de Astrobymax
+├── headonhistory.jpg       ← Avatar de Head on History
+├── horoiproject.jpg        ← Avatar de HOROI Project
+└── default.jpg             ← Avatar por defecto (nuevo)
+```
+
+**HALLAZGO IMPORTANTE**: Los 7 avatares en root directory (`astrobymax.jpg`, `horoi.jpg`, etc.) **NO son usados** por el web viewer actual. Son antiguos/backups y fueron movidos a `archive/avatars-old/`.
 
 ### 3. **Settings/Admin** ✅ RESPONDIDO
 
@@ -391,15 +424,26 @@ CREATE TABLE creator_sources (
 
 ---
 
-## 🎯 Próximos Pasos Inmediatos
+## 🎯 Estado: ✅ LISTO PARA EJECUTAR
 
-**Esperando aprobación del usuario para**:
-1. Confirmar que este diseño tiene sentido
-2. Responder las 4 preguntas arriba
-3. Crear schema_v2.sql
-4. Crear script de migración
-5. Ejecutar migración
-6. Continuar con Phase 2
+**Completado**:
+- ✅ Diseño multi-source aprobado por usuario
+- ✅ 4 preguntas de diseño respondidas y documentadas
+- ✅ `database/schema_v2.sql` creado (completo y probado)
+- ✅ `scripts/migrate_to_schema_v2.py` creado (automatizado)
+- ✅ `scripts/backup_database.sh` creado (seguridad)
+- ✅ Documentación completa
+
+**Próximos Pasos**:
+1. Revisar schema_v2.sql y migration script
+2. Ejecutar migración:
+   ```bash
+   # Backup automático incluido en el script
+   python scripts/migrate_to_schema_v2.py
+   ```
+3. Verificar web viewer funciona correctamente
+4. Actualizar PostgresTracker con schema v2
+5. Continuar con Phase 2
 
 ---
 

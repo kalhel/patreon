@@ -7,13 +7,14 @@
 ## 📍 Estado Actual
 
 - **Branch**: `claude/phase0-infrastructure-011CUt1Xs6FxZQdr2GWoA9nS`
-- **Fase Actual**: Phase 1 - Data Migration ✅ COMPLETO (100%)
+- **Fase Actual**: Phase 1.5 - Schema Refactor ✅ LISTO PARA EJECUTAR
 - **Fecha de Inicio Phase 0**: 2025-11-07
 - **Fecha de Finalización Phase 0**: 2025-11-07
 - **Fecha de Finalización Phase 1**: 2025-11-07
-- **Última Actualización**: 2025-11-07 15:45 UTC
-- **Último Paso Completado**: ✅ Migración Firebase → PostgreSQL completada (982 posts, 0 errores)
-- **Siguiente Paso**: Phase 2 - Core Backend (Migrar scripts Python a usar PostgreSQL en vez de Firebase)
+- **Fecha de Finalización Phase 1.5**: 2025-11-07 (preparación completa)
+- **Última Actualización**: 2025-11-07 19:30 UTC
+- **Último Paso Completado**: ✅ Schema V2 multi-source preparado (scripts de migración + backup listos)
+- **Siguiente Paso**: Ejecutar migración a Schema V2 → Luego Phase 2 (Core Backend)
 
 ---
 
@@ -504,6 +505,132 @@ engine = create_engine(f"postgresql://{db_user}:{encoded_password}@{db_host}:{db
 - ✅ Credenciales Firebase configuradas
 - ✅ Errores de migración resueltos (3 problemas)
 - ✅ Migración ejecutada exitosamente (982 posts, 0 errores)
+
+---
+
+## 🔄 Phase 1.5: Schema Refactor (Multi-Source Design)
+
+**Objetivo**: Refactorizar schema para soportar múltiples plataformas por creador (Patreon, YouTube, Substack, etc.)
+
+**Razón**: El schema v1 tenía una limitación: un creador = una plataforma. Si "Astrobymax" tiene Patreon + YouTube, serían 2 registros separados. El schema v2 separa creadores (entidades/personas) de sources (plataformas).
+
+### 1.5.1 Análisis y Diseño
+
+- [x] **Identificar problema de diseño** ✅
+  - Usuario señaló: "un creador puede tener diferentes fuentes"
+  - Investigación de web viewer (web/viewer.py) completada
+  - Auditoría de avatares: root directory NO usados (movidos a archive/)
+
+- [x] **Diseñar schema multi-source** ✅
+  - Tabla `creators`: Personas/entidades (platform-agnostic)
+  - Tabla `creator_sources`: Plataformas/canales de cada creator
+  - Tabla `posts`: Ahora referencia `source_id` (not creator_id directly)
+  - Tabla `scraping_status`: Ahora incluye `source_id` para tracking granular
+  - Decisión de avatares: Híbrido (filesystem + DB reference) - Aprobado por usuario
+
+- [x] **Documentar diseño completo** ✅
+  - docs/SCHEMA_REFACTOR_PLAN.md (450 líneas)
+  - 4 preguntas de diseño respondidas:
+    1. Nombres únicos: `name` UNIQUE (sin slug)
+    2. Avatares: Opción 3 - Híbrido (web/static/avatars/ + filename en DB)
+    3. Settings/Admin: Ya existe y es muy completo
+    4. Migration strategy: Migrar 982 posts (preservar datos)
+
+### 1.5.2 Implementación de Schema V2
+
+- [x] **Crear database/schema_v2.sql** ✅
+  - Schema completo con diseño multi-source (560 líneas)
+  - Incluye:
+    - creators (platform-agnostic)
+    - creator_sources (plataformas)
+    - posts (ahora referencia sources)
+    - scraping_status (ahora con source_id)
+    - Todas las vistas y triggers actualizados
+    - Comentarios SQL detallados
+
+- [x] **Crear script de migración** ✅
+  - scripts/migrate_to_schema_v2.py (completo y automatizado)
+  - Funcionalidades:
+    - Verificación de schema v1 vs v2
+    - Análisis de datos actuales (982 posts)
+    - Backup automático (pg_dump)
+    - Migración de creators → creators + creator_sources
+    - Migración de scraping_status con source_id
+    - Verificación de integridad post-migración
+    - Reporte JSON de migración
+
+- [x] **Crear script de backup** ✅
+  - scripts/backup_database.sh (con compresión opcional)
+  - Extrae datos de .env automáticamente
+  - Limpieza de backups antiguos (mantiene últimos 10)
+  - Formato timestamped: patreon_backup_YYYYMMDD_HHMMSS.sql
+
+### 1.5.3 Cleanup y Organización
+
+- [x] **Mover archivos obsoletos a archive/** ✅
+  - archive/avatars-old/ (7 files - 523 KB)
+    - astrobymax.jpg, horoi.jpg, olomihead on history.jpg, prueba*.jpeg
+    - **Verificado**: Web viewer NO los usa (usa web/static/)
+  - archive/backups/ (3 files - 34 MB)
+    - backup_jsons_20251107.tar.gz, web_backup_*.tar.gz
+    - headonhistory_posts_detailed.json (duplicado)
+  - archive/temp-scripts/ (1 file)
+    - test_json_adapter.py
+
+- [x] **Actualizar archive/README.md** ✅
+  - Documentar estructura completa
+  - Detalle de cada carpeta (tamaños, propósito)
+  - Recomendaciones de eliminación
+
+### 1.5.4 Documentación
+
+- [x] **Actualizar docs/PHASE2_PLAN.md** ✅
+  - Hallazgos de auditoría de avatares documentados
+  - Flujo de procesamiento (Phase 1, 2, 3) documentado
+  - Web viewer funcionalities documentadas
+
+- [x] **Actualizar PROGRESS.md** ✅
+  - Esta sección Phase 1.5 añadida
+  - Estado actual actualizado
+  - Próximos pasos clarificados
+
+### Phase 1.5 ✅ LISTO PARA EJECUTAR
+- **Total Tasks**: 12
+- **Completed**: 12
+- **Remaining**: 0 (preparación completa)
+- **Progress**: 100%
+- **Estado**: ✅ LISTO - Schema v2, migration script y backup script listos
+- **Siguiente acción**: Ejecutar `python scripts/migrate_to_schema_v2.py`
+
+### Archivos Creados en Phase 1.5
+- ✅ `database/schema_v2.sql` (560 líneas - schema multi-source completo)
+- ✅ `scripts/migrate_to_schema_v2.py` (600+ líneas - migración automatizada)
+- ✅ `scripts/backup_database.sh` (150 líneas - backup con compresión)
+- ✅ `docs/SCHEMA_REFACTOR_PLAN.md` (450 líneas - diseño y decisiones)
+- ✅ `archive/avatars-old/` + `archive/backups/` + `archive/temp-scripts/`
+
+### Decisiones Técnicas Clave (Phase 1.5)
+
+**1. Diseño Multi-Source**:
+```sql
+-- Antes (v1): Un creador = una plataforma ❌
+creators (creator_id='astrobymax', platform='patreon')
+
+-- Ahora (v2): Un creador con múltiples sources ✅
+creators (name='Astrobymax')  -- Entidad única
+├── creator_sources (platform='patreon', platform_id='astrobymax')
+└── creator_sources (platform='youtube', platform_id='UC_astrobymax')
+```
+
+**2. Avatares**: Filesystem (web/static/avatars/) + DB reference
+- Balance perfecto: DB pequeña, archivos rápidos
+- Fácil migrar a S3/CDN después si crece
+- Web viewer ya configurado para servir desde /static/
+
+**3. Migration Strategy**: Preservar 982 posts con script automatizado
+- Backup automático antes de migración
+- Datos preservados en JSONB (firebase_data)
+- Reversible (backup SQL disponible)
 
 ---
 
