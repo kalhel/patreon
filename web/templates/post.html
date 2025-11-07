@@ -649,39 +649,49 @@
 
                         {% elif block.type == 'heading_2' %}
                             <div class="content-block heading-2">
-                                <h2>{{ block.text }}</h2>
+                                <h2>{{ block.text | markdown | safe }}</h2>
                             </div>
 
                         {% elif block.type == 'heading_3' %}
                             <div class="content-block heading-3">
-                                <h3>{{ block.text }}</h3>
+                                <h3>{{ block.text | markdown | safe }}</h3>
                             </div>
 
                         {% elif block.type == 'paragraph' %}
                             {% set paragraph_text = (block.text or '') | trim %}
                             {% if paragraph_text and paragraph_text not in date_skip_values and paragraph_text | lower not in date_skip_values_lower %}
                             <div class="content-block paragraph">
-                                <p>{{ block.text }}</p>
+                                <p>{{ block.text | markdown | safe }}</p>
                             </div>
                             {% endif %}
 
                         {% elif block.type == 'image' %}
-                            {# Skip Patreon thumbnail images (usually end with /1.png, /2.png, etc.) #}
-                            {% set skip_image = false %}
-                            {% set url_lower = block.url.lower() %}
+                            {# Show image using local path if available, otherwise remote URL #}
+                            {% if block.media_id %}
+                                {# Find local path for this media_id #}
+                                {% set local_img = namespace(path='') %}
+                                {% for img_path in post.image_local_paths %}
+                                    {% if block.media_id in img_path or block.url.split('/')[-2] in img_path %}
+                                        {% set local_img.path = img_path %}
+                                    {% endif %}
+                                {% endfor %}
 
-                            {# Check if it's a Patreon thumbnail pattern #}
-                            {% if 'patreonusercontent.com' in url_lower and ('/1.png' in url_lower or '/2.png' in url_lower or '/3.png' in url_lower) %}
-                                {% set skip_image = true %}
-                            {% endif %}
-
-                            {% if not skip_image %}
-                            <div class="content-block image">
-                                <img src="{{ block.url }}" alt="{{ block.caption or '' }}" loading="lazy">
-                                {% if block.caption %}
-                                <div class="caption">{{ block.caption }}</div>
+                                {% if local_img.path %}
+                                <div class="content-block image">
+                                    <img src="{{ url_for('media_file', filename=local_img.path) }}" alt="{{ block.caption or '' }}" loading="lazy">
+                                    {% if block.caption %}
+                                    <div class="caption">{{ block.caption }}</div>
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                {# Fallback to remote URL if local not found #}
+                                <div class="content-block image">
+                                    <img src="{{ block.url }}" alt="{{ block.caption or '' }}" loading="lazy">
+                                    {% if block.caption %}
+                                    <div class="caption">{{ block.caption }}</div>
+                                    {% endif %}
+                                </div>
                                 {% endif %}
-                            </div>
                             {% endif %}
 
                         {% elif block.type == 'video' %}
@@ -710,7 +720,7 @@
 
                         {% elif block.type == 'quote' %}
                             <div class="content-block quote">
-                                <blockquote>{{ block.text }}</blockquote>
+                                <blockquote>{{ block.text | markdown | safe }}</blockquote>
                             </div>
 
                         {% elif block.type == 'youtube_embed' %}

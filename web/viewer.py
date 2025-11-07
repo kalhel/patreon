@@ -24,6 +24,28 @@ app = Flask(__name__,
             template_folder='templates',
             static_folder='static')
 
+# Custom Jinja2 filter for basic markdown to HTML
+import re
+
+@app.template_filter('markdown')
+def markdown_filter(text):
+    """Convert basic markdown to HTML"""
+    if not text:
+        return ''
+
+    # Bold: **text** or __text__ -> <strong>text</strong>
+    text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
+    text = re.sub(r'__(.+?)__', r'<strong>\1</strong>', text)
+
+    # Italic: *text* or _text_ -> <em>text</em>
+    text = re.sub(r'\*(.+?)\*', r'<em>\1</em>', text)
+    text = re.sub(r'_(.+?)_', r'<em>\1</em>', text)
+
+    # Links: [text](url) -> <a href="url">text</a>
+    text = re.sub(r'\[([^\]]+)\]\(([^\)]+)\)', r'<a href="\2" target="_blank">\1</a>', text)
+
+    return text
+
 # Data directories - try both raw and processed
 RAW_DATA_DIR = Path(__file__).parent.parent / "data" / "raw"
 PROCESSED_DATA_DIR = Path(__file__).parent.parent / "data" / "processed"
