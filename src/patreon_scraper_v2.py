@@ -559,26 +559,45 @@ class PatreonScraperV2:
             post_detail['full_content'] = ""
 
         try:
-            # Extract ONLY content images by URL pattern (most reliable method)
-            # Content images: /p/post/{post_id}/
-            # Avatars: /p/campaign/ or /p/user/
-
-            all_images = self.driver.find_elements(By.CSS_SELECTOR, 'img')
+            # Extract ONLY content images using data-media-id attribute
+            # This attribute is ONLY present on original content images, not thumbnails or avatars
             image_urls = []
 
-            for img in all_images:
+            # Method 1: Use data-media-id (most reliable - only on original images)
+            content_images = self.driver.find_elements(By.CSS_SELECTOR, 'img[data-media-id]')
+            for img in content_images:
                 src = img.get_attribute('src')
-                if not src or 'patreonusercontent.com' not in src:
-                    continue
+                if src and 'patreonusercontent.com' in src:
+                    image_urls.append(src)
 
-                # ONLY include images from /p/post/ (content images)
-                # EXCLUDE /p/campaign/ (creator avatars) and /p/user/ (user avatars)
-                if '/p/post/' in src and '/p/campaign/' not in src and '/p/user/' not in src:
+            # Method 2: Fallback to URL pattern if no data-media-id found
+            # But exclude thumbnail sizes (eyJ3Ijo in URL = width parameter)
+            if not image_urls:
+                all_images = self.driver.find_elements(By.CSS_SELECTOR, 'img')
+                for img in all_images:
+                    src = img.get_attribute('src')
+                    if not src or 'patreonusercontent.com' not in src:
+                        continue
+
+                    # ONLY /p/post/ images
+                    if '/p/post/' not in src:
+                        continue
+
+                    # EXCLUDE avatars
+                    if '/p/campaign/' in src or '/p/user/' in src:
+                        continue
+
+                    # EXCLUDE thumbnails (they have width/height parameters in base64)
+                    # eyJ3Ijo = {"w": (width parameter)
+                    # eyJoIjo = {"h": (height parameter)
+                    if 'eyJ3Ijo' in src or 'eyJoIjo' in src:
+                        continue
+
                     if src not in image_urls:
                         image_urls.append(src)
 
             post_detail['images'] = image_urls
-            logger.info(f"  📸 Extracted {len(image_urls)} content images (URL filter: /p/post/ only)")
+            logger.info(f"  📸 Extracted {len(image_urls)} content images (data-media-id selector)")
 
         except Exception as e:
             logger.warning(f"  ⚠️  Error extracting images: {e}")
