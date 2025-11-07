@@ -101,6 +101,8 @@ def save_collections_to_postgres(creator_id: str, collections_data: Dict):
                         description,
                         collection_url,
                         post_count,
+                        collection_image,
+                        collection_image_local,
                         scraped_at,
                         created_at
                     ) VALUES (
@@ -110,6 +112,8 @@ def save_collections_to_postgres(creator_id: str, collections_data: Dict):
                         :description,
                         :collection_url,
                         :post_count,
+                        :collection_image,
+                        :collection_image_local,
                         :scraped_at,
                         NOW()
                     )
@@ -118,6 +122,8 @@ def save_collections_to_postgres(creator_id: str, collections_data: Dict):
                         description = EXCLUDED.description,
                         collection_url = EXCLUDED.collection_url,
                         post_count = EXCLUDED.post_count,
+                        collection_image = EXCLUDED.collection_image,
+                        collection_image_local = EXCLUDED.collection_image_local,
                         scraped_at = EXCLUDED.scraped_at,
                         updated_at = NOW()
                     RETURNING id
@@ -130,6 +136,8 @@ def save_collections_to_postgres(creator_id: str, collections_data: Dict):
                     'description': collection.get('description'),
                     'collection_url': collection.get('collection_url'),
                     'post_count': collection.get('post_count', 0),
+                    'collection_image': collection.get('collection_image'),
+                    'collection_image_local': collection.get('collection_image_local'),
                     'scraped_at': collection.get('scraped_at')
                 })
                 session.commit()
