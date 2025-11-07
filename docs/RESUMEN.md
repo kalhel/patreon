@@ -316,6 +316,7 @@ rm config/patreon_cookies.json
 
 - **README Principal:** [README.md](../README.md)
 - **Roadmap:** [ROADMAP.md](../ROADMAP.md) 🆕 - Mejoras futuras y planificación
+- **Arquitectura:** [ARCHITECTURE.md](ARCHITECTURE.md) 🆕 - Diseño técnico integral del sistema
 - **Changelog:** [CHANGELOG.md](../CHANGELOG.md)
 - **Quick Updates:** [README_UPDATES.md](../README_UPDATES.md)
 - **Workflow Original:** [TWO_PHASE_WORKFLOW.md](TWO_PHASE_WORKFLOW.md)

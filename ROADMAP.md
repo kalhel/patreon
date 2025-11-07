@@ -3,6 +3,8 @@
 **Última actualización**: 2025-11-07
 **Estado**: Planificación de mejoras y nuevas funcionalidades
 
+> **📐 Nota importante**: Este roadmap describe las funcionalidades y mejoras planeadas. Para ver cómo todos estos componentes se integran en una **arquitectura técnica coherente y escalable**, consulta el documento [**ARCHITECTURE.md**](docs/ARCHITECTURE.md), que incluye diseño del sistema, stack tecnológico, plan de migración por fases y diagramas detallados.
+
 ---
 
 ## 📋 Índice
