@@ -17,6 +17,10 @@ import logging
 from pathlib import Path
 from sqlalchemy import create_engine, text
 from urllib.parse import quote_plus
+from dotenv import load_dotenv
+
+# Load .env file
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
