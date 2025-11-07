@@ -154,15 +154,20 @@ def debug_post(post_id):
             for btype, count in block_types.items():
                 print(f"  - {btype}: {count}")
 
-            print(f"\nFirst 3 blocks:")
-            for i, block in enumerate(content_blocks[:3], 1):
+            print(f"\nAll blocks (showing order and type):")
+            for i, block in enumerate(content_blocks, 1):
                 if isinstance(block, dict):
-                    print(f"  [{i}] Type: {block.get('type')}, Order: {block.get('order')}")
-                    if block.get('type') == 'heading_1':
-                        print(f"      Text: {block.get('text', '')[:100]}")
-                    elif block.get('type') == 'image':
-                        print(f"      Media ID: {block.get('media_id')}")
-                        print(f"      URL: {block.get('url', '')[:80]}")
+                    btype = block.get('type')
+                    order = block.get('order')
+                    print(f"  [{i:2d}] Order: {order:2d}, Type: {btype}")
+                    if btype == 'heading_1':
+                        print(f"       Text: {block.get('text', '')[:60]}")
+                    elif btype == 'image':
+                        print(f"       Media ID: {block.get('media_id')}")
+                        print(f"       URL: {block.get('url', '')[:60]}")
+                    elif btype == 'paragraph' and i <= 5:  # Show first 5 paragraphs
+                        text = block.get('text', '')[:50]
+                        print(f"       Text: {text}...")
         else:
             print(f"  ⚠️  EMPTY or NULL")
         print()
