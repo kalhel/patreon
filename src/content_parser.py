@@ -481,6 +481,9 @@ class ContentBlockParser:
         """Find the main content container on the page"""
         selectors = [
             '[data-tag="post-content"]',
+            '.cm-bjFDAN',  # Patreon's main content container
+            '.sc-4aa4e11b-0',  # Patreon's post detail container
+            'div.cm-LIiDtl',  # Patreon's text content wrapper
             '[class*="post-content"]',
             'div[class*="content"]',
             'article',
@@ -490,10 +493,13 @@ class ContentBlockParser:
         for selector in selectors:
             try:
                 element = driver.find_element(By.CSS_SELECTOR, selector)
-                if element:
+                if element and element.text.strip():
+                    logger.info(f"Found content with selector: {selector}")
                     return element
             except:
                 continue
+
+        logger.warning("Could not find content element with any selector")
         return None
 
     def _extract_json_ld_embeds(self, driver: WebDriver):
@@ -698,7 +704,20 @@ class ContentBlockParser:
             elif tag == 'span':
                 # Dive into spans
                 self._parse_children(child)
+            elif tag == 'figure':
+                # Figures wrap images - recurse into them
+                self._parse_children(child)
+            elif tag == 'section':
+                # Sections contain content - recurse into them
+                self._parse_children(child)
+            elif tag in ['strong', 'b', 'em', 'i', 'u', 'mark']:
+                # Inline formatting tags - recurse into them
+                self._parse_children(child)
             # Add more tag handlers as needed
+            else:
+                # Unknown tag - try to recurse if it might contain content
+                if child.children:
+                    self._parse_children(child)
 
     def _add_heading_block(self, level: int, element):
         """Add heading block (h1, h2, h3)"""

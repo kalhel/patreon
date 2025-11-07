@@ -604,37 +604,40 @@ class PatreonScraperV2:
             post_detail['images'] = []
 
         try:
-            # Extract videos
-            videos = self.driver.find_elements(By.CSS_SELECTOR, 'video, [data-tag="video"]')
+            # Extract videos - ONLY actual <video> elements, not data-tag="video"
+            # data-tag attributes on Patreon are UI elements, not actual media
+            videos = self.driver.find_elements(By.TAG_NAME, 'video')
             video_urls = []
             for video in videos:
                 src = video.get_attribute('src')
-                if src:
+                if src and 'patreonusercontent.com' in src:
                     video_urls.append(src)
                 # Check for source tags
                 sources = video.find_elements(By.TAG_NAME, 'source')
                 for source in sources:
                     src = source.get_attribute('src')
-                    if src:
+                    if src and 'patreonusercontent.com' in src:
                         video_urls.append(src)
             post_detail['videos'] = list(set(video_urls))
+            logger.info(f"  🎬 Extracted {len(video_urls)} videos")
         except:
             post_detail['videos'] = []
 
         try:
-            # Extract audio
-            audios = self.driver.find_elements(By.CSS_SELECTOR, 'audio, [data-tag="audio"]')
+            # Extract audio - ONLY actual <audio> elements, not data-tag="audio"
+            audios = self.driver.find_elements(By.TAG_NAME, 'audio')
             audio_urls = []
             for audio in audios:
                 src = audio.get_attribute('src')
-                if src:
+                if src and 'patreonusercontent.com' in src:
                     audio_urls.append(src)
                 sources = audio.find_elements(By.TAG_NAME, 'source')
                 for source in sources:
                     src = source.get_attribute('src')
-                    if src:
+                    if src and 'patreonusercontent.com' in src:
                         audio_urls.append(src)
             post_detail['audios'] = list(set(audio_urls))
+            logger.info(f"  🎵 Extracted {len(audio_urls)} audio files")
         except:
             post_detail['audios'] = []
 
