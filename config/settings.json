@@ -1,10 +1,17 @@
 {
   "media": {
     "images": {
-      "download": false,
-      "download_content_images": false,
-      "store_urls": true,
-      "note": "Images disabled - avatars/covers already in web/static/avatars/"
+      "download_content_images": true,
+      "skip_avatars": true,
+      "skip_covers": true,
+      "skip_thumbnails": true,
+      "min_size": {
+        "width": 400,
+        "height": 400,
+        "note": "Filter out small icons/avatars"
+      },
+      "deduplication": true,
+      "note": "Download content images, skip avatars/covers/icons, deduplicate"
     },
     "patreon": {
       "videos": {
