@@ -233,6 +233,21 @@ def load_posts_from_postgres():
 
             posts = []
             for row in rows:
+                # Extract video_subtitles_relative from video_subtitles JSONB
+                video_subtitles = row[21] if row[21] else []
+                video_subtitles_relative = []
+                if isinstance(video_subtitles, list):
+                    # If video_subtitles is a list of objects with 'path' or 'relative_path'
+                    for subtitle in video_subtitles:
+                        if isinstance(subtitle, dict):
+                            if 'relative_path' in subtitle:
+                                video_subtitles_relative.append(subtitle['relative_path'])
+                            elif 'path' in subtitle:
+                                # Extract relative path from full path
+                                path = subtitle['path']
+                                if 'media/' in path:
+                                    video_subtitles_relative.append(path.split('media/')[-1])
+
                 post = {
                     'post_id': row[0],
                     'creator_id': row[1],
@@ -258,7 +273,8 @@ def load_posts_from_postgres():
                     'video_local_paths': row[18] if row[18] else [],
                     'audio_local_paths': row[19] if row[19] else [],
                     'video_streams': row[20] if row[20] else [],
-                    'video_subtitles': row[21] if row[21] else [],
+                    'video_subtitles': video_subtitles,
+                    'video_subtitles_relative': video_subtitles_relative,  # Extracted from JSONB
                     'patreon_tags': row[22] if row[22] else [],
                     'status': row[23] if row[23] else {},
                     'collections': []  # Will be populated below
