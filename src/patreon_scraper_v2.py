@@ -613,20 +613,35 @@ class PatreonScraperV2:
             post_detail['images'] = []
 
         try:
-            # Extract videos - ONLY actual <video> elements, not data-tag="video"
-            # data-tag attributes on Patreon are UI elements, not actual media
+            # Extract videos - ONLY actual <video> elements with video file extensions
+            # Filter out image posters/placeholders (png, jpg, etc.)
             videos = self.driver.find_elements(By.TAG_NAME, 'video')
             video_urls = []
+            video_extensions = ('.mp4', '.webm', '.ogg', '.mov', '.avi', '.m3u8', '.ts')
+
             for video in videos:
                 src = video.get_attribute('src')
                 if src and 'patreonusercontent.com' in src:
-                    video_urls.append(src)
+                    # Check if it's actually a video file, not an image
+                    url_lower = src.lower().split('?')[0]  # Remove query params before checking
+                    if url_lower.endswith(video_extensions):
+                        video_urls.append(src)
+                        logger.info(f"  ✓ Video file: {src[:80]}...")
+                    else:
+                        logger.debug(f"  ⏭️ Skipping non-video URL in <video> tag: {src[:80]}...")
+
                 # Check for source tags
                 sources = video.find_elements(By.TAG_NAME, 'source')
                 for source in sources:
                     src = source.get_attribute('src')
                     if src and 'patreonusercontent.com' in src:
-                        video_urls.append(src)
+                        url_lower = src.lower().split('?')[0]
+                        if url_lower.endswith(video_extensions):
+                            video_urls.append(src)
+                            logger.info(f"  ✓ Video file: {src[:80]}...")
+                        else:
+                            logger.debug(f"  ⏭️ Skipping non-video URL in <source> tag: {src[:80]}...")
+
             post_detail['videos'] = list(set(video_urls))
             logger.info(f"  🎬 Extracted {len(video_urls)} videos")
         except:

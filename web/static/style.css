@@ -226,7 +226,7 @@ body {
 
 /* Quotes - Estilo de Patreon */
 .content-block.quote blockquote {
-    border-left: 4px solid var(--patreon-coral); /* Más grosor como Patreon */
+    border-left: 4px solid #FF424D !important; /* Línea vertical roja/coral como Patreon */
     padding-left: 1.5rem;
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;
@@ -236,6 +236,12 @@ body {
     font-size: 1rem; /* 16px como Patreon */
     line-height: 1.7;
     background-color: rgba(255, 255, 255, 0.02); /* Fondo sutil */
+}
+
+/* Asegurar que blockquotes siempre tengan la línea vertical */
+blockquote {
+    border-left: 4px solid #FF424D !important;
+    padding-left: 1.5rem !important;
 }
 
 /* YouTube embeds and iframes */
