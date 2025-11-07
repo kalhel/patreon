@@ -53,6 +53,137 @@ class PostMigrator:
         encoded_password = quote_plus(db_password)
         return f"postgresql://{db_user}:{encoded_password}@{db_host}:{db_port}/{db_name}"
 
+    def preflight_checks(self) -> bool:
+        """
+        Run comprehensive pre-flight checks before migration
+
+        Returns:
+            True if all checks pass, False otherwise
+        """
+        logger.info("🔍 Running pre-flight checks...")
+
+        all_passed = True
+
+        # Check 1: Database connection
+        logger.info("  ✓ Checking database connection...")
+        try:
+            with self.engine.connect() as conn:
+                result = conn.execute(text("SELECT version()"))
+                version = result.scalar()
+                logger.info(f"    ✅ Connected to PostgreSQL: {version.split(',')[0]}")
+        except Exception as e:
+            logger.error(f"    ❌ Database connection failed: {e}")
+            all_passed = False
+
+        # Check 2: Schema file exists
+        logger.info("  ✓ Checking schema file...")
+        schema_file = Path('database/schema_posts.sql')
+        if not schema_file.exists():
+            logger.error(f"    ❌ Schema file not found: {schema_file}")
+            all_passed = False
+        else:
+            logger.info(f"    ✅ Schema file found: {schema_file}")
+
+        # Check 3: JSON files exist
+        logger.info("  ✓ Checking for JSON files...")
+        json_files = self.find_json_files()
+        if not json_files:
+            logger.error("    ❌ No JSON files found in data/processed or data/backups")
+            all_passed = False
+        else:
+            logger.info(f"    ✅ Found {len(json_files)} JSON files")
+
+            # Validate JSON structure
+            logger.info("  ✓ Validating JSON structure...")
+            valid_count = 0
+            for json_file in json_files[:3]:  # Check first 3 files
+                try:
+                    with open(json_file, 'r') as f:
+                        data = json.load(f)
+                    if isinstance(data, list) and len(data) > 0:
+                        # Check if posts have required fields
+                        sample = data[0]
+                        required_fields = ['post_id', 'creator_id', 'post_url']
+                        missing = [f for f in required_fields if f not in sample]
+                        if missing:
+                            logger.warning(f"    ⚠️  {json_file.name} missing fields: {missing}")
+                        else:
+                            valid_count += 1
+                    else:
+                        logger.warning(f"    ⚠️  {json_file.name} is not a list or is empty")
+                except Exception as e:
+                    logger.error(f"    ❌ Error reading {json_file.name}: {e}")
+
+            if valid_count > 0:
+                logger.info(f"    ✅ JSON structure validation passed ({valid_count} files checked)")
+            else:
+                logger.error("    ❌ No valid JSON files found")
+                all_passed = False
+
+        # Check 4: Disk space (estimate needed space)
+        logger.info("  ✓ Checking disk space...")
+        try:
+            import shutil
+            total, used, free = shutil.disk_usage("/")
+            free_gb = free / (1024**3)
+            if free_gb < 1:
+                logger.warning(f"    ⚠️  Low disk space: {free_gb:.2f} GB free")
+            else:
+                logger.info(f"    ✅ Disk space OK: {free_gb:.2f} GB free")
+        except Exception as e:
+            logger.warning(f"    ⚠️  Could not check disk space: {e}")
+
+        # Check 5: Database permissions
+        logger.info("  ✓ Checking database permissions...")
+        try:
+            session = self.Session()
+            # Try to create a test table
+            session.execute(text("""
+                CREATE TABLE IF NOT EXISTS _migration_test (id SERIAL PRIMARY KEY)
+            """))
+            session.execute(text("DROP TABLE IF EXISTS _migration_test"))
+            session.commit()
+            session.close()
+            logger.info("    ✅ Database permissions OK (can create/drop tables)")
+        except Exception as e:
+            logger.error(f"    ❌ Insufficient database permissions: {e}")
+            all_passed = False
+
+        # Check 6: Existing data in database
+        logger.info("  ✓ Checking for existing posts in database...")
+        try:
+            session = self.Session()
+            result = session.execute(text("""
+                SELECT COUNT(*) FROM information_schema.tables
+                WHERE table_name = 'posts'
+            """))
+            table_exists = result.scalar() > 0
+
+            if table_exists:
+                result = session.execute(text("SELECT COUNT(*) FROM posts"))
+                existing_count = result.scalar()
+                if existing_count > 0:
+                    logger.warning(f"    ⚠️  Database already has {existing_count} posts")
+                    logger.warning(f"       Duplicates will be skipped, existing posts won't be overwritten")
+                else:
+                    logger.info("    ✅ Posts table exists but is empty")
+            else:
+                logger.info("    ℹ️  Posts table doesn't exist (will be created)")
+            session.close()
+        except Exception as e:
+            logger.warning(f"    ⚠️  Could not check existing posts: {e}")
+
+        # Summary
+        logger.info("\n" + "="*60)
+        if all_passed:
+            logger.info("✅ ALL PRE-FLIGHT CHECKS PASSED")
+        else:
+            logger.error("❌ SOME PRE-FLIGHT CHECKS FAILED")
+            logger.error("   Please fix the issues above before proceeding")
+        logger.info("="*60 + "\n")
+
+        return all_passed
+
     def apply_schema(self, schema_file: str = 'database/schema_posts.sql'):
         """Apply SQL schema to database"""
         logger.info(f"📋 Applying schema from {schema_file}...")
@@ -283,9 +414,26 @@ class PostMigrator:
 
         return stats
 
-    def migrate_all(self, apply_schema: bool = True):
+    def migrate_all(self, apply_schema: bool = True, skip_checks: bool = False):
         """Migrate all posts from JSON files to PostgreSQL"""
         logger.info("🚀 Starting migration from JSON to PostgreSQL")
+
+        # Run pre-flight checks first
+        if not skip_checks:
+            if not self.preflight_checks():
+                logger.error("❌ Pre-flight checks failed, aborting migration")
+                logger.error("   Fix the issues above or use --skip-checks to bypass")
+                return
+
+            # Ask for confirmation
+            logger.info("⚠️  Ready to migrate. This will:")
+            logger.info("   1. Apply database schema (if needed)")
+            logger.info("   2. Insert posts from JSON files into PostgreSQL")
+            logger.info("   3. Skip duplicates (existing post_ids won't be modified)")
+            response = input("\n👉 Proceed with migration? (yes/no): ").strip().lower()
+            if response not in ['yes', 'y']:
+                logger.info("❌ Migration cancelled by user")
+                return
 
         # Apply schema first
         if apply_schema:
@@ -369,16 +517,46 @@ def main():
     """Main entry point"""
     import argparse
 
-    parser = argparse.ArgumentParser(description='Migrate Patreon posts from JSON to PostgreSQL')
+    parser = argparse.ArgumentParser(
+        description='Migrate Patreon posts from JSON to PostgreSQL',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Full migration with pre-flight checks
+  python src/migrate_json_to_postgres.py
+
+  # Skip checks and confirmation (use with caution!)
+  python src/migrate_json_to_postgres.py --skip-checks --yes
+
+  # Only apply schema, don't migrate
+  python src/migrate_json_to_postgres.py --schema-only
+
+  # Migrate specific file
+  python src/migrate_json_to_postgres.py --file data/processed/astrobymax_posts_detailed.json
+        """
+    )
     parser.add_argument('--no-schema', action='store_true',
                        help='Skip applying schema (if already applied)')
+    parser.add_argument('--skip-checks', action='store_true',
+                       help='Skip pre-flight checks (not recommended)')
+    parser.add_argument('--yes', '-y', action='store_true',
+                       help='Auto-confirm (skip confirmation prompt)')
     parser.add_argument('--file', type=str,
                        help='Migrate specific JSON file instead of all')
+    parser.add_argument('--schema-only', action='store_true',
+                       help='Only apply schema, do not migrate data')
 
     args = parser.parse_args()
 
     try:
         migrator = PostMigrator()
+
+        # Schema-only mode
+        if args.schema_only:
+            logger.info("📋 Schema-only mode")
+            if migrator.preflight_checks():
+                migrator.apply_schema()
+            return
 
         if args.file:
             # Migrate single file
@@ -389,7 +567,15 @@ def main():
             logger.info(f"✅ Done: inserted={stats['inserted']}, skipped={stats['skipped']}")
         else:
             # Migrate all files
-            migrator.migrate_all(apply_schema=not args.no_schema)
+            # Handle --yes flag by monkey-patching input
+            if args.yes:
+                import builtins
+                builtins.input = lambda _: "yes"
+
+            migrator.migrate_all(
+                apply_schema=not args.no_schema,
+                skip_checks=args.skip_checks
+            )
 
     except KeyboardInterrupt:
         logger.info("\n⚠️ Migration interrupted by user")
