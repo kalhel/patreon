@@ -923,6 +923,9 @@ User → Login → Auth Service
 
 ## 📅 Plan de Migración
 
+> **📋 Plan Detallado de Implementación:**
+> Ver [POSTGRESQL_MIGRATION_PLAN.md](./POSTGRESQL_MIGRATION_PLAN.md) para el plan detallado paso a paso con estrategia de rollback, testing, y progreso actual.
+
 ### Fase 0: Preparación (Semana 1-2)
 
 **Objetivos:**
