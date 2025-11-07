@@ -7,11 +7,12 @@
 ## 📍 Estado Actual
 
 - **Branch**: `claude/phase0-infrastructure-011CUt1Xs6FxZQdr2GWoA9nS`
-- **Fase Actual**: Phase 0 - Infrastructure Setup ⚠️ CASI COMPLETO (99%)
+- **Fase Actual**: Phase 0 - Infrastructure Setup ✅ COMPLETO (100%)
 - **Fecha de Inicio**: 2025-11-07
-- **Última Actualización**: 2025-11-07 08:45 UTC
-- **Último Paso Completado**: PostgreSQL, Redis instalados; Schema aplicado (14 tablas); Python deps instalados; DB_HOST fix aplicado
-- **Siguiente Paso**: Usuario debe ejecutar en WSL: `python3 scripts/test_connections.py` para verificar que 4/4 tests pasen
+- **Fecha de Finalización**: 2025-11-07
+- **Última Actualización**: 2025-11-07 10:30 UTC
+- **Último Paso Completado**: ✅ Todos los tests (4/4) pasaron exitosamente
+- **Siguiente Paso**: Phase 1 - Data Migration (migrar datos de Firebase/JSON a PostgreSQL)
 
 ---
 
@@ -124,13 +125,13 @@
   - Script ejecutado: `scripts/test_connections.py`
   - Redis respondiendo PONG
 
-- [ ] **Test final de 4/4 componentes** ⚠️ PENDIENTE
-  - **ACCIÓN REQUERIDA**: Usuario debe ejecutar en WSL:
-    ```bash
-    python3 scripts/test_connections.py
-    ```
-  - Debe mostrar: ✅ 4/4 tests passed
-  - Si falla SQLAlchemy, verificar que .env tenga `DB_HOST=127.0.0.1` (no localhost)
+- [x] **Test final de 4/4 componentes** ✅
+  - Test ejecutado exitosamente: `python3 scripts/test_connections.py`
+  - Resultado: ✅ 4/4 tests passed
+  - PostgreSQL: ✅ Conectado (TCP via 127.0.0.1:5432)
+  - Redis: ✅ Conectado (v7.0.15)
+  - Celery: ✅ Instalado (v5.5.3)
+  - SQLAlchemy: ✅ Conectado (v2.0.44)
 
 - [ ] **Backup de datos actuales** (Opcional ahora, requerido antes de Phase 1)
   ```bash
@@ -211,6 +212,34 @@ sed -i 's/DB_HOST=localhost/DB_HOST=127.0.0.1/g' .env
 python3 scripts/test_connections.py
 ```
 
+### 2025-11-07 - Sesión 3: Resolución final y completación de Phase 0 (GitHub/Claude + Usuario en WSL)
+
+```bash
+# En GitHub (Claude):
+# Fix de listen_addresses en PostgreSQL
+sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = 'localhost'/g" /etc/postgresql/*/main/postgresql.conf
+sudo systemctl restart postgresql
+
+# Verificar que PostgreSQL escucha en TCP
+sudo ss -tulpn | grep 5432
+# Resultado: tcp LISTEN 0 200 127.0.0.1:5432
+
+# Fix de URL encoding para password en SQLAlchemy
+# Modificado scripts/test_connections.py para usar urllib.parse.quote_plus()
+git add scripts/test_connections.py
+git commit -m "Fix SQLAlchemy TCP connection and password URL encoding"
+git push -u origin claude/phase0-infrastructure-011CUt1Xs6FxZQdr2GWoA9nS
+
+# En WSL (Usuario):
+# Test final exitoso
+python3 scripts/test_connections.py
+# Resultado: ✅ 4/4 tests passed
+
+# Issues resueltos en esta sesión:
+# - Issue #5: PostgreSQL no escuchaba en TCP (listen_addresses comentado)
+# - Issue #6: Password con @ no funcionaba (faltaba URL encoding)
+```
+
 ---
 
 ## 🐛 Issues & Soluciones
@@ -258,48 +287,63 @@ sudo systemctl enable redis-server
 
 ### Issue #5: SQLAlchemy intentando conectar vía Unix socket
 **Problema**: SQLAlchemy fallaba con error "connection to server on socket '@localhost/.s.PGSQL.5432' failed" porque `DB_HOST=localhost` causa que PostgreSQL use Unix socket en vez de TCP
-**Solución**: Cambiar DB_HOST de 'localhost' a '127.0.0.1' para forzar conexión TCP:
+**Solución**:
+1. Cambiar DB_HOST de 'localhost' a '127.0.0.1' para forzar conexión TCP
+2. Habilitar `listen_addresses = 'localhost'` en postgresql.conf
+3. Reiniciar PostgreSQL
 ```bash
 sed -i 's/DB_HOST=localhost/DB_HOST=127.0.0.1/g' .env
+sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = 'localhost'/g" /etc/postgresql/*/main/postgresql.conf
+sudo systemctl restart postgresql
 ```
-**Notas**: Se encontraron entradas duplicadas de DB_HOST en .env que necesitan limpiarse
 **Fecha**: 2025-11-07
-**Estado**: ⚠️ Parcialmente resuelto - Usuario debe ejecutar test_connections.py para verificar
+**Estado**: ✅ Resuelto
+
+### Issue #6: Password con caracteres especiales no funciona en SQLAlchemy
+**Problema**: SQLAlchemy fallaba con error "password authentication failed" porque la contraseña "Stigmata7511@" contiene el carácter `@` que necesita ser URL-encoded en la URL de conexión
+**Solución**: Usar `urllib.parse.quote_plus()` para codificar la contraseña antes de construir la URL de SQLAlchemy:
+```python
+from urllib.parse import quote_plus
+encoded_password = quote_plus(db_password)
+engine = create_engine(f"postgresql://{db_user}:{encoded_password}@{db_host}:{db_port}/{db_name}")
+```
+**Fecha**: 2025-11-07
+**Estado**: ✅ Resuelto
 
 ---
 
 ## 📊 Métricas de Progreso
 
-### Phase 0
+### Phase 0 ✅ COMPLETO
 - **Total Tasks**: 20
-- **Completed**: 18
-- **Remaining**: 2 (test final 4/4 + backup opcional)
-- **Progress**: 90%
-- **Estado**: ⚠️ Casi completo - Falta verificación final
+- **Completed**: 19
+- **Remaining**: 1 (backup opcional)
+- **Progress**: 100% (tareas críticas completadas)
+- **Estado**: ✅ COMPLETO - Listo para Phase 1
 
-### Tareas Completadas (18/20)
+### Tareas Completadas (19/20)
 - ✅ PostgreSQL 16 instalado
-- ✅ pgvector compilado e instalado
+- ✅ pgvector compilado e instalado desde source
 - ✅ Base de datos 'patreon' creada
-- ✅ Usuario 'patreon_user' creado
+- ✅ Usuario 'patreon_user' creado con permisos
 - ✅ Extensión vector habilitada
 - ✅ Schema aplicado (14 tablas, 2 vistas, 44 índices)
-- ✅ Redis instalado
-- ✅ Redis configurado y ejecutándose
-- ✅ requirements.txt actualizado
-- ✅ Dependencias Python instaladas
+- ✅ Redis 7 instalado y configurado
+- ✅ Redis con persistencia habilitada
+- ✅ requirements.txt actualizado con todas las dependencias
+- ✅ Dependencias Python instaladas (psycopg2, sqlalchemy, celery, redis)
 - ✅ Directorio database/ creado
-- ✅ Directorio scripts/ creado
+- ✅ Directorio scripts/ creado con 3 scripts
 - ✅ .env.example creado
-- ✅ docker-compose.yml creado
-- ✅ PostgreSQL conectando correctamente
-- ✅ Redis conectando correctamente
-- ✅ Celery instalado
-- ✅ DB_HOST fix aplicado (localhost → 127.0.0.1)
+- ✅ docker-compose.yml creado (7 servicios)
+- ✅ PostgreSQL conectando correctamente via TCP (127.0.0.1:5432)
+- ✅ Redis conectando correctamente (7.0.15)
+- ✅ Celery instalado (5.5.3)
+- ✅ SQLAlchemy conectando correctamente (2.0.44)
+- ✅ **Test 4/4 componentes pasado exitosamente**
 
-### Tareas Pendientes (2/20)
-- ⚠️ Test final 4/4 componentes (ejecutar test_connections.py)
-- 📦 Backup de datos (opcional ahora, obligatorio antes de Phase 1)
+### Tareas Pendientes (1/20)
+- 📦 Backup de datos (opcional ahora, recomendado antes de Phase 1)
 
 ---
 
@@ -307,31 +351,33 @@ sed -i 's/DB_HOST=localhost/DB_HOST=127.0.0.1/g' .env
 
 ### 📖 Leer primero (en orden):
 1. **PROGRESS.md** (este archivo) - Sección "Estado Actual" al inicio
-2. **Issues & Soluciones** - Ver qué problemas ya se resolvieron
-3. **Comandos Ejecutados** - Ver qué ya se hizo en WSL
+2. **Issues & Soluciones** - Ver los 6 issues resueltos en Phase 0
+3. **Comandos Ejecutados** - Ver todo lo ejecutado en Sesiones 1-3
 4. **docs/ARCHITECTURE.md** - Diseño técnico general (si necesitas contexto)
 
 ### 🎯 Contexto rápido:
-**Estamos en**: Phase 0 - Infrastructure Setup (90% completo)
-**Último paso completado**: Fix de DB_HOST (localhost → 127.0.0.1) aplicado
-**Próximo paso inmediato**: Usuario debe ejecutar `python3 scripts/test_connections.py` en WSL
+**Estamos en**: ✅ Phase 0 COMPLETO - Listo para Phase 1
+**Último paso completado**: Test 4/4 componentes pasó exitosamente (2025-11-07)
+**Próximo paso inmediato**: Phase 1 - Data Migration
 
-### ⚡ Siguiente acción inmediata:
-1. **Pedir al usuario** que ejecute en su WSL:
+### ⚡ Siguiente acción inmediata (Phase 1):
+1. **Hacer backup de datos actuales** (OPCIONAL pero recomendado):
    ```bash
-   python3 scripts/test_connections.py
+   tar -czf backup_jsons_$(date +%Y%m%d).tar.gz data/processed/ data/raw/
    ```
 
-2. **Resultado esperado**: `✅ 4/4 tests passed`
-   - Si sale 4/4: ¡Phase 0 completo! → Actualizar PROGRESS.md → Commit y push → Explicar Phase 1
-   - Si falla SQLAlchemy: Revisar .env y limpiar duplicados de DB_HOST
+2. **Migrar datos de Firebase a PostgreSQL**:
+   ```bash
+   python3 scripts/migrate_firebase_to_postgres.py
+   ```
+   - Este script migrará el tracking de posts desde Firebase a la tabla `scraping_status`
+   - Creará creators automáticamente si no existen
+   - Preservará datos originales de Firebase en columna JSONB
 
-3. **Si todo pasa**:
-   - Actualizar este archivo marcando test 4/4 como completado
-   - Commit: "Update PROGRESS.md: Phase 0 infrastructure setup complete"
-   - Push a branch: `claude/phase0-infrastructure-011CUt1Xs6FxZQdr2GWoA9nS`
-   - Informar al usuario que Phase 0 está completo
-   - Preguntar si quiere backup ahora o continuar a Phase 1
+3. **Verificar migración**:
+   - El script mostrará estadísticas de migración
+   - Verificar datos en PostgreSQL: `psql -U patreon_user -d patreon`
+   - Query de prueba: `SELECT COUNT(*) FROM scraping_status WHERE firebase_migrated = true;`
 
 ### 📂 Archivos clave:
 - `PROGRESS.md` - Este archivo (tracking completo)
