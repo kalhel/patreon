@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
     import psycopg2
-    from psycopg2.extras import execute_values
+    from psycopg2.extras import execute_values, Json
 except ImportError:
     print("❌ psycopg2 not installed. Run: pip install psycopg2-binary")
     sys.exit(1)
@@ -145,7 +145,7 @@ def migrate_firebase_to_postgres(firebase_data, conn):
                 datetime.now(),
                 phase2_status,
                 True,
-                json.dumps(post_data)
+                Json(post_data)
             ))
 
             migrated_count += 1
