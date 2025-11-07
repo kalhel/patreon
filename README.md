@@ -269,6 +269,7 @@ python src/main.py --creator astrobymax --full-details
 - [x] Documentación de Web Viewer (docs/WEB_VIEWER.md)
 - [x] Plan de Collections (COLLECTIONS_PLAN.md)
 - [x] Diseño de base de datos Notion (docs/NOTION_DATABASE_DESIGN.md)
+- [x] **Roadmap de mejoras futuras** (ROADMAP.md) 🆕
 
 ---
 
