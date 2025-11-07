@@ -107,25 +107,23 @@ psql $DATABASE_URL -f database/schema_posts.sql
 
 ## FASE 2: Update Scraping Scripts 🔄
 
-### 2.1 Phase 1 URL Collector (`src/phase1_url_collector.py`)
+### 2.1 Phase 1 URL Collector ✅ (`src/phase1_url_collector.py`)
 
 **Current behavior:**
 - Collects post URLs from creator pages
-- Saves to: `data/raw/{creator}_posts.json`
+- **Already uses PostgresTracker** to save directly to PostgreSQL
+- Never saved to JSON (previously used Firebase)
 
-**New behavior:**
-- Collect post URLs
-- Insert into PostgreSQL `posts` table (basic info only)
-- **DUAL MODE:** Also save to JSON as backup (temporary)
+**Status: NO CHANGES NEEDED**
+- ✅ Already imports and uses `PostgresTracker`
+- ✅ Already calls `tracker.create_post_record()` for each post
+- ✅ Already checks `tracker.post_exists()` to avoid duplicates
+- ✅ Already calls `tracker.update_creator_stats()`
+- ✅ PostgreSQL integration complete since initial implementation
 
-**Changes needed:**
-- Import `PostgresTracker` or create `PostgresPostsWriter`
-- Add `save_to_postgres()` method
-- Add flag check: `config/use_postgresql.flag`
-
-**Rollback:**
-- Git revert the commit
-- JSON files remain untouched
+**Note:**
+Phase 1 was already migrated from Firebase to PostgreSQL before this migration plan.
+It never used JSON storage, so no dual mode is needed.
 
 ---
 
@@ -300,8 +298,8 @@ git revert <commit-hash>
 2. ✅ **FASE 1:** Migrate posts and collections to PostgreSQL
 3. ✅ **FASE 2.3:** Update Phase 3 collections scraper
 4. ✅ **FASE 2.2:** Update Phase 2 detail extractor
-5. ⏳ **FASE 2.1:** Update Phase 1 URL collector (next)
-6. 🌐 **FASE 3:** Update web viewer with dual mode
+5. ✅ **FASE 2.1:** Phase 1 URL collector (already uses PostgreSQL)
+6. ⏳ **FASE 3:** Update web viewer with dual mode (next)
 7. ✅ **FASE 4:** Complete testing and validation
 
 ---
@@ -326,10 +324,10 @@ git revert <commit-hash>
 - ✅ FASE 1: Data migration completed
   - ✅ Posts migrated (982 posts)
   - ✅ Collections migrated (30 collections, 259 relationships)
-- ⏳ FASE 2: Update scraping scripts (in progress)
+- ✅ FASE 2: Update scraping scripts (completed)
   - ✅ Phase 3 collections scraper (dual mode implemented)
   - ✅ Phase 2 detail extractor (dual mode implemented)
-  - ⏳ Phase 1 URL collector (next)
+  - ✅ Phase 1 URL collector (already uses PostgreSQL)
 
 ---
 
