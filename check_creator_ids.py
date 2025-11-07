@@ -73,37 +73,48 @@ def check_posts():
                     print(f"Post {post_id}: current='{current_creator}', URL={post_url}")
                     fixes.append((post_id, current_creator, post_url))
 
-        if fixes:
+        # Now determine correct creator_id based on creator_name
+        print(f"\n{'='*70}")
+        print(f"DETERMINING CORRECT CREATOR_ID FROM CREATOR_NAME")
+        print(f"{'='*70}\n")
+
+        # Mapping of creator names to their correct creator_id
+        creator_name_mapping = {
+            'Ali A Olomi': 'headonhistory',
+            'HOROI Project': 'horoiproject',
+            'AstroByMax': 'astrobymax'
+        }
+
+        sql_fixes = []
+        for row in rows:
+            post_id = row[0]
+            current_creator_id = row[1]
+            creator_name = row[4]
+
+            correct_creator_id = creator_name_mapping.get(creator_name)
+
+            print(f"Post {post_id}:")
+            print(f"  Current creator_id: '{current_creator_id}'")
+            print(f"  Creator name: '{creator_name}'")
+            print(f"  Correct creator_id: '{correct_creator_id}'")
+
+            if correct_creator_id and current_creator_id != correct_creator_id:
+                print(f"  ❌ MISMATCH!")
+                sql_fixes.append(f"UPDATE posts SET creator_id = '{correct_creator_id}' WHERE post_id = '{post_id}';")
+            else:
+                print(f"  ✅ OK")
+            print()
+
+        if sql_fixes:
             print(f"\n{'='*70}")
-            print(f"CHECKING CREATOR_SOURCES FOR THESE POSTS")
+            print(f"SQL FIX SCRIPT")
             print(f"{'='*70}\n")
-
-            # Query creator_sources to find the correct creator
-            for post_id, current_creator, post_url in fixes:
-                query = text("""
-                    SELECT c.creator_id, cs.platform_id, cs.id as source_id
-                    FROM creator_sources cs
-                    JOIN creators c ON c.id = cs.creator_id
-                    JOIN posts p ON p.creator_source_id = cs.id
-                    WHERE p.post_id = :post_id
-                """)
-
-                result = conn.execute(query, {'post_id': post_id})
-                row = result.fetchone()
-
-                if row:
-                    correct_creator = row[1]  # platform_id
-                    print(f"Post {post_id}:")
-                    print(f"  Current creator_id in posts: '{current_creator}'")
-                    print(f"  Correct creator (from creator_sources): '{correct_creator}'")
-                    print(f"  Source ID: {row[2]}")
-
-                    if current_creator != correct_creator:
-                        print(f"  ❌ MISMATCH! Should be '{correct_creator}' not '{current_creator}'")
-                        print(f"  Fix: UPDATE posts SET creator_id = '{correct_creator}' WHERE post_id = '{post_id}';")
-                    else:
-                        print(f"  ✅ OK")
-                    print()
+            for fix in sql_fixes:
+                print(fix)
+            print()
+            print("Run these commands with:")
+            print("  psql -d alejandria -c \"<SQL_COMMAND>\"")
+            print("Or save to a file and run: psql -d alejandria -f fix_creator_ids.sql")
 
 if __name__ == "__main__":
     check_posts()
