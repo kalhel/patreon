@@ -7,12 +7,13 @@
 ## 📍 Estado Actual
 
 - **Branch**: `claude/phase0-infrastructure-011CUt1Xs6FxZQdr2GWoA9nS`
-- **Fase Actual**: Phase 0 - Infrastructure Setup ✅ COMPLETO (100%)
-- **Fecha de Inicio**: 2025-11-07
-- **Fecha de Finalización**: 2025-11-07
-- **Última Actualización**: 2025-11-07 10:30 UTC
-- **Último Paso Completado**: ✅ Todos los tests (4/4) pasaron exitosamente
-- **Siguiente Paso**: Phase 1 - Data Migration (migrar datos de Firebase/JSON a PostgreSQL)
+- **Fase Actual**: Phase 1 - Data Migration ✅ COMPLETO (100%)
+- **Fecha de Inicio Phase 0**: 2025-11-07
+- **Fecha de Finalización Phase 0**: 2025-11-07
+- **Fecha de Finalización Phase 1**: 2025-11-07
+- **Última Actualización**: 2025-11-07 15:45 UTC
+- **Último Paso Completado**: ✅ Migración Firebase → PostgreSQL completada (982 posts, 0 errores)
+- **Siguiente Paso**: Phase 2 - Core Backend (Migrar scripts Python a usar PostgreSQL en vez de Firebase)
 
 ---
 
@@ -140,6 +141,58 @@
 
 ---
 
+## 🎯 Fase 1: Data Migration ✅ COMPLETO
+
+**Objetivo**: Migrar datos de Firebase Realtime Database a PostgreSQL.
+
+### 1.1 Firebase to PostgreSQL Migration
+
+- [x] **Preparar script de migración** ✅
+  - Script: `scripts/migrate_firebase_to_postgres.py`
+  - Funcionalidades:
+    - Fetch datos de Firebase vía REST API
+    - Mapeo de estructura Firebase → PostgreSQL
+    - Backup automático de datos Firebase (JSON)
+    - Verificación post-migración
+
+- [x] **Configurar credenciales Firebase** ✅
+  - Credenciales encontradas en: `config/credentials.json.backup`
+  - Añadidas a .env:
+    - FIREBASE_DATABASE_URL
+    - FIREBASE_DATABASE_SECRET
+
+- [x] **Resolver errores de migración** ✅
+  - Ver Issue #7 para detalles técnicos
+  - 3 problemas críticos resueltos:
+    1. Adaptador psycopg2 para JSONB
+    2. URLs faltantes de posts
+    3. Mapeo status Firebase dict → PostgreSQL VARCHAR
+
+- [x] **Ejecutar migración** ✅
+  - Fecha: 2025-11-07
+  - Posts migrados: **982**
+  - Errores: **0**
+  - Todos los posts marcados como `phase2_status = 'completed'`
+  - Datos originales preservados en columna `firebase_data` (JSONB)
+
+- [x] **Verificar migración** ✅
+  - Ejecutado: `SELECT COUNT(*) FROM scraping_status WHERE firebase_migrated = true;`
+  - Resultado: 982 posts
+  - Estructura verificada correctamente
+  - Firebase data preservado en JSONB
+
+### 1.2 Estadísticas de Migración
+
+```
+Total Posts Migrados:     982
+Errores:                  0
+Phase2 Status:            completed (100%)
+Firebase Data:            ✅ Preservado en JSONB
+Backup Creado:            ✅ data/backups/firebase_backup_*.json
+```
+
+---
+
 ## 📋 Comandos Ejecutados
 
 ### 2025-11-07 - Sesión 1: Creación de archivos (GitHub/Claude)
@@ -240,6 +293,54 @@ python3 scripts/test_connections.py
 # - Issue #6: Password con @ no funcionaba (faltaba URL encoding)
 ```
 
+### 2025-11-07 - Sesión 4: Firebase Migration (GitHub/Claude + Usuario en WSL)
+
+```bash
+# En WSL (Usuario):
+# Añadir credenciales Firebase a .env
+nano .env
+# Añadido:
+# FIREBASE_DATABASE_URL=https://patreon-57f6c-default-rtdb.europe-west1.firebasedatabase.app/
+# FIREBASE_DATABASE_SECRET=FzSfDxkeHdPLSlmZh1L3uxH0lEVJ4KZbs04wqbKp
+
+# En GitHub (Claude):
+# Fix 1: Importar Json adapter para JSONB
+# scripts/migrate_firebase_to_postgres.py línea 18
+git add scripts/migrate_firebase_to_postgres.py
+git commit -m "Fix Firebase migration: use psycopg2.extras.Json for JSONB"
+
+# Fix 2: Handle missing post URLs
+# scripts/migrate_firebase_to_postgres.py línea 116
+git add scripts/migrate_firebase_to_postgres.py
+git commit -m "Fix Firebase migration: handle missing post URLs with default Patreon URL"
+
+# Fix 3: Mapear Firebase status dict → PostgreSQL VARCHAR
+# scripts/migrate_firebase_to_postgres.py líneas 118-130
+git add scripts/migrate_firebase_to_postgres.py
+git commit -m "Fix Firebase migration: properly extract status from Firebase dict to VARCHAR"
+git push -u origin claude/phase0-infrastructure-011CUt1Xs6FxZQdr2GWoA9nS
+
+# En WSL (Usuario):
+# Pull de fixes
+git pull origin claude/phase0-infrastructure-011CUt1Xs6FxZQdr2GWoA9nS
+
+# Limpiar cache Python (por si acaso)
+find /home/user/patreon -type d -name __pycache__ -exec rm -rf {} +
+find /home/user/patreon -type f -name "*.pyc" -delete
+
+# Ejecutar migración EXITOSA
+python3 scripts/migrate_firebase_to_postgres.py
+# Resultado: 982 posts migrados, 0 errores ✅
+
+# Verificar en PostgreSQL
+psql -U patreon_user -d patreon -h 127.0.0.1
+# SELECT COUNT(*) FROM scraping_status WHERE firebase_migrated = true;
+# Resultado: 982
+
+# Issues resueltos en esta sesión:
+# - Issue #7: Migración Firebase con 3 problemas (ver detalles abajo)
+```
+
 ---
 
 ## 🐛 Issues & Soluciones
@@ -310,6 +411,55 @@ engine = create_engine(f"postgresql://{db_user}:{encoded_password}@{db_host}:{db
 **Fecha**: 2025-11-07
 **Estado**: ✅ Resuelto
 
+### Issue #7: Firebase Migration - Múltiples errores de tipo de datos
+**Problema**: La migración de Firebase a PostgreSQL fallaba con "can't adapt type 'dict'" para los 982 posts. Después de análisis, se identificaron 3 problemas:
+
+1. **Problema JSONB**: Faltaba importar `Json` adapter de psycopg2.extras
+   - Error: `can't adapt type 'dict'` al insertar firebase_data
+   - Solución línea 18: `from psycopg2.extras import execute_values, Json`
+   - Solución línea 160: Cambiar `json.dumps(post_data)` a `Json(post_data)`
+
+2. **Problema URLs faltantes**: Posts sin campo `url` violaban constraint NOT NULL
+   - Error: `null value in column "post_url" violates not-null constraint`
+   - Solución línea 116:
+   ```python
+   # ANTES: post_url = post_data.get('url', '')
+   # DESPUÉS:
+   post_url = post_data.get('url') or f"https://www.patreon.com/posts/{post_id}"
+   ```
+
+3. **Problema principal - Status dict**: Firebase guardaba `status` como objeto dict complejo, pero PostgreSQL esperaba VARCHAR simple
+   - Error: `can't adapt type 'dict'` al insertar phase2_status
+   - Firebase status structure:
+   ```json
+   {
+     "status": {
+       "url_collected": true,
+       "details_extracted": true,
+       "last_attempt": "2025-11-07...",
+       "errors": []
+     }
+   }
+   ```
+   - PostgreSQL esperaba: `'pending'`, `'completed'`, o `'failed'` (VARCHAR)
+   - Solución líneas 118-130: Extraer status simple del dict complejo:
+   ```python
+   status_obj = post_data.get('status', {})
+   if isinstance(status_obj, dict):
+       if status_obj.get('details_extracted'):
+           phase2_status = 'completed'
+       elif status_obj.get('errors'):
+           phase2_status = 'failed'
+       else:
+           phase2_status = 'pending'
+   else:
+       phase2_status = status_obj if status_obj in ['pending', 'completed', 'failed'] else 'pending'
+   ```
+
+**Resultado**: Migración exitosa de 982 posts con 0 errores
+**Fecha**: 2025-11-07
+**Estado**: ✅ Resuelto
+
 ---
 
 ## 📊 Métricas de Progreso
@@ -319,9 +469,9 @@ engine = create_engine(f"postgresql://{db_user}:{encoded_password}@{db_host}:{db
 - **Completed**: 19
 - **Remaining**: 1 (backup opcional)
 - **Progress**: 100% (tareas críticas completadas)
-- **Estado**: ✅ COMPLETO - Listo para Phase 1
+- **Estado**: ✅ COMPLETO
 
-### Tareas Completadas (19/20)
+### Tareas Completadas Phase 0 (19/20)
 - ✅ PostgreSQL 16 instalado
 - ✅ pgvector compilado e instalado desde source
 - ✅ Base de datos 'patreon' creada
@@ -342,8 +492,18 @@ engine = create_engine(f"postgresql://{db_user}:{encoded_password}@{db_host}:{db
 - ✅ SQLAlchemy conectando correctamente (2.0.44)
 - ✅ **Test 4/4 componentes pasado exitosamente**
 
-### Tareas Pendientes (1/20)
-- 📦 Backup de datos (opcional ahora, recomendado antes de Phase 1)
+### Phase 1 ✅ COMPLETO
+- **Total Tasks**: 4
+- **Completed**: 4
+- **Remaining**: 0
+- **Progress**: 100%
+- **Estado**: ✅ COMPLETO - 982 posts migrados de Firebase a PostgreSQL
+
+### Tareas Completadas Phase 1 (4/4)
+- ✅ Script de migración preparado
+- ✅ Credenciales Firebase configuradas
+- ✅ Errores de migración resueltos (3 problemas)
+- ✅ Migración ejecutada exitosamente (982 posts, 0 errores)
 
 ---
 
@@ -351,33 +511,39 @@ engine = create_engine(f"postgresql://{db_user}:{encoded_password}@{db_host}:{db
 
 ### 📖 Leer primero (en orden):
 1. **PROGRESS.md** (este archivo) - Sección "Estado Actual" al inicio
-2. **Issues & Soluciones** - Ver los 6 issues resueltos en Phase 0
-3. **Comandos Ejecutados** - Ver todo lo ejecutado en Sesiones 1-3
+2. **Issues & Soluciones** - Ver los 7 issues resueltos (Phase 0 + Phase 1)
+3. **Comandos Ejecutados** - Ver todo lo ejecutado en Sesiones 1-4
 4. **docs/ARCHITECTURE.md** - Diseño técnico general (si necesitas contexto)
 
 ### 🎯 Contexto rápido:
-**Estamos en**: ✅ Phase 0 COMPLETO - Listo para Phase 1
-**Último paso completado**: Test 4/4 componentes pasó exitosamente (2025-11-07)
-**Próximo paso inmediato**: Phase 1 - Data Migration
+**Estamos en**: ✅ Phase 0 y Phase 1 COMPLETOS - Listo para Phase 2
+**Último paso completado**: Migración Firebase → PostgreSQL exitosa (982 posts, 0 errores)
+**Próximo paso inmediato**: Phase 2 - Core Backend (Migrar scripts Python)
 
-### ⚡ Siguiente acción inmediata (Phase 1):
-1. **Hacer backup de datos actuales** (OPCIONAL pero recomendado):
+### ⚡ Siguiente acción inmediata (Phase 2):
+Phase 2 consiste en migrar los scripts Python existentes para que usen PostgreSQL en vez de Firebase:
+
+1. **Identificar scripts que usan Firebase**:
    ```bash
-   tar -czf backup_jsons_$(date +%Y%m%d).tar.gz data/processed/ data/raw/
+   grep -r "firebase_tracker" src/ scripts/
+   grep -r "FirebaseTracker" src/ scripts/
    ```
 
-2. **Migrar datos de Firebase a PostgreSQL**:
-   ```bash
-   python3 scripts/migrate_firebase_to_postgres.py
-   ```
-   - Este script migrará el tracking de posts desde Firebase a la tabla `scraping_status`
-   - Creará creators automáticamente si no existen
-   - Preservará datos originales de Firebase en columna JSONB
+2. **Crear módulo de tracking PostgreSQL** (src/postgres_tracker.py):
+   - Clase `PostgresTracker` con misma API que `FirebaseTracker`
+   - Métodos: create_post_record, mark_url_collected, mark_details_extracted, etc.
+   - Usar SQLAlchemy ORM
 
-3. **Verificar migración**:
-   - El script mostrará estadísticas de migración
-   - Verificar datos en PostgreSQL: `psql -U patreon_user -d patreon`
-   - Query de prueba: `SELECT COUNT(*) FROM scraping_status WHERE firebase_migrated = true;`
+3. **Migrar scripts uno por uno**:
+   - Identificar cada script que usa `firebase_tracker.py`
+   - Reemplazar `from src.firebase_tracker import FirebaseTracker` por `from src.postgres_tracker import PostgresTracker`
+   - Actualizar .env si es necesario
+   - Probar cada script después de migración
+
+4. **Eliminar dependencias Firebase**:
+   - Una vez todos los scripts migren, eliminar `firebase_tracker.py`
+   - Eliminar credenciales Firebase de .env
+   - Actualizar requirements.txt (eliminar requests si no se usa para otra cosa)
 
 ### 📂 Archivos clave:
 - `PROGRESS.md` - Este archivo (tracking completo)
