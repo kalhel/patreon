@@ -9,7 +9,7 @@ from pathlib import Path
 import shutil
 from datetime import datetime
 
-# Add src to path for Firebase access
+# Add src to path for database access
 sys.path.insert(0, 'src')
 
 def reset_creator_files(creator_id, backup=True):
@@ -69,15 +69,14 @@ def reset_creator_files(creator_id, backup=True):
 
     return True
 
-def reset_firebase(creator_id):
-    """Reset Firebase status for a creator"""
+def reset_database(creator_id):
+    """Reset PostgreSQL database status for a creator"""
     try:
-        from firebase_tracker import load_firebase_config, FirebaseTracker
+        from postgres_tracker import PostgresTracker
 
-        print(f"\n🔄 Resetting Firebase status for '{creator_id}'...")
+        print(f"\n🔄 Resetting database status for '{creator_id}'...")
 
-        database_url, database_secret = load_firebase_config()
-        tracker = FirebaseTracker(database_url, database_secret)
+        tracker = PostgresTracker()
 
         # Get all posts for this creator
         all_posts = tracker.get_all_posts()
@@ -88,10 +87,10 @@ def reset_firebase(creator_id):
         ]
 
         if not creator_posts:
-            print(f"   ⚠️  No posts found in Firebase for '{creator_id}'")
+            print(f"   ⚠️  No posts found in database for '{creator_id}'")
             return False
 
-        print(f"   Found {len(creator_posts)} posts in Firebase")
+        print(f"   Found {len(creator_posts)} posts in database")
 
         # Reset details_extracted status for all posts
         reset_count = 0
@@ -105,14 +104,14 @@ def reset_firebase(creator_id):
         # Update stats
         tracker.update_creator_stats(creator_id)
 
-        print(f"✅ Firebase reset complete for '{creator_id}'")
+        print(f"✅ Database reset complete for '{creator_id}'")
         return True
 
     except ImportError:
-        print("⚠️  Firebase not available (firebase_tracker not found)")
+        print("⚠️  PostgreSQL tracker not available (postgres_tracker not found)")
         return False
     except Exception as e:
-        print(f"❌ Error resetting Firebase: {e}")
+        print(f"❌ Error resetting database: {e}")
         return False
 
 def main():
@@ -127,8 +126,8 @@ Examples:
   # Reset without creating backup
   python reset_creator.py headonhistory --no-backup
 
-  # Reset and also clear Firebase status
-  python reset_creator.py headonhistory --firebase
+  # Reset and also clear database status
+  python reset_creator.py headonhistory --database
 
   # Just list files without deleting
   python reset_creator.py headonhistory --dry-run
@@ -140,7 +139,7 @@ After resetting, re-run the scraper to regenerate clean data:
 
     parser.add_argument('creator_id', help='Creator ID to reset (e.g., headonhistory)')
     parser.add_argument('--no-backup', action='store_true', help='Delete without creating backup')
-    parser.add_argument('--firebase', action='store_true', help='Also reset Firebase status')
+    parser.add_argument('--database', action='store_true', help='Also reset PostgreSQL database status')
     parser.add_argument('--dry-run', action='store_true', help='List files without deleting')
 
     args = parser.parse_args()
@@ -190,9 +189,9 @@ After resetting, re-run the scraper to regenerate clean data:
         print("\n❌ No files were reset")
         return
 
-    # Reset Firebase if requested
-    if args.firebase:
-        reset_firebase(args.creator_id)
+    # Reset database if requested
+    if args.database:
+        reset_database(args.creator_id)
 
     print("\n" + "="*70)
     print("✅ RESET COMPLETE")

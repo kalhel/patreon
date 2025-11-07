@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Phase 1: URL Collector
-Collects all post URLs from Patreon creators and tracks them in Firebase
+Collects all post URLs from Patreon creators and tracks them in PostgreSQL
 """
 
 import json
@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import List, Dict
 from patreon_auth_selenium import PatreonAuthSelenium
 from patreon_scraper_v2 import PatreonScraperV2
-from firebase_tracker import FirebaseTracker, load_firebase_config
+from postgres_tracker import PostgresTracker
 
 # Configure logging
 logging.basicConfig(
@@ -82,7 +82,7 @@ def authenticate(config, headless=True):
 
 def collect_urls_for_creator(
     scraper: PatreonScraperV2,
-    tracker: FirebaseTracker,
+    tracker: PostgresTracker,
     creator: Dict,
     limit: int = None
 ) -> int:
@@ -91,7 +91,7 @@ def collect_urls_for_creator(
 
     Args:
         scraper: PatreonScraperV2 instance
-        tracker: FirebaseTracker instance
+        tracker: PostgresTracker instance
         creator: Creator configuration
         limit: Optional limit on posts to collect
 
@@ -115,7 +115,7 @@ def collect_urls_for_creator(
 
     logger.info(f"\n📊 Found {len(posts)} posts from {creator_name}")
 
-    # Track in Firebase
+    # Track in PostgreSQL
     new_posts = 0
     existing_posts = 0
 
@@ -123,13 +123,13 @@ def collect_urls_for_creator(
         post_id = post['post_id']
         post_url = post['post_url']
 
-        # Check if already in Firebase
+        # Check if already in database
         if tracker.post_exists(post_id):
             existing_posts += 1
-            logger.info(f"  ⏭️  Post {post_id} already exists in Firebase")
+            logger.info(f"  ⏭️  Post {post_id} already exists in database")
             continue
 
-        # Create new record in Firebase
+        # Create new record in database
         success = tracker.create_post_record(
             post_id=post_id,
             creator_id=creator_id,
@@ -153,14 +153,14 @@ def collect_urls_for_creator(
     return new_posts
 
 
-def collect_all_urls(config, auth, tracker: FirebaseTracker, limit: int = None):
+def collect_all_urls(config, auth, tracker: PostgresTracker, limit: int = None):
     """
     Collect URLs from all creators
 
     Args:
         config: Configuration dictionary
         auth: Authenticated PatreonAuthSelenium instance
-        tracker: FirebaseTracker instance
+        tracker: PostgresTracker instance
         limit: Optional limit per creator
     """
     scraper = PatreonScraperV2(auth)
@@ -191,14 +191,14 @@ def collect_all_urls(config, auth, tracker: FirebaseTracker, limit: int = None):
     logger.info(f"{'='*60}\n")
 
 
-def collect_single_creator(config, auth, tracker: FirebaseTracker, creator_name: str, limit: int = None):
+def collect_single_creator(config, auth, tracker: PostgresTracker, creator_name: str, limit: int = None):
     """
     Collect URLs from a single creator
 
     Args:
         config: Configuration dictionary
         auth: Authenticated PatreonAuthSelenium instance
-        tracker: FirebaseTracker instance
+        tracker: PostgresTracker instance
         creator_name: Creator name or ID
         limit: Optional limit on posts
     """
@@ -247,7 +247,7 @@ Examples:
   # Collect URLs from single creator
   python phase1_url_collector.py --creator headonhistory
 
-  # Show Firebase summary
+  # Show PostgreSQL summary
   python phase1_url_collector.py --summary
         """
     )
@@ -259,7 +259,7 @@ Examples:
     parser.add_argument('--limit', type=int,
                         help='Limit number of posts per creator')
     parser.add_argument('--summary', action='store_true',
-                        help='Show Firebase tracking summary')
+                        help='Show PostgreSQL tracking summary')
     parser.add_argument('--headless', action='store_true', default=True,
                         help='Run browser in headless mode (default: True)')
     parser.add_argument('--no-headless', action='store_false', dest='headless',
@@ -267,9 +267,8 @@ Examples:
 
     args = parser.parse_args()
 
-    # Initialize Firebase tracker
-    database_url, database_secret = load_firebase_config()
-    tracker = FirebaseTracker(database_url, database_secret)
+    # Initialize PostgreSQL tracker
+    tracker = PostgresTracker()
 
     # If only summary requested
     if args.summary:

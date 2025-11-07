@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-"""Reset processed posts in Firebase to pending state"""
+"""Reset processed posts in PostgreSQL to pending state"""
 
 import sys
 sys.path.insert(0, 'src')
 
-from firebase_tracker import load_firebase_config, FirebaseTracker
+from postgres_tracker import PostgresTracker
 
-database_url, database_secret = load_firebase_config()
-tracker = FirebaseTracker(database_url, database_secret)
+tracker = PostgresTracker()
 
 # Get all posts
 all_posts = tracker.get_all_posts()

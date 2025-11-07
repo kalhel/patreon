@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Phase 2: Post Detail Extractor
-Extracts full details from posts tracked in Firebase
+Extracts full details from posts tracked in PostgreSQL
 """
 
 import json
@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import List, Dict, Optional
 from patreon_auth_selenium import PatreonAuthSelenium
 from patreon_scraper_v2 import PatreonScraperV2
-from firebase_tracker import FirebaseTracker, load_firebase_config
+from postgres_tracker import PostgresTracker
 from media_downloader import MediaDownloader
 
 # Configure logging
@@ -86,7 +86,7 @@ def authenticate(config, headless=True):
 
 def extract_post_details(
     scraper: PatreonScraperV2,
-    tracker: FirebaseTracker,
+    tracker: PostgresTracker,
     post: Dict,
     save_to_json: bool = True
 ) -> bool:
@@ -95,8 +95,8 @@ def extract_post_details(
 
     Args:
         scraper: PatreonScraperV2 instance
-        tracker: FirebaseTracker instance
-        post: Post record from Firebase
+        tracker: PostgresTracker instance
+        post: Post record from database
         save_to_json: Whether to save details to JSON file
 
     Returns:
@@ -124,11 +124,11 @@ def extract_post_details(
 
         # Merge with existing data
         full_post_data = {
-            **post,  # Existing Firebase data
+            **post,  # Existing database data
             **post_detail  # New scraped details
         }
 
-        # CRITICAL: Always preserve the creator_id from Firebase (line 95)
+        # CRITICAL: Always preserve the creator_id from database
         # The scraper might extract incorrect creator info from page HTML
         full_post_data['creator_id'] = creator_id
 
@@ -178,7 +178,7 @@ def extract_post_details(
 
             logger.info(f"   💾 Saved to {output_file}")
 
-        # Mark as extracted in Firebase
+        # Mark as extracted in database
         tracker.mark_details_extracted(post_id, success=True)
 
         logger.info(f"   ✅ Successfully extracted details for post {post_id}")
@@ -198,7 +198,7 @@ def extract_post_details(
 
 def extract_all_pending(
     scraper: PatreonScraperV2,
-    tracker: FirebaseTracker,
+    tracker: PostgresTracker,
     creator_id: Optional[str] = None,
     limit: Optional[int] = None
 ) -> Dict[str, int]:
@@ -207,7 +207,7 @@ def extract_all_pending(
 
     Args:
         scraper: PatreonScraperV2 instance
-        tracker: FirebaseTracker instance
+        tracker: PostgresTracker instance
         creator_id: Optional filter by creator
         limit: Optional limit on posts to process
 
@@ -265,7 +265,7 @@ def extract_all_pending(
 
 def extract_single_post(
     scraper: PatreonScraperV2,
-    tracker: FirebaseTracker,
+    tracker: PostgresTracker,
     post_id: str
 ) -> bool:
     """
@@ -273,17 +273,17 @@ def extract_single_post(
 
     Args:
         scraper: PatreonScraperV2 instance
-        tracker: FirebaseTracker instance
+        tracker: PostgresTracker instance
         post_id: Post ID to extract
 
     Returns:
         True if successful
     """
-    # Get post from Firebase
+    # Get post from database
     post = tracker.get_post(post_id)
 
     if not post:
-        logger.error(f"❌ Post {post_id} not found in Firebase")
+        logger.error(f"❌ Post {post_id} not found in database")
         return False
 
     # Check if already extracted
@@ -318,7 +318,7 @@ Examples:
   # Extract details for specific post
   python phase2_detail_extractor.py --post 142518617
 
-  # Show Firebase summary
+  # Show PostgreSQL summary
   python phase2_detail_extractor.py --summary
         """
     )
@@ -332,7 +332,7 @@ Examples:
     parser.add_argument('--limit', type=int,
                         help='Limit number of posts to process')
     parser.add_argument('--summary', action='store_true',
-                        help='Show Firebase tracking summary')
+                        help='Show PostgreSQL tracking summary')
     parser.add_argument('--headless', action='store_true', default=True,
                         help='Run browser in headless mode (default: True)')
     parser.add_argument('--no-headless', action='store_false', dest='headless',
@@ -340,9 +340,8 @@ Examples:
 
     args = parser.parse_args()
 
-    # Initialize Firebase tracker
-    database_url, database_secret = load_firebase_config()
-    tracker = FirebaseTracker(database_url, database_secret)
+    # Initialize PostgreSQL tracker
+    tracker = PostgresTracker()
 
     # If only summary requested
     if args.summary:

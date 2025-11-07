@@ -11,7 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
-from firebase_tracker import FirebaseTracker, load_firebase_config
+from postgres_tracker import PostgresTracker
 from phase2_detail_extractor import extract_post_details, authenticate
 import json
 import logging
@@ -43,23 +43,23 @@ def load_config():
     return config
 
 
-def rescrape_post(scraper, tracker: FirebaseTracker, post_id: str):
+def rescrape_post(scraper, tracker: PostgresTracker, post_id: str):
     """
     Re-scrape a single post to update YouTube thumbnails
 
     Args:
         scraper: Patreon scraper instance
-        tracker: Firebase tracker
+        tracker: PostgreSQL tracker
         post_id: Post ID to re-scrape
 
     Returns:
         True if successful, False otherwise
     """
     try:
-        # Get existing post data from Firebase
+        # Get existing post data from database
         post = tracker.get_post(post_id)
         if not post:
-            logger.error(f"❌ Post {post_id} not found in Firebase")
+            logger.error(f"❌ Post {post_id} not found in database")
             return False
 
         creator_id = post.get('creator_id')
@@ -135,8 +135,7 @@ Examples:
 
     # Load config
     config = load_config()
-    database_url, database_secret = load_firebase_config()
-    tracker = FirebaseTracker(database_url, database_secret)
+    tracker = PostgresTracker()
 
     # Find posts to re-scrape
     post_ids_to_process = []

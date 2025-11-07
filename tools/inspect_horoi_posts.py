@@ -7,20 +7,19 @@ import json
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
-from firebase_tracker import load_firebase_config, FirebaseTracker
+from postgres_tracker import PostgresTracker
 
 def main():
-    # Load Firebase config
-    database_url, database_secret = load_firebase_config()
-    tracker = FirebaseTracker(database_url, database_secret)
+    # Initialize PostgreSQL tracker
+    tracker = PostgresTracker()
 
     print("🔍 Inspecting horoiproject posts structure...\n", flush=True)
 
-    # Get all posts from Firebase
-    all_posts = tracker._get('posts')
+    # Get all posts from database
+    all_posts = tracker.get_all_posts()
 
     if not all_posts:
-        print("❌ No posts found in Firebase")
+        print("❌ No posts found in database")
         return
 
     # Find horoiproject posts

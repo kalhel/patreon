@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 from patreon_auth_selenium import PatreonAuthSelenium
 from patreon_scraper_v2 import PatreonScraperV2
-from firebase_tracker import FirebaseTracker, load_firebase_config
+from postgres_tracker import PostgresTracker
 from phase1_url_collector import collect_urls_for_creator
 from phase2_detail_extractor import extract_post_details
 
@@ -61,7 +61,7 @@ def authenticate(config, headless=True):
 def run_full_workflow(
     config,
     auth,
-    tracker: FirebaseTracker,
+    tracker: PostgresTracker,
     limit_urls: int = None,
     limit_details: int = None,
     creator_filter: str = None
@@ -72,7 +72,7 @@ def run_full_workflow(
     Args:
         config: Configuration dictionary
         auth: Authenticated PatreonAuthSelenium instance
-        tracker: FirebaseTracker instance
+        tracker: PostgresTracker instance
         limit_urls: Limit URLs to collect per creator
         limit_details: Limit posts to extract details
         creator_filter: Optional creator filter
@@ -172,7 +172,7 @@ def run_full_workflow(
     logger.info(f"Details failed:         {total_stats['details_failed']}")
     logger.info("="*70 + "\n")
 
-    # Show Firebase summary
+    # Show database summary
     tracker.print_summary()
 
 
@@ -191,7 +191,7 @@ Examples:
   # Run workflow for single creator
   python orchestrator.py --creator headonhistory
 
-  # Show Firebase summary only
+  # Show PostgreSQL summary only
   python orchestrator.py --summary
         """
     )
@@ -205,7 +205,7 @@ Examples:
     parser.add_argument('--limit-details', type=int,
                         help='Limit posts to extract details')
     parser.add_argument('--summary', action='store_true',
-                        help='Show Firebase tracking summary')
+                        help='Show PostgreSQL tracking summary')
     parser.add_argument('--headless', action='store_true', default=True,
                         help='Run browser in headless mode (default: True)')
     parser.add_argument('--no-headless', action='store_false', dest='headless',
@@ -213,9 +213,8 @@ Examples:
 
     args = parser.parse_args()
 
-    # Initialize Firebase
-    database_url, database_secret = load_firebase_config()
-    tracker = FirebaseTracker(database_url, database_secret)
+    # Initialize PostgreSQL tracker
+    tracker = PostgresTracker()
 
     # Show summary if requested
     if args.summary:
