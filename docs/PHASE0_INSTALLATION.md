@@ -93,11 +93,11 @@ sudo apt install -y postgresql-15-pgvector
 sudo -u postgres psql
 
 # Dentro de psql:
-CREATE DATABASE patreon;
+CREATE DATABASE alejandria;
 CREATE USER patreon_user WITH PASSWORD 'TU_PASSWORD_AQUI';
-GRANT ALL PRIVILEGES ON DATABASE patreon TO patreon_user;
+GRANT ALL PRIVILEGES ON DATABASE alejandria TO patreon_user;
 
-\c patreon
+\c alejandria
 CREATE EXTENSION vector;
 GRANT ALL ON SCHEMA public TO patreon_user;
 
@@ -114,7 +114,7 @@ cp .env.example .env
 nano .env
 
 # Aplicar schema
-psql -U patreon_user -d patreon -h localhost -f database/schema.sql
+psql -U patreon_user -d alejandria -h localhost -f database/schema.sql
 ```
 
 ### Paso 5: Instalar Redis
@@ -190,7 +190,7 @@ docker-compose ps
 ```bash
 # El schema se aplica automáticamente en el primer inicio
 # Verificar:
-docker-compose exec postgres psql -U patreon_user -d patreon -c "\dt"
+docker-compose exec postgres psql -U patreon_user -d alejandria -c "\dt"
 ```
 
 ### Paso 5: Instalar dependencias Python (local)
@@ -324,7 +324,7 @@ sudo systemctl restart redis-server
 
 ```bash
 # Conectar como postgres
-sudo -u postgres psql -d patreon
+sudo -u postgres psql -d alejandria
 
 # Dar permisos
 GRANT ALL ON ALL TABLES IN SCHEMA public TO patreon_user;

@@ -268,7 +268,7 @@ def main():
 
     if not table_exists:
         print("❌ Table 'scraping_status' does not exist")
-        print("Run database/schema.sql first: psql -U patreon_user -d patreon -f database/schema.sql")
+        print("Run database/schema.sql first: psql -U patreon_user -d alejandria -f database/schema.sql")
         conn.close()
         return 1
 
@@ -294,7 +294,7 @@ def main():
     print("=" * 70)
     print()
     print("Next steps:")
-    print("  1. Verify data in PostgreSQL: psql -U patreon_user -d patreon")
+    print("  1. Verify data in PostgreSQL: psql -U patreon_user -d alejandria")
     print("  2. Query: SELECT * FROM scraping_status LIMIT 10;")
     print("  3. Update scripts to use PostgreSQL instead of Firebase")
     print()

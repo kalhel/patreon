@@ -33,14 +33,14 @@
   - Ver Issue #1 abajo para detalles
   - Verificado: Extensión instalada correctamente
 
-- [x] **Crear base de datos 'patreon'** ✅
-  - Base de datos creada: `patreon`
+- [x] **Crear base de datos 'alejandria'** ✅
+  - Base de datos creada: `alejandria`
   - Usuario creado: `patreon_user`
   - Password: `Stigmata7511@`
   - Permisos otorgados correctamente
 
 - [x] **Habilitar pgvector** ✅
-  - Extensión vector creada en base de datos patreon
+  - Extensión vector creada en base de datos alejandria
   - Verificado con `\dx` - extensión activa
 
 - [x] **Ejecutar schema.sql** ✅
@@ -235,9 +235,9 @@ sudo make install
 sudo -u postgres psql
 # En psql:
 CREATE USER patreon_user WITH PASSWORD 'Stigmata7511@';
-CREATE DATABASE patreon OWNER patreon_user;
-GRANT ALL PRIVILEGES ON DATABASE patreon TO patreon_user;
-\c patreon
+CREATE DATABASE alejandria OWNER patreon_user;
+GRANT ALL PRIVILEGES ON DATABASE alejandria TO patreon_user;
+\c alejandria
 CREATE EXTENSION vector;
 GRANT ALL ON SCHEMA public TO patreon_user;
 \q
@@ -247,7 +247,7 @@ cp .env.example .env
 nano .env  # Configurar credenciales
 
 # Aplicar schema
-psql -U patreon_user -d patreon -h localhost -f database/schema.sql
+psql -U patreon_user -d alejandria -h localhost -f database/schema.sql
 # Resultado: 14 tablas, 2 vistas, 44 índices creados
 
 # Instalar Redis (Issue #4)
@@ -334,7 +334,7 @@ python3 scripts/migrate_firebase_to_postgres.py
 # Resultado: 982 posts migrados, 0 errores ✅
 
 # Verificar en PostgreSQL
-psql -U patreon_user -d patreon -h 127.0.0.1
+psql -U patreon_user -d alejandria -h 127.0.0.1
 # SELECT COUNT(*) FROM scraping_status WHERE firebase_migrated = true;
 # Resultado: 982
 
@@ -353,19 +353,19 @@ psql -U patreon_user -d patreon -h 127.0.0.1
 sudo apt install -y build-essential postgresql-server-dev-all git
 git clone https://github.com/pgvector/pgvector.git /tmp/pgvector
 cd /tmp/pgvector && make && sudo make install
-sudo -u postgres psql -d patreon -c "CREATE EXTENSION vector;"
+sudo -u postgres psql -d alejandria -c "CREATE EXTENSION vector;"
 ```
 **Fecha**: 2025-11-07
 **Estado**: ✅ Resuelto
 
 ### Issue #2: Base de datos no existía
-**Problema**: Al intentar aplicar schema.sql, la base de datos 'patreon' no existía
+**Problema**: Al intentar aplicar schema.sql, la base de datos 'alejandria' no existía
 **Solución**: Crear manualmente base de datos y usuario antes de aplicar schema:
 ```bash
 sudo -u postgres psql
-CREATE DATABASE patreon;
+CREATE DATABASE alejandria;
 CREATE USER patreon_user WITH PASSWORD 'Stigmata7511@';
-GRANT ALL PRIVILEGES ON DATABASE patreon TO patreon_user;
+GRANT ALL PRIVILEGES ON DATABASE alejandria TO patreon_user;
 ```
 **Fecha**: 2025-11-07
 **Estado**: ✅ Resuelto
@@ -681,7 +681,7 @@ Phase 2 consiste en migrar los scripts Python existentes para que usen PostgreSQ
 - `.env` (usuario) - Credenciales: DB_PASSWORD=Stigmata7511@, DB_HOST=127.0.0.1
 
 ### 🔐 Credenciales importantes:
-- DB: patreon
+- DB: alejandria
 - User: patreon_user
 - Password: Stigmata7511@
 - Host: 127.0.0.1 (NO localhost - causa problemas con SQLAlchemy)

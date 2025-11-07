@@ -958,7 +958,7 @@ User → Login → Auth Service
 3. **Crear esquema de base de datos**
    ```bash
    # Aplicar schema.sql
-   psql -U postgres -d patreon -f schema.sql
+   psql -U postgres -d alejandria -f schema.sql
    ```
 
 4. **Setup Celery**
@@ -1580,7 +1580,7 @@ User → Login → Auth Service
      postgres:
        image: postgres:15
        environment:
-         POSTGRES_DB: patreon
+         POSTGRES_DB: alejandria
          POSTGRES_USER: patreon
          POSTGRES_PASSWORD: ${DB_PASSWORD}
        volumes:
@@ -1720,7 +1720,7 @@ User → Login → Auth Service
    DATE=$(date +%Y%m%d_%H%M%S)
 
    # Backup PostgreSQL
-   docker exec patreon-postgres pg_dump -U patreon patreon | \
+   docker exec patreon-postgres pg_dump -U patreon alejandria | \
        gzip > backups/db_$DATE.sql.gz
 
    # Backup media

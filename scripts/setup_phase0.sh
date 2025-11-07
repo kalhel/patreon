@@ -125,7 +125,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 
 if [[ $(prompt "Create database and user? (y/n)") == "y" ]]; then
     echo ""
-    info "Creating database 'patreon' and user 'patreon_user'"
+    info "Creating database 'alejandria' and user 'patreon_user'"
 
     # Generate random password if not set
     DB_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
@@ -135,13 +135,13 @@ if [[ $(prompt "Create database and user? (y/n)") == "y" ]]; then
 CREATE USER patreon_user WITH PASSWORD '$DB_PASSWORD';
 
 -- Create database
-CREATE DATABASE patreon OWNER patreon_user;
+CREATE DATABASE alejandria OWNER patreon_user;
 
 -- Grant privileges
-GRANT ALL PRIVILEGES ON DATABASE patreon TO patreon_user;
+GRANT ALL PRIVILEGES ON DATABASE alejandria TO patreon_user;
 
--- Connect to patreon database
-\c patreon
+-- Connect to alejandria database
+\c alejandria
 
 -- Enable pgvector extension
 CREATE EXTENSION IF NOT EXISTS vector;
@@ -153,7 +153,7 @@ GRANT ALL ON SCHEMA public TO patreon_user;
 EOF
 
     success "Database configured"
-    info "Database: patreon"
+    info "Database: alejandria"
     info "User: patreon_user"
     warning "Password: $DB_PASSWORD"
     warning "SAVE THIS PASSWORD! Add it to your .env file"
@@ -164,7 +164,7 @@ EOF
     fi
 
     echo ""
-    echo "DB_NAME=patreon" >> .env
+    echo "DB_NAME=alejandria" >> .env
     echo "DB_USER=patreon_user" >> .env
     echo "DB_PASSWORD=$DB_PASSWORD" >> .env
     echo "DB_HOST=localhost" >> .env
@@ -186,7 +186,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 
 if [[ -f database/schema.sql ]]; then
     if [[ $(prompt "Run database/schema.sql? (y/n)") == "y" ]]; then
-        PGPASSWORD=$DB_PASSWORD psql -U patreon_user -d patreon -h localhost -f database/schema.sql
+        PGPASSWORD=$DB_PASSWORD psql -U patreon_user -d alejandria -h localhost -f database/schema.sql
         success "Schema created"
     else
         warning "Skipping schema creation"

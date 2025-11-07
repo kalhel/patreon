@@ -1,6 +1,6 @@
-# 🎯 Patreon Multi-Source Content Aggregator
+# 🏛️ Alejandría - Multi-Source Content Aggregator
 
-**Sistema escalable de scraping y organización de contenido de múltiples plataformas**
+**Sistema escalable de scraping y organización de contenido de múltiples plataformas (Patreon, YouTube, Substack, etc.)**
 
 ---
 
@@ -121,11 +121,11 @@ nano .env  # Configurar credenciales
 
 ```bash
 # Crear base de datos
-sudo -u postgres createdb patreon
+sudo -u postgres createdb alejandria
 sudo -u postgres createuser patreon_user
 
 # Aplicar schema
-psql -U patreon_user -d patreon -h 127.0.0.1 -f database/schema.sql
+psql -U patreon_user -d alejandria -h 127.0.0.1 -f database/schema.sql
 ```
 
 ### Verificar Instalación
