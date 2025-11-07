@@ -925,12 +925,51 @@ class ContentBlockParser:
         """
         Extract text with inline formatting preserved as markdown
 
-        Returns formatted text with **bold**, *italic*, etc.
+        Converts:
+        - <strong>, <b> -> **text**
+        - <em>, <i> -> *text*
+        - <u> -> __text__
+        - <a> -> [text](url)
+
+        Returns formatted text with markdown
         """
-        # For now, just get text - we can enhance this later
-        # to convert <strong> to **text**, <em> to *text*, etc.
-        text = element.get_text(strip=True)
-        return text
+        if not element:
+            return ""
+
+        result = []
+
+        # Process all children (text nodes and tags)
+        for child in element.children:
+            if isinstance(child, str):
+                # Plain text node
+                text = child.strip()
+                if text:
+                    result.append(text)
+            else:
+                # Element node
+                tag = child.name.lower() if child.name else None
+                inner_text = child.get_text(strip=True)
+
+                if not inner_text:
+                    continue
+
+                if tag in ['strong', 'b']:
+                    result.append(f"**{inner_text}**")
+                elif tag in ['em', 'i']:
+                    result.append(f"*{inner_text}*")
+                elif tag == 'u':
+                    result.append(f"__{inner_text}__")
+                elif tag == 'a':
+                    href = child.get('href', '')
+                    if href:
+                        result.append(f"[{inner_text}]({href})")
+                    else:
+                        result.append(inner_text)
+                else:
+                    # Unknown tag, just get text
+                    result.append(inner_text)
+
+        return ' '.join(result) if result else element.get_text(strip=True)
 
 
 def parse_post_content(content_element: WebElement) -> List[Dict]:
