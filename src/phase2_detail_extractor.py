@@ -76,14 +76,12 @@ def update_post_details_in_postgres(post_data: Dict):
                 UPDATE posts
                 SET
                     title = :title,
-                    content = :content,
+                    full_content = :full_content,
                     content_blocks = CAST(:content_blocks AS jsonb),
                     published_at = :published_at,
-                    edited_at = :edited_at,
                     video_streams = CAST(:video_streams AS jsonb),
                     video_subtitles = CAST(:video_subtitles AS jsonb),
                     video_local_paths = :video_local_paths,
-                    video_subtitles_relative = :video_subtitles_relative,
                     audios = :audios,
                     audio_local_paths = :audio_local_paths,
                     images = :images,
@@ -94,17 +92,22 @@ def update_post_details_in_postgres(post_data: Dict):
             """)
 
             # Prepare data for update
+            # Extract full_content from content_blocks for search
+            full_content = ""
+            if post_data.get('content_blocks'):
+                text_blocks = [block.get('text', '') for block in post_data.get('content_blocks', [])
+                              if block.get('type') == 'text' and block.get('text')]
+                full_content = '\n\n'.join(text_blocks)
+
             update_params = {
                 'post_id': post_data.get('post_id'),
                 'title': post_data.get('title'),
-                'content': post_data.get('content'),
+                'full_content': full_content,
                 'content_blocks': json.dumps(post_data.get('content_blocks', [])),
                 'published_at': post_data.get('published_at'),
-                'edited_at': post_data.get('edited_at'),
                 'video_streams': json.dumps(post_data.get('video_streams', [])),
                 'video_subtitles': json.dumps(post_data.get('video_subtitles', [])),
                 'video_local_paths': post_data.get('video_local_paths'),
-                'video_subtitles_relative': post_data.get('video_subtitles_relative'),
                 'audios': post_data.get('audios'),
                 'audio_local_paths': post_data.get('audio_local_paths'),
                 'images': post_data.get('images'),

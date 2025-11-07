@@ -148,7 +148,7 @@ def test_update_post_details():
                 UPDATE posts
                 SET
                     title = :title,
-                    content = :content,
+                    full_content = :full_content,
                     content_blocks = CAST(:content_blocks AS jsonb),
                     video_streams = CAST(:video_streams AS jsonb),
                     images = :images,
@@ -160,7 +160,7 @@ def test_update_post_details():
             conn.execute(update_sql, {
                 'post_id': test_post_id,
                 'title': 'Test Post - Phase 2 PostgreSQL Integration',
-                'content': 'This is test content to verify PostgreSQL updates work correctly.',
+                'full_content': 'Test content block from Phase 2 test',
                 'content_blocks': json.dumps(test_content_blocks),
                 'video_streams': json.dumps(test_video_streams),
                 'images': ['https://example.com/test1.jpg', 'https://example.com/test2.jpg'],
@@ -172,7 +172,7 @@ def test_update_post_details():
 
             # Verify the update
             verify_sql = text("""
-                SELECT title, content, content_blocks, images, patreon_tags
+                SELECT title, full_content, content_blocks, images, patreon_tags
                 FROM posts
                 WHERE post_id = :id
             """)
@@ -180,6 +180,7 @@ def test_update_post_details():
             updated_post = result.fetchone()
 
             print(f"   Title: {updated_post[0]}")
+            print(f"   Full content length: {len(updated_post[1])} chars")
             print(f"   Content blocks: {len(updated_post[2])} blocks")
             print(f"   Images: {len(updated_post[3])} images")
             print(f"   Tags: {len(updated_post[4])} tags")
