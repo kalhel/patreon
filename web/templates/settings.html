@@ -615,6 +615,134 @@
             </div>
         </div>
 
+        <!-- Media Download Settings -->
+        <div class="section">
+            <h2 class="section-title">📥 Media Download Settings</h2>
+            <p style="color: rgba(255, 255, 255, 0.6); margin-bottom: 1.5rem;">
+                Configure what media to download and how to handle duplicates.
+                Settings are saved to <span class="file-path">config/settings.json</span>
+            </p>
+
+            <div style="display: grid; gap: 1.5rem;">
+                <!-- Images Settings -->
+                <div style="background: #0a0a0a; padding: 1.5rem; border-radius: 8px; border: 1px solid #2d2d2d;">
+                    <h3 style="color: #2196F3; margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem;">🖼️ Images</h3>
+
+                    <label style="display: flex; align-items: center; margin-bottom: 1rem; cursor: pointer;">
+                        <input type="checkbox" id="download-images" style="margin-right: 10px; width: 18px; height: 18px;">
+                        <span style="font-weight: 500; color: rgba(255, 255, 255, 0.9);">Download content images</span>
+                    </label>
+
+                    <label style="display: flex; align-items: center; margin-bottom: 1rem; cursor: pointer;">
+                        <input type="checkbox" id="skip-avatars" style="margin-right: 10px; width: 18px; height: 18px;">
+                        <span style="color: rgba(255, 255, 255, 0.8);">Skip avatars/icons (&lt;400x400px)</span>
+                    </label>
+
+                    <label style="display: flex; align-items: center; margin-bottom: 1rem; cursor: pointer;">
+                        <input type="checkbox" id="dedup-images" style="margin-right: 10px; width: 18px; height: 18px;">
+                        <span style="color: rgba(255, 255, 255, 0.8);">Enable deduplication (prevents duplicates)</span>
+                    </label>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; color: rgba(255, 255, 255, 0.6); font-size: 0.85rem;">Min width (px)</label>
+                            <input type="number" id="min-width" min="0" step="50"
+                                   style="width: 100%; padding: 0.75rem; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; color: white; font-family: monospace;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; color: rgba(255, 255, 255, 0.6); font-size: 0.85rem;">Min height (px)</label>
+                            <input type="number" id="min-height" min="0" step="50"
+                                   style="width: 100%; padding: 0.75rem; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; color: white; font-family: monospace;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Patreon Videos/Audio/Subtitles Settings -->
+                <div style="background: #0a0a0a; padding: 1.5rem; border-radius: 8px; border: 1px solid #2d2d2d;">
+                    <h3 style="color: #FF424D; margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem;">🎬 Patreon Videos</h3>
+
+                    <label style="display: flex; align-items: center; margin-bottom: 1rem; cursor: pointer;">
+                        <input type="checkbox" id="download-patreon-videos" style="margin-right: 10px; width: 18px; height: 18px;">
+                        <span style="font-weight: 500; color: rgba(255, 255, 255, 0.9);">Download Patreon videos</span>
+                    </label>
+                    <p style="color: rgba(255, 255, 255, 0.5); font-size: 0.875rem; margin: 0.5rem 0 1.5rem 0;">
+                        If disabled, videos will show "View on Patreon" link
+                    </p>
+
+                    <h3 style="color: #FF424D; margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1.1rem;">📝 Video Subtitles</h3>
+
+                    <label style="display: flex; align-items: center; margin-bottom: 1rem; cursor: pointer;">
+                        <input type="checkbox" id="download-subtitles" style="margin-right: 10px; width: 18px; height: 18px;" checked disabled>
+                        <span style="color: rgba(255, 255, 255, 0.6);">Download video subtitles (.vtt) <em>(always enabled)</em></span>
+                    </label>
+                    <p style="color: rgba(255, 255, 255, 0.5); font-size: 0.875rem; margin: 0.5rem 0 1.5rem 0;">
+                        Subtitles are automatically downloaded with videos and validated (storyboards rejected)
+                    </p>
+
+                    <h3 style="color: #9C27B0; margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1.1rem;">🎵 Patreon Audio</h3>
+
+                    <label style="display: flex; align-items: center; margin-bottom: 1rem; cursor: pointer;">
+                        <input type="checkbox" id="download-patreon-audios" style="margin-right: 10px; width: 18px; height: 18px;">
+                        <span style="font-weight: 500; color: rgba(255, 255, 255, 0.9);">Download Patreon audio files</span>
+                    </label>
+                </div>
+
+                <!-- YouTube Settings -->
+                <div style="background: #0a0a0a; padding: 1.5rem; border-radius: 8px; border: 1px solid #2d2d2d;">
+                    <h3 style="color: #FF0000; margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem;">▶️ YouTube Videos</h3>
+
+                    <label style="display: block; margin-bottom: 0.5rem; color: rgba(255, 255, 255, 0.6); font-size: 0.85rem;">Download mode:</label>
+                    <select id="youtube-mode" style="width: 100%; padding: 0.75rem; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; color: white; margin-bottom: 1rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+                        <option value="embed">Embed (fast, no download)</option>
+                        <option value="download">Download with subtitles (slow, requires yt-dlp)</option>
+                    </select>
+
+                    <div style="background: rgba(33, 150, 243, 0.1); padding: 1rem; border-radius: 6px; border: 1px solid rgba(33, 150, 243, 0.2);">
+                        <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.875rem; margin: 0;">
+                            <strong>Embed:</strong> Just stores YouTube URL, video loads from YouTube<br>
+                            <strong>Download:</strong> Downloads video + English/Spanish subtitles to disk
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Deduplication Settings -->
+                <div style="background: #0a0a0a; padding: 1.5rem; border-radius: 8px; border: 1px solid #2d2d2d;">
+                    <h3 style="color: #4CAF50; margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem;">🔄 Hash-Based Deduplication</h3>
+
+                    <label style="display: flex; align-items: center; margin-bottom: 1rem; cursor: pointer;">
+                        <input type="checkbox" id="global-dedup" style="margin-right: 10px; width: 18px; height: 18px;">
+                        <span style="font-weight: 500; color: rgba(255, 255, 255, 0.9);">Enable global deduplication</span>
+                    </label>
+
+                    <div style="background: rgba(76, 175, 80, 0.1); padding: 1rem; border-radius: 6px; border: 1px solid rgba(76, 175, 80, 0.2);">
+                        <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.875rem; margin: 0;">
+                            Uses SHA256 hash to detect duplicate files. Files are saved as:<br>
+                            <code style="background: rgba(0,0,0,0.3); padding: 0.2rem 0.5rem; border-radius: 4px; color: #4CAF50;">{hash_prefix}_{post_id}_{index}.{ext}</code><br>
+                            If a file with the same content exists, it won't be downloaded again.
+                        </p>
+                    </div>
+
+                    <div style="background: #1a1a1a; padding: 1rem; border-radius: 6px; margin-top: 1rem; border: 1px solid #333;">
+                        <strong style="color: #4CAF50;">💾 Space Saved:</strong>
+                        <span id="dedup-stats" style="color: rgba(255, 255, 255, 0.6); margin-left: 0.5rem;">Loading...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                <button class="btn" onclick="saveMediaSettings()">
+                    💾 Save Media Settings
+                </button>
+                <button class="btn btn-secondary" onclick="loadMediaSettings()">
+                    🔄 Reload Settings
+                </button>
+            </div>
+
+            <div class="info-box" style="margin-top: 1rem;">
+                <p>📁 Settings file: <span class="file-path">config/settings.json</span></p>
+            </div>
+        </div>
+
         <!-- Actions -->
         <div class="actions">
             <a href="/" class="back-link">
@@ -626,117 +754,6 @@
             <button class="btn btn-secondary" onclick="reloadPage()">
                 🔄 Reload Status
             </button>
-        </div>
-    </div>
-
-    <!-- Media Download Settings -->
-    <div class="container">
-        <div class="section">
-            <h2 class="section-title">📥 Media Download Settings</h2>
-            <p style="color: #888; margin-bottom: 20px;">
-                Configure what media to download and how to handle duplicates.
-                Settings are saved to <code>config/settings.json</code>
-            </p>
-
-            <div style="display: grid; gap: 20px;">
-                <!-- Images Settings -->
-                <div style="background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333;">
-                    <h3 style="color: #2196F3; margin-top: 0;">🖼️ Images</h3>
-
-                    <label style="display: flex; align-items: center; margin-bottom: 15px; cursor: pointer;">
-                        <input type="checkbox" id="download-images" style="margin-right: 10px; width: 18px; height: 18px;">
-                        <span style="font-weight: 500;">Download content images</span>
-                    </label>
-
-                    <label style="display: flex; align-items: center; margin-bottom: 15px; cursor: pointer;">
-                        <input type="checkbox" id="skip-avatars" style="margin-right: 10px; width: 18px; height: 18px;">
-                        <span>Skip avatars/icons (&lt;400x400px)</span>
-                    </label>
-
-                    <label style="display: flex; align-items: center; margin-bottom: 15px; cursor: pointer;">
-                        <input type="checkbox" id="dedup-images" style="margin-right: 10px; width: 18px; height: 18px;">
-                        <span>Enable deduplication (prevents duplicates)</span>
-                    </label>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
-                        <div>
-                            <label style="display: block; margin-bottom: 5px; color: #888;">Min width (px)</label>
-                            <input type="number" id="min-width" min="0" step="50"
-                                   style="width: 100%; padding: 8px; background: #2a2a2a; border: 1px solid #444; border-radius: 4px; color: white;">
-                        </div>
-                        <div>
-                            <label style="display: block; margin-bottom: 5px; color: #888;">Min height (px)</label>
-                            <input type="number" id="min-height" min="0" step="50"
-                                   style="width: 100%; padding: 8px; background: #2a2a2a; border: 1px solid #444; border-radius: 4px; color: white;">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Patreon Videos/Audio Settings -->
-                <div style="background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333;">
-                    <h3 style="color: #FF424D; margin-top: 0;">🎬 Patreon Videos</h3>
-
-                    <label style="display: flex; align-items: center; margin-bottom: 15px; cursor: pointer;">
-                        <input type="checkbox" id="download-patreon-videos" style="margin-right: 10px; width: 18px; height: 18px;">
-                        <span style="font-weight: 500;">Download Patreon videos</span>
-                    </label>
-                    <p style="color: #888; font-size: 14px; margin: 10px 0;">
-                        If disabled, videos will only show "View on Patreon" link
-                    </p>
-
-                    <h3 style="color: #FF424D; margin-top: 20px;">🎵 Patreon Audio</h3>
-
-                    <label style="display: flex; align-items: center; margin-bottom: 15px; cursor: pointer;">
-                        <input type="checkbox" id="download-patreon-audios" style="margin-right: 10px; width: 18px; height: 18px;">
-                        <span style="font-weight: 500;">Download Patreon audio files</span>
-                    </label>
-                </div>
-
-                <!-- YouTube Settings -->
-                <div style="background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333;">
-                    <h3 style="color: #FF0000; margin-top: 0;">▶️ YouTube Videos</h3>
-
-                    <label style="display: block; margin-bottom: 10px; color: #888;">Download mode:</label>
-                    <select id="youtube-mode" style="width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #444; border-radius: 4px; color: white; margin-bottom: 10px;">
-                        <option value="embed">Embed (fast, no download)</option>
-                        <option value="download">Download with subtitles (slow, requires yt-dlp)</option>
-                    </select>
-
-                    <p style="color: #888; font-size: 14px; margin: 10px 0;">
-                        <strong>Embed:</strong> Just stores YouTube URL, video loads from YouTube<br>
-                        <strong>Download:</strong> Downloads video + English/Spanish subtitles to disk
-                    </p>
-                </div>
-
-                <!-- Deduplication Settings -->
-                <div style="background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333;">
-                    <h3 style="color: #4CAF50; margin-top: 0;">🔄 Deduplication</h3>
-
-                    <label style="display: flex; align-items: center; margin-bottom: 15px; cursor: pointer;">
-                        <input type="checkbox" id="global-dedup" style="margin-right: 10px; width: 18px; height: 18px;">
-                        <span style="font-weight: 500;">Enable global deduplication</span>
-                    </label>
-
-                    <p style="color: #888; font-size: 14px; margin: 10px 0;">
-                        Uses SHA256 hash to detect duplicate files. If a file with the same content exists,
-                        it won't be downloaded again, saving disk space and bandwidth.
-                    </p>
-
-                    <div style="background: #2a2a2a; padding: 15px; border-radius: 6px; margin-top: 15px;">
-                        <strong style="color: #4CAF50;">💾 Space Saved:</strong>
-                        <span id="dedup-stats" style="color: #888;">Loading...</span>
-                    </div>
-                </div>
-            </div>
-
-            <div style="margin-top: 30px; display: flex; gap: 10px;">
-                <button class="btn" onclick="saveMediaSettings()">
-                    💾 Save Media Settings
-                </button>
-                <button class="btn btn-secondary" onclick="loadMediaSettings()">
-                    🔄 Reload Settings
-                </button>
-            </div>
         </div>
     </div>
 
