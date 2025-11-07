@@ -565,15 +565,22 @@ class PatreonScraperV2:
 
             # Method 1: Use data-media-id (most reliable - only on original images)
             content_images = self.driver.find_elements(By.CSS_SELECTOR, 'img[data-media-id]')
+            logger.info(f"  🔍 Found {len(content_images)} images with data-media-id")
+
             for img in content_images:
                 src = img.get_attribute('src')
+                media_id = img.get_attribute('data-media-id')
                 if src and 'patreonusercontent.com' in src:
                     image_urls.append(src)
+                    logger.info(f"  ✓ Image with data-media-id={media_id}: {src[:80]}...")
 
             # Method 2: Fallback to URL pattern if no data-media-id found
             # But exclude thumbnail sizes (eyJ3Ijo in URL = width parameter)
             if not image_urls:
+                logger.warning(f"  ⚠️ No images with data-media-id found, using fallback (will download thumbnails)")
                 all_images = self.driver.find_elements(By.CSS_SELECTOR, 'img')
+                logger.info(f"  🔍 Fallback: Found {len(all_images)} total img elements")
+
                 for img in all_images:
                     src = img.get_attribute('src')
                     if not src or 'patreonusercontent.com' not in src:
@@ -591,10 +598,12 @@ class PatreonScraperV2:
                     # eyJ3Ijo = {"w": (width parameter)
                     # eyJoIjo = {"h": (height parameter)
                     if 'eyJ3Ijo' in src or 'eyJoIjo' in src:
+                        logger.debug(f"  ⏭️ Skipping thumbnail: {src[:80]}...")
                         continue
 
                     if src not in image_urls:
                         image_urls.append(src)
+                        logger.info(f"  ✓ Fallback image: {src[:80]}...")
 
             post_detail['images'] = image_urls
             logger.info(f"  📸 Extracted {len(image_urls)} content images (data-media-id selector)")
