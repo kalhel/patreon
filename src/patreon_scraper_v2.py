@@ -559,70 +559,26 @@ class PatreonScraperV2:
             post_detail['full_content'] = ""
 
         try:
-            # Extract ONLY content images (not avatars, covers, or thumbnails)
-            # Strategy: Use specific selectors for content images and exclude avatar patterns
+            # Extract ONLY content images by URL pattern (most reliable method)
+            # Content images: /p/post/{post_id}/
+            # Avatars: /p/campaign/ or /p/user/
+
+            all_images = self.driver.find_elements(By.CSS_SELECTOR, 'img')
             image_urls = []
 
-            # Method 1: Images with data-media-id (most reliable for content images)
-            content_images = self.driver.find_elements(By.CSS_SELECTOR, 'img[data-media-id]')
-            for img in content_images:
-                src = img.get_attribute('src')
-                if src and 'patreonusercontent.com' in src:
-                    image_urls.append(src)
-
-            # Method 2: Images inside <figure> tags (common for post content)
-            figure_images = self.driver.find_elements(By.CSS_SELECTOR, 'figure img')
-            for img in figure_images:
-                src = img.get_attribute('src')
-                if src and 'patreonusercontent.com' in src:
-                    image_urls.append(src)
-
-            # Method 3: Images in post content containers (but exclude avatars)
-            # Exclude: comment avatars (data-tag="comment-send-avatar"), creator profile pics
-            all_images = self.driver.find_elements(By.CSS_SELECTOR, 'img')
             for img in all_images:
-                try:
-                    src = img.get_attribute('src')
-                    if not src or 'patreonusercontent.com' not in src:
-                        continue
-
-                    # Skip if already captured
-                    if src in image_urls:
-                        continue
-
-                    # Exclude avatars by URL pattern
-                    if '/p/campaign/' in src or '/p/user/' in src:
-                        continue
-
-                    # Exclude avatars by data-tag
-                    data_tag = img.get_attribute('data-tag')
-                    if data_tag and 'avatar' in data_tag.lower():
-                        continue
-
-                    # Exclude by alt text
-                    alt = img.get_attribute('alt')
-                    if alt and ('profile picture' in alt.lower() or 'avatar' in alt.lower()):
-                        continue
-
-                    # Exclude by parent class (comment avatars have specific parent classes)
-                    try:
-                        parent = img.find_element(By.XPATH, '..')
-                        parent_class = parent.get_attribute('class') or ''
-                        # cm-MCtAYf is used for comment avatars
-                        if 'cm-MCtAYf' in parent_class:
-                            continue
-                    except:
-                        pass
-
-                    # If URL contains /p/post/ it's likely content
-                    if '/p/post/' in src:
-                        image_urls.append(src)
-
-                except Exception as e:
+                src = img.get_attribute('src')
+                if not src or 'patreonusercontent.com' not in src:
                     continue
 
-            post_detail['images'] = list(set(image_urls))
-            logger.info(f"  📸 Extracted {len(post_detail['images'])} content images (avatars excluded)")
+                # ONLY include images from /p/post/ (content images)
+                # EXCLUDE /p/campaign/ (creator avatars) and /p/user/ (user avatars)
+                if '/p/post/' in src and '/p/campaign/' not in src and '/p/user/' not in src:
+                    if src not in image_urls:
+                        image_urls.append(src)
+
+            post_detail['images'] = image_urls
+            logger.info(f"  📸 Extracted {len(image_urls)} content images (URL filter: /p/post/ only)")
 
         except Exception as e:
             logger.warning(f"  ⚠️  Error extracting images: {e}")
