@@ -526,9 +526,22 @@ def view_post(post_id):
         audio_count = len(post.get('audios') or [])
 
     comments_count = metadata.get('comments_count') or comment_block_count
-    published_raw = (metadata.get('published_date') or '').strip()
-    published_label = published_raw or format_date_eu(post.get('created_at'))
-    if not published_label:
+
+    # Check for published date in multiple locations (PostgreSQL vs JSON structure)
+    published_raw = (
+        post.get('published_date') or  # PostgreSQL direct field
+        metadata.get('published_date') or  # JSON nested field
+        post.get('published_at') or  # PostgreSQL timestamp
+        ''
+    )
+    if isinstance(published_raw, str):
+        published_raw = published_raw.strip()
+    else:
+        published_raw = str(published_raw) if published_raw else ''
+
+    # Format the date for display
+    published_label = format_date_eu(published_raw) if published_raw else format_date_eu(post.get('created_at'))
+    if not published_label or published_label == 'N/A':
         published_label = 'Date unknown'
 
     date_skip_originals = set()

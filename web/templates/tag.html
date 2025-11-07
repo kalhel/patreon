@@ -769,8 +769,10 @@
                     </div>
 
                     <div class="post-card-date">
-                        {% if post.post_metadata and post.post_metadata.published_date %}
-                            {{ post.post_metadata.published_date }}
+                        {% if post.published_date %}
+                            {{ post.published_date | date_eu }}
+                        {% elif post.post_metadata and post.post_metadata.published_date %}
+                            {{ post.post_metadata.published_date | date_eu }}
                         {% elif post.published_at %}
                             {{ post.published_at | date_eu }}
                         {% elif post.created_at %}

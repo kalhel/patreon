@@ -270,7 +270,17 @@
 
                 <div class="post-footer">
                     <div class="post-date">
-                        <span>{{ post.published_at | date_eu }}</span>
+                        <span>{% if post.published_date %}
+                            {{ post.published_date | date_eu }}
+                        {% elif post.post_metadata and post.post_metadata.published_date %}
+                            {{ post.post_metadata.published_date | date_eu }}
+                        {% elif post.published_at %}
+                            {{ post.published_at | date_eu }}
+                        {% elif post.created_at %}
+                            {{ post.created_at | date_eu }}
+                        {% else %}
+                            N/A
+                        {% endif %}</span>
                     </div>
                     <div class="post-likes">
                         <span>{{ post.like_count if post.like_count else 0 }}</span>

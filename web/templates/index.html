@@ -1591,7 +1591,17 @@
 
                             <!-- Fecha -->
                             <div class="post-card-date">
-                                {{ post.published_date or post.post_metadata.published_date if post.post_metadata else post.published_at or 'N/A' }}
+                                {% if post.published_date %}
+                                    {{ post.published_date | date_eu }}
+                                {% elif post.post_metadata and post.post_metadata.published_date %}
+                                    {{ post.post_metadata.published_date | date_eu }}
+                                {% elif post.published_at %}
+                                    {{ post.published_at | date_eu }}
+                                {% elif post.created_at %}
+                                    {{ post.created_at | date_eu }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
                             </div>
 
                         {# Content preview: priority local video > youtube > image > audio > text #}
