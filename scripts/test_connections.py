@@ -139,14 +139,20 @@ def test_sqlalchemy():
         import sqlalchemy
         print(f"✅ SQLAlchemy installed: {sqlalchemy.__version__}")
 
-        # Try to create engine
+        # Try to create engine with explicit TCP connection
         from sqlalchemy import create_engine
+
+        # Build connection URL with query parameters to force TCP
+        db_user = os.getenv('DB_USER', 'patreon_user')
+        db_password = os.getenv('DB_PASSWORD', 'CHANGE_THIS_PASSWORD')
+        db_host = os.getenv('DB_HOST', 'localhost')
+        db_port = int(os.getenv('DB_PORT', '5432'))
+        db_name = os.getenv('DB_NAME', 'patreon')
+
+        # Use connect_args to explicitly set host parameter for TCP connection
         engine = create_engine(
-            f"postgresql://{os.getenv('DB_USER', 'patreon_user')}:"
-            f"{os.getenv('DB_PASSWORD', 'CHANGE_THIS_PASSWORD')}@"
-            f"{os.getenv('DB_HOST', 'localhost')}:"
-            f"{os.getenv('DB_PORT', '5432')}/"
-            f"{os.getenv('DB_NAME', 'patreon')}"
+            f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}",
+            connect_args={'host': db_host, 'port': db_port}
         )
 
         # Test connection
