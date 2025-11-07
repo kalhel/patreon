@@ -220,20 +220,16 @@ class SchemaV2Migration:
         with open(schema_v2_file, 'r') as f:
             schema_sql = f.read()
 
-        # Drop existing tables to start fresh with v2
+        # Drop everything - nuclear option but guaranteed to work
         # NOTE: This is safe because we have a backup
-        self.log("  Dropping old schema v1 tables...")
+        self.log("  Dropping entire public schema...")
         with self.engine.connect() as conn:
-            # Drop all v1 tables (in dependency order)
-            conn.execute(text("DROP TABLE IF EXISTS scraping_status CASCADE"))
-            conn.execute(text("DROP TABLE IF EXISTS post_collections CASCADE"))
-            conn.execute(text("DROP TABLE IF EXISTS collections CASCADE"))
-            conn.execute(text("DROP TABLE IF EXISTS posts CASCADE"))
-            conn.execute(text("DROP TABLE IF EXISTS media_files CASCADE"))
-            conn.execute(text("DROP TABLE IF EXISTS creators CASCADE"))
-            conn.execute(text("DROP TABLE IF EXISTS system_config CASCADE"))
+            conn.execute(text("DROP SCHEMA public CASCADE"))
+            conn.execute(text("CREATE SCHEMA public"))
+            conn.execute(text("GRANT ALL ON SCHEMA public TO patreon_user"))
+            conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
             conn.commit()
-        self.log("  ✅ Old tables dropped")
+        self.log("  ✅ Schema dropped and recreated")
 
         # Execute schema_v2.sql
         with self.engine.connect() as conn:
