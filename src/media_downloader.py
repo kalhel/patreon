@@ -1496,27 +1496,47 @@ class MediaDownloader:
         result['images'] = images['absolute']
         result['images_relative'] = images['relative']
 
-        # Download videos
-        video_block_count = sum(
-            1
-            for block in post.get('content_blocks') or []
-            if isinstance(block, dict) and block.get('type') == 'video'
-        )
-        expected_videos = video_block_count if video_block_count > 0 else None
+        # Download videos (check settings first)
+        patreon_video_settings = self.settings.get('media', {}).get('patreon', {}).get('videos', {})
+        should_download_videos = patreon_video_settings.get('download', True)
 
-        videos = self.download_videos_from_post(post, creator_id, referer, expected_videos)
-        result['videos'] = videos['absolute']
-        result['videos_relative'] = videos['relative']
+        if should_download_videos:
+            video_block_count = sum(
+                1
+                for block in post.get('content_blocks') or []
+                if isinstance(block, dict) and block.get('type') == 'video'
+            )
+            expected_videos = video_block_count if video_block_count > 0 else None
+
+            videos = self.download_videos_from_post(post, creator_id, referer, expected_videos)
+            result['videos'] = videos['absolute']
+            result['videos_relative'] = videos['relative']
+        else:
+            # Videos disabled - add fallback message to video blocks
+            fallback_message = patreon_video_settings.get('fallback_message', 'Video not downloaded')
+            content_blocks = post.get('content_blocks', [])
+            for block in content_blocks:
+                if isinstance(block, dict) and block.get('type') == 'video':
+                    block['download_disabled'] = True
+                    block['fallback_message'] = fallback_message
+
+            logger.info(f"  ⏭️  [VIDEO] Patreon video download disabled in settings - skipping")
 
         # Download subtitles (.vtt files)
         subtitles = self.download_subtitles_from_post(post, creator_id, referer)
         result['video_subtitles'] = subtitles['absolute']
         result['video_subtitles_relative'] = subtitles['relative']
 
-        # Download audios
-        audios = self.download_audios_from_post(post, creator_id, referer)
-        result['audios'] = audios['absolute']
-        result['audios_relative'] = audios['relative']
+        # Download audios (check settings first)
+        patreon_audio_settings = self.settings.get('media', {}).get('patreon', {}).get('audios', {})
+        should_download_audios = patreon_audio_settings.get('download', True)
+
+        if should_download_audios:
+            audios = self.download_audios_from_post(post, creator_id, referer)
+            result['audios'] = audios['absolute']
+            result['audios_relative'] = audios['relative']
+        else:
+            logger.info(f"  ⏭️  [AUDIO] Patreon audio download disabled in settings - skipping")
 
         # Download YouTube videos (if any youtube_embed blocks exist)
         youtube_result = self.download_youtube_videos_from_post(post, creator_id)
