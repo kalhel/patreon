@@ -661,7 +661,17 @@
                                 {% endfor %}
                             {% endif %}
 
-                            {# Show videos after audio #}
+                            {# Show images after audio #}
+                            {% set local_images = post.image_local_paths if post.image_local_paths is defined and post.image_local_paths else [] %}
+                            {% if local_images %}
+                                {% for img_path in local_images %}
+                                    <div class="content-block image">
+                                        <img src="{{ url_for('media_file', filename=img_path) }}" alt="Post image" loading="lazy">
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+
+                            {# Show videos after images #}
                             {% set local_videos = post.video_local_paths if post.video_local_paths is defined and post.video_local_paths else [] %}
                             {% set local_subtitles = post.video_subtitles_relative if post.video_subtitles_relative is defined and post.video_subtitles_relative else [] %}
                             {% if local_videos %}
