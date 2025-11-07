@@ -602,20 +602,28 @@ engine = create_engine(f"postgresql://{db_user}:{encoded_password}@{db_host}:{db
   - Script ejecutado: `python scripts/migrate_to_schema_v2.py`
   - Resultado: **EXITOSO** ✅
 
+- [x] **Fix inconsistencia de schema** ✅
+  - Problema detectado: `scraping_status` tenía `creator_id` (V1) en lugar de `source_id` (V2)
+  - SQL fix aplicado: Renombrar columna + actualizar foreign keys e índices
+  - Archivo: `fix_scraping_status_column.sql` (aplicado y archivado)
+  - Fecha: 2025-11-07 11:42 Local
+
 - [x] **Verificar migración completada** ✅
   - 1 creator migrado (Unknown → platform-agnostic)
   - 1 creator_source creado (Patreon platform)
-  - 982 scraping_status migrados (con source_id correcto)
+  - 982 scraping_status migrados (con `source_id` correcto ✅)
   - 0 posts (correcto - se llenarán en Phase 2 con el scraper)
   - Todas las tablas v2 creadas correctamente
+  - Script verificación: `scripts/verify_schema_v2.sh` - **TODOS LOS CHECKS PASAN** ✅
 
 ### Phase 1.5 ✅ **COMPLETADA CON ÉXITO**
-- **Total Tasks**: 14
-- **Completed**: 14
+- **Total Tasks**: 15
+- **Completed**: 15
 - **Remaining**: 0
 - **Progress**: 100%
-- **Estado**: ✅ **MIGRACIÓN EXITOSA** - Schema V2 multi-source implementado
+- **Estado**: ✅ **MIGRACIÓN EXITOSA** - Schema V2 multi-source 100% implementado y verificado
 - **Resultado**: Base de datos lista para soportar múltiples plataformas por creador
+- **Verificación**: Todos los checks pasando ✅
 - **Siguiente fase**: Phase 2 - Core Backend (PostgresTracker)
 
 ### Archivos Creados en Phase 1.5
