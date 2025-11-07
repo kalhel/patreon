@@ -231,6 +231,24 @@ class SchemaV2Migration:
             conn.commit()
         self.log("  ✅ Schema dropped and recreated")
 
+        # Create vector extension as superuser (required after DROP SCHEMA)
+        self.log("  Creating pgvector extension as superuser...")
+        import subprocess
+        db_name = os.getenv('DB_NAME', 'alejandria')
+        try:
+            subprocess.run(
+                ['sudo', '-u', 'postgres', 'psql', '-d', db_name, '-c', 'CREATE EXTENSION IF NOT EXISTS vector;'],
+                check=True,
+                capture_output=True,
+                text=True
+            )
+            self.log("  ✅ pgvector extension created")
+        except subprocess.CalledProcessError as e:
+            self.error(f"Failed to create vector extension: {e}")
+            if e.stderr:
+                self.error(f"Error: {e.stderr}")
+            return False
+
         # Execute schema_v2.sql
         with self.engine.connect() as conn:
             conn.execute(text(schema_sql))
