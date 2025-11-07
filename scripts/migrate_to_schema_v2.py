@@ -153,23 +153,30 @@ class SchemaV2Migration:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         backup_file = backup_dir / f"schema_v1_backup_{timestamp}.sql"
 
-        # Extract connection details
-        from urllib.parse import urlparse, unquote
-        parsed = urlparse(self.db_url)
+        # Get connection details from environment variables (more reliable than parsing URL)
+        db_host = os.getenv('DB_HOST', '127.0.0.1')
+        db_port = os.getenv('DB_PORT', '5432')
+        db_user = os.getenv('DB_USER', 'patreon_user')
+        db_name = os.getenv('DB_NAME', 'alejandria')
+        db_password = os.getenv('DB_PASSWORD')
 
         # Debug: Show connection details (without password)
-        self.log(f"  Host: {parsed.hostname or 'localhost'}")
-        self.log(f"  Port: {parsed.port or 5432}")
-        self.log(f"  User: {parsed.username}")
-        self.log(f"  Database: {parsed.path.lstrip('/')}")
+        self.log(f"  Host: {db_host}")
+        self.log(f"  Port: {db_port}")
+        self.log(f"  User: {db_user}")
+        self.log(f"  Database: {db_name}")
+
+        if not db_password:
+            self.error("DB_PASSWORD not found in environment variables")
+            return False
 
         # Run pg_dump
         cmd = [
             'pg_dump',
-            '-h', parsed.hostname or 'localhost',
-            '-p', str(parsed.port or 5432),
-            '-U', parsed.username,
-            '-d', parsed.path.lstrip('/'),
+            '-h', db_host,
+            '-p', db_port,
+            '-U', db_user,
+            '-d', db_name,
             '-f', str(backup_file),
             '--clean',
             '--if-exists'
@@ -178,11 +185,7 @@ class SchemaV2Migration:
         import subprocess
         try:
             env = os.environ.copy()
-            if parsed.password:
-                env['PGPASSWORD'] = parsed.password
-            else:
-                self.error("No password found in DATABASE_URL")
-                return False
+            env['PGPASSWORD'] = db_password
 
             # Run with stderr capture for better error messages
             result = subprocess.run(
