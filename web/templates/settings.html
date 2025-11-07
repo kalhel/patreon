@@ -629,6 +629,246 @@
         </div>
     </div>
 
+    <!-- Media Download Settings -->
+    <div class="container">
+        <div class="section">
+            <h2 class="section-title">📥 Media Download Settings</h2>
+            <p style="color: #888; margin-bottom: 20px;">
+                Configure what media to download and how to handle duplicates.
+                Settings are saved to <code>config/settings.json</code>
+            </p>
+
+            <div style="display: grid; gap: 20px;">
+                <!-- Images Settings -->
+                <div style="background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333;">
+                    <h3 style="color: #2196F3; margin-top: 0;">🖼️ Images</h3>
+
+                    <label style="display: flex; align-items: center; margin-bottom: 15px; cursor: pointer;">
+                        <input type="checkbox" id="download-images" style="margin-right: 10px; width: 18px; height: 18px;">
+                        <span style="font-weight: 500;">Download content images</span>
+                    </label>
+
+                    <label style="display: flex; align-items: center; margin-bottom: 15px; cursor: pointer;">
+                        <input type="checkbox" id="skip-avatars" style="margin-right: 10px; width: 18px; height: 18px;">
+                        <span>Skip avatars/icons (&lt;400x400px)</span>
+                    </label>
+
+                    <label style="display: flex; align-items: center; margin-bottom: 15px; cursor: pointer;">
+                        <input type="checkbox" id="dedup-images" style="margin-right: 10px; width: 18px; height: 18px;">
+                        <span>Enable deduplication (prevents duplicates)</span>
+                    </label>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #888;">Min width (px)</label>
+                            <input type="number" id="min-width" min="0" step="50"
+                                   style="width: 100%; padding: 8px; background: #2a2a2a; border: 1px solid #444; border-radius: 4px; color: white;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #888;">Min height (px)</label>
+                            <input type="number" id="min-height" min="0" step="50"
+                                   style="width: 100%; padding: 8px; background: #2a2a2a; border: 1px solid #444; border-radius: 4px; color: white;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Patreon Videos/Audio Settings -->
+                <div style="background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333;">
+                    <h3 style="color: #FF424D; margin-top: 0;">🎬 Patreon Videos</h3>
+
+                    <label style="display: flex; align-items: center; margin-bottom: 15px; cursor: pointer;">
+                        <input type="checkbox" id="download-patreon-videos" style="margin-right: 10px; width: 18px; height: 18px;">
+                        <span style="font-weight: 500;">Download Patreon videos</span>
+                    </label>
+                    <p style="color: #888; font-size: 14px; margin: 10px 0;">
+                        If disabled, videos will only show "View on Patreon" link
+                    </p>
+
+                    <h3 style="color: #FF424D; margin-top: 20px;">🎵 Patreon Audio</h3>
+
+                    <label style="display: flex; align-items: center; margin-bottom: 15px; cursor: pointer;">
+                        <input type="checkbox" id="download-patreon-audios" style="margin-right: 10px; width: 18px; height: 18px;">
+                        <span style="font-weight: 500;">Download Patreon audio files</span>
+                    </label>
+                </div>
+
+                <!-- YouTube Settings -->
+                <div style="background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333;">
+                    <h3 style="color: #FF0000; margin-top: 0;">▶️ YouTube Videos</h3>
+
+                    <label style="display: block; margin-bottom: 10px; color: #888;">Download mode:</label>
+                    <select id="youtube-mode" style="width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #444; border-radius: 4px; color: white; margin-bottom: 10px;">
+                        <option value="embed">Embed (fast, no download)</option>
+                        <option value="download">Download with subtitles (slow, requires yt-dlp)</option>
+                    </select>
+
+                    <p style="color: #888; font-size: 14px; margin: 10px 0;">
+                        <strong>Embed:</strong> Just stores YouTube URL, video loads from YouTube<br>
+                        <strong>Download:</strong> Downloads video + English/Spanish subtitles to disk
+                    </p>
+                </div>
+
+                <!-- Deduplication Settings -->
+                <div style="background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333;">
+                    <h3 style="color: #4CAF50; margin-top: 0;">🔄 Deduplication</h3>
+
+                    <label style="display: flex; align-items: center; margin-bottom: 15px; cursor: pointer;">
+                        <input type="checkbox" id="global-dedup" style="margin-right: 10px; width: 18px; height: 18px;">
+                        <span style="font-weight: 500;">Enable global deduplication</span>
+                    </label>
+
+                    <p style="color: #888; font-size: 14px; margin: 10px 0;">
+                        Uses SHA256 hash to detect duplicate files. If a file with the same content exists,
+                        it won't be downloaded again, saving disk space and bandwidth.
+                    </p>
+
+                    <div style="background: #2a2a2a; padding: 15px; border-radius: 6px; margin-top: 15px;">
+                        <strong style="color: #4CAF50;">💾 Space Saved:</strong>
+                        <span id="dedup-stats" style="color: #888;">Loading...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px; display: flex; gap: 10px;">
+                <button class="btn" onclick="saveMediaSettings()">
+                    💾 Save Media Settings
+                </button>
+                <button class="btn btn-secondary" onclick="loadMediaSettings()">
+                    🔄 Reload Settings
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load media settings on page load
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadMediaSettings();
+            await loadDedupStats();
+        });
+
+        async function loadMediaSettings() {
+            try {
+                const response = await fetch('/api/media-settings/get');
+                const result = await response.json();
+
+                if (result.success) {
+                    const settings = result.settings.media;
+
+                    // Images
+                    document.getElementById('download-images').checked = settings.images.download_content_images;
+                    document.getElementById('skip-avatars').checked = settings.images.skip_avatars;
+                    document.getElementById('dedup-images').checked = settings.images.deduplication;
+                    document.getElementById('min-width').value = settings.images.min_size.width;
+                    document.getElementById('min-height').value = settings.images.min_size.height;
+
+                    // Patreon
+                    document.getElementById('download-patreon-videos').checked = settings.patreon.videos.download;
+                    document.getElementById('download-patreon-audios').checked = settings.patreon.audios.download;
+
+                    // YouTube
+                    document.getElementById('youtube-mode').value = settings.youtube.mode;
+
+                    // Global dedup
+                    document.getElementById('global-dedup').checked = settings.deduplication.enabled;
+                }
+            } catch (error) {
+                console.error('Error loading media settings:', error);
+            }
+        }
+
+        async function saveMediaSettings() {
+            try {
+                const settings = {
+                    media: {
+                        images: {
+                            download_content_images: document.getElementById('download-images').checked,
+                            skip_avatars: document.getElementById('skip-avatars').checked,
+                            skip_covers: true,
+                            skip_thumbnails: true,
+                            min_size: {
+                                width: parseInt(document.getElementById('min-width').value),
+                                height: parseInt(document.getElementById('min-height').value),
+                                note: "Filter out small icons/avatars"
+                            },
+                            deduplication: document.getElementById('dedup-images').checked,
+                            note: "Download content images, skip avatars/covers/icons, deduplicate"
+                        },
+                        patreon: {
+                            videos: {
+                                download: document.getElementById('download-patreon-videos').checked,
+                                quality: "best",
+                                format: "mp4",
+                                fallback_message: "Ver en Patreon"
+                            },
+                            audios: {
+                                download: document.getElementById('download-patreon-audios').checked,
+                                format: "mp3"
+                            }
+                        },
+                        youtube: {
+                            mode: document.getElementById('youtube-mode').value,
+                            download_if_embed_fails: false,
+                            download_settings: {
+                                quality: "best",
+                                subtitles: ["en", "es"],
+                                auto_subtitles: true,
+                                format: "mp4"
+                            },
+                            note: "mode: 'embed' (fast, no download) or 'download' (slow, requires yt-dlp)"
+                        },
+                        deduplication: {
+                            enabled: document.getElementById('global-dedup').checked,
+                            hash_algorithm: "sha256",
+                            use_database: true,
+                            note: "Prevent downloading same file twice using SHA256 hash"
+                        }
+                    },
+                    scraping: {
+                        max_retries: 3,
+                        retry_delay: 60,
+                        timeout: 300,
+                        headless: true
+                    },
+                    celery: {
+                        enabled: false,
+                        broker: "redis://localhost:6379/0",
+                        workers: {
+                            phase1: 2,
+                            phase2: 1,
+                            phase3: 2
+                        },
+                        note: "Celery queues for production - disabled for local development"
+                    }
+                };
+
+                const response = await fetch('/api/media-settings/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ settings })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('✅ Media settings saved successfully!\n\nFile updated:\n- config/settings.json');
+                } else {
+                    alert('❌ Error saving settings:\n' + result.message);
+                }
+            } catch (error) {
+                alert('❌ Error saving settings:\n' + error.message);
+            }
+        }
+
+        async function loadDedupStats() {
+            // TODO: Implement API endpoint to get dedup stats from .dedup_index.json
+            const statsEl = document.getElementById('dedup-stats');
+            statsEl.textContent = 'Deduplication enabled (stats will be shown after first scrape)';
+        }
+    </script>
+
     <script>
         async function saveConfiguration() {
             try:

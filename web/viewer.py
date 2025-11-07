@@ -671,6 +671,93 @@ def save_settings():
         }), 500
 
 
+@app.route('/api/media-settings/get', methods=['GET'])
+def get_media_settings():
+    """Get media download settings from settings.json"""
+    try:
+        config_dir = Path(__file__).parent.parent / "config"
+        settings_file = config_dir / "settings.json"
+
+        if not settings_file.exists():
+            # Return default settings
+            return jsonify({
+                'success': True,
+                'settings': {
+                    "media": {
+                        "images": {
+                            "download_content_images": True,
+                            "skip_avatars": True,
+                            "skip_covers": True,
+                            "skip_thumbnails": True,
+                            "min_size": {"width": 400, "height": 400},
+                            "deduplication": True
+                        },
+                        "patreon": {
+                            "videos": {"download": True, "quality": "best", "format": "mp4"},
+                            "audios": {"download": True, "format": "mp3"}
+                        },
+                        "youtube": {"mode": "embed"},
+                        "deduplication": {"enabled": True, "hash_algorithm": "sha256"}
+                    }
+                }
+            })
+
+        with open(settings_file, 'r', encoding='utf-8') as f:
+            settings = json.load(f)
+
+        return jsonify({
+            'success': True,
+            'settings': settings
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error loading settings: {str(e)}'
+        }), 500
+
+
+@app.route('/api/media-settings/save', methods=['POST'])
+def save_media_settings():
+    """Save media download settings to settings.json"""
+    try:
+        config_dir = Path(__file__).parent.parent / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        settings_file = config_dir / "settings.json"
+
+        data = request.get_json()
+
+        if 'settings' not in data:
+            return jsonify({
+                'success': False,
+                'message': 'No settings data provided'
+            }), 400
+
+        # Create backup if file exists
+        if settings_file.exists():
+            backup_file = settings_file.with_suffix('.json.backup')
+            import shutil
+            shutil.copy2(settings_file, backup_file)
+            print(f"✅ Created backup: {backup_file}")
+
+        # Save new settings
+        with open(settings_file, 'w', encoding='utf-8') as f:
+            json.dump(data['settings'], f, indent=2, ensure_ascii=False)
+
+        print(f"✅ Saved media settings to: {settings_file}")
+
+        return jsonify({
+            'success': True,
+            'message': 'Settings saved successfully'
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error saving settings: {str(e)}'
+        }), 500
+
+
 @app.route('/api/creator/update', methods=['POST'])
 def update_creator():
     """Update an existing creator in creators.json"""
