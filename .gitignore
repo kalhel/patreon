@@ -106,3 +106,4 @@ tmp/
 
 # Archive directory (deprecated files)
 # archive/
+check_collections_structure.py
