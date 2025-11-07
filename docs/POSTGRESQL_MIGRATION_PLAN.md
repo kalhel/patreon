@@ -129,28 +129,33 @@ psql $DATABASE_URL -f database/schema_posts.sql
 
 ---
 
-### 2.2 Phase 2 Detail Extractor (`src/phase2_detail_extractor.py`)
+### 2.2 Phase 2 Detail Extractor ✅ (`src/phase2_detail_extractor.py`)
 
 **Current behavior:**
-- Reads from: `data/raw/{creator}_posts.json`
+- Already reads from PostgreSQL via `PostgresTracker`
 - Extracts full post details (content, media, etc.)
 - Saves to: `data/processed/{creator}_posts_detailed.json`
+- Only marks `details_extracted = true` in database
 
-**New behavior:**
-- Read from PostgreSQL `posts` table (filter by `status.details_extracted = false`)
+**New behavior (IMPLEMENTED):**
+- Read from PostgreSQL `posts` table (via PostgresTracker)
 - Extract full post details
-- Update PostgreSQL `posts` table with full data
-- **DUAL MODE:** Also save to JSON as backup (temporary)
+- Update PostgreSQL `posts` table with full data (content_blocks, media paths, etc.)
+- **DUAL MODE:** Always saves to JSON + PostgreSQL if flag enabled
 
-**Changes needed:**
-- Import database connection
-- Read posts from PostgreSQL
-- Update posts in PostgreSQL with new content_blocks, media paths
-- Add flag check: `config/use_postgresql.flag`
+**Changes completed:**
+- ✅ Import database connection (sqlalchemy, dotenv, quote_plus)
+- ✅ Added `use_postgresql()` function to check flag
+- ✅ Added `get_database_url()` function to build connection from .env
+- ✅ Created `update_post_details_in_postgres()` function
+- ✅ Updates posts with: title, content, content_blocks, video_streams, video_subtitles, media paths, tags
+- ✅ Modified `extract_post_details()` to use dual mode
+- ✅ Graceful error handling for PostgreSQL failures
 
 **Rollback:**
 - Git revert the commit
 - JSON files remain untouched
+- Or simply remove `config/use_postgresql.flag`
 
 ---
 
@@ -294,8 +299,8 @@ git revert <commit-hash>
 1. ✅ **FASE 0:** Backups + branch + tag + documentation
 2. ✅ **FASE 1:** Migrate posts and collections to PostgreSQL
 3. ✅ **FASE 2.3:** Update Phase 3 collections scraper
-4. ⏳ **FASE 2.2:** Update Phase 2 detail extractor (next)
-5. 🔄 **FASE 2.1:** Update Phase 1 URL collector
+4. ✅ **FASE 2.2:** Update Phase 2 detail extractor
+5. ⏳ **FASE 2.1:** Update Phase 1 URL collector (next)
 6. 🌐 **FASE 3:** Update web viewer with dual mode
 7. ✅ **FASE 4:** Complete testing and validation
 
@@ -323,8 +328,8 @@ git revert <commit-hash>
   - ✅ Collections migrated (30 collections, 259 relationships)
 - ⏳ FASE 2: Update scraping scripts (in progress)
   - ✅ Phase 3 collections scraper (dual mode implemented)
-  - ⏳ Phase 2 detail extractor (next)
-  - 🔄 Phase 1 URL collector
+  - ✅ Phase 2 detail extractor (dual mode implemented)
+  - ⏳ Phase 1 URL collector (next)
 
 ---
 

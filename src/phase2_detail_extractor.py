@@ -7,12 +7,19 @@ Extracts full details from posts tracked in PostgreSQL
 import json
 import argparse
 import logging
+import os
 from pathlib import Path
 from typing import List, Dict, Optional
+from dotenv import load_dotenv
+from urllib.parse import quote_plus
+from sqlalchemy import create_engine, text
 from patreon_auth_selenium import PatreonAuthSelenium
 from patreon_scraper_v2 import PatreonScraperV2
 from postgres_tracker import PostgresTracker
 from media_downloader import MediaDownloader
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -26,6 +33,93 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 media_downloader = MediaDownloader()
+
+
+# ============================================================================
+# PostgreSQL Integration Functions
+# ============================================================================
+
+def use_postgresql() -> bool:
+    """Check if PostgreSQL mode is enabled via flag file"""
+    flag_path = Path("config/use_postgresql.flag")
+    return flag_path.exists()
+
+
+def get_database_url() -> str:
+    """Build PostgreSQL connection URL from environment variables"""
+    db_user = os.getenv('DB_USER', 'postgres')
+    db_password = os.getenv('DB_PASSWORD')
+    db_host = os.getenv('DB_HOST', 'localhost')
+    db_port = os.getenv('DB_PORT', '5432')
+    db_name = os.getenv('DB_NAME', 'alejandria')
+
+    if not db_password:
+        raise ValueError("DB_PASSWORD not found in .env file")
+
+    encoded_password = quote_plus(db_password)
+    return f"postgresql://{db_user}:{encoded_password}@{db_host}:{db_port}/{db_name}"
+
+
+def update_post_details_in_postgres(post_data: Dict):
+    """
+    Update post in PostgreSQL with full extracted details
+
+    Args:
+        post_data: Full post data including extracted details
+    """
+    try:
+        engine = create_engine(get_database_url())
+
+        with engine.connect() as conn:
+            # Update post with full details
+            update_sql = text("""
+                UPDATE posts
+                SET
+                    title = :title,
+                    content = :content,
+                    content_blocks = CAST(:content_blocks AS jsonb),
+                    published_at = :published_at,
+                    edited_at = :edited_at,
+                    video_streams = CAST(:video_streams AS jsonb),
+                    video_subtitles = CAST(:video_subtitles AS jsonb),
+                    video_local_paths = :video_local_paths,
+                    video_subtitles_relative = :video_subtitles_relative,
+                    audios = :audios,
+                    audio_local_paths = :audio_local_paths,
+                    images = :images,
+                    image_local_paths = :image_local_paths,
+                    patreon_tags = :patreon_tags,
+                    updated_at = NOW()
+                WHERE post_id = :post_id
+            """)
+
+            # Prepare data for update
+            update_params = {
+                'post_id': post_data.get('post_id'),
+                'title': post_data.get('title'),
+                'content': post_data.get('content'),
+                'content_blocks': json.dumps(post_data.get('content_blocks', [])),
+                'published_at': post_data.get('published_at'),
+                'edited_at': post_data.get('edited_at'),
+                'video_streams': json.dumps(post_data.get('video_streams', [])),
+                'video_subtitles': json.dumps(post_data.get('video_subtitles', [])),
+                'video_local_paths': post_data.get('video_local_paths'),
+                'video_subtitles_relative': post_data.get('video_subtitles_relative'),
+                'audios': post_data.get('audios'),
+                'audio_local_paths': post_data.get('audio_local_paths'),
+                'images': post_data.get('images'),
+                'image_local_paths': post_data.get('image_local_paths'),
+                'patreon_tags': post_data.get('patreon_tags')
+            }
+
+            conn.execute(update_sql, update_params)
+            conn.commit()
+
+            logger.info(f"   🐘 Updated post {post_data.get('post_id')} in PostgreSQL")
+
+    except Exception as e:
+        logger.error(f"   ❌ Error updating PostgreSQL: {e}")
+        raise
 
 
 def load_config():
@@ -176,7 +270,15 @@ def extract_post_details(
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(existing_posts, f, indent=2, ensure_ascii=False)
 
-            logger.info(f"   💾 Saved to {output_file}")
+            logger.info(f"   💾 Saved to JSON: {output_file}")
+
+        # DUAL MODE: Also save to PostgreSQL if flag is enabled
+        if use_postgresql():
+            try:
+                logger.info(f"   🐘 PostgreSQL mode enabled - updating database...")
+                update_post_details_in_postgres(full_post_data)
+            except Exception as e:
+                logger.warning(f"   ⚠️  PostgreSQL update failed (continuing): {e}")
 
         # Mark as extracted in database
         tracker.mark_details_extracted(post_id, success=True)
