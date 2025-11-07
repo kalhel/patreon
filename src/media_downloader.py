@@ -484,27 +484,30 @@ class MediaDownloader:
             logger.debug(f"Could not validate image size: {e}")
             return True  # Accept on error to avoid breaking downloads
 
-    def download_file(self, url: str, output_path: Path, media_type: str = 'image', referer: Optional[str] = None) -> bool:
+    def download_file(self, url: str, output_path: Path, media_type: str = 'image', referer: Optional[str] = None, check_dedup: bool = True, post_id: str = None, index: int = 0) -> Tuple[bool, Optional[str]]:
         """
-        Download a single file
+        Download a single file with deduplication support
 
         Args:
             url: URL to download
             output_path: Path to save file
             media_type: Type of media (for stats)
             referer: Optional HTTP referer header to include
+            check_dedup: Whether to check for duplicates before downloading
+            post_id: Post ID for generating hash-based filename
+            index: File index in post
 
         Returns:
-            bool: True if downloaded successfully
+            Tuple[bool, Optional[str]]: (success, final_file_path)
         """
         try:
-            # Check if already exists
+            # Check if already exists at this exact path
             if output_path.exists():
                 logger.debug(f"Skipped (exists): {output_path.name}")
                 self.stats[f'{media_type}s']['skipped'] += 1
-                return True
+                return True, str(output_path)
 
-            # Download
+            # Download to memory first to calculate hash
             logger.debug(f"Downloading: {url}")
             headers = {}
             if referer:
@@ -512,35 +515,52 @@ class MediaDownloader:
             response = self.session.get(url, stream=True, timeout=30, headers=headers)
             response.raise_for_status()
 
-            # Get total size for progress bar
-            total_size = int(response.headers.get('content-length', 0))
+            # Read content to calculate hash
+            content = response.content
+
+            # Check deduplication if enabled
+            if check_dedup and self.settings.get('media', {}).get('deduplication', {}).get('enabled', True):
+                file_hash = self.calculate_content_hash(content)
+                hash16 = file_hash[:16]
+
+                # Check if this hash already exists
+                existing_path = self.check_duplicate(file_hash)
+                if existing_path and Path(existing_path).exists():
+                    logger.info(f"✓ Deduplicated: {output_path.name} -> existing {Path(existing_path).name}")
+                    self.stats[f'{media_type}s']['deduplicated'] += 1
+                    self.stats[f'{media_type}s']['skipped'] += 1
+                    return True, existing_path
+
+                # Generate new filename with hash if post_id provided
+                if post_id:
+                    ext = output_path.suffix
+                    new_filename = f"{hash16}_{post_id}_{index:02d}{ext}"
+                    output_path = output_path.parent / new_filename
 
             # Create parent directory
             output_path.parent.mkdir(parents=True, exist_ok=True)
 
-            # Download with progress
+            # Write content to file
             with open(output_path, 'wb') as f:
-                if total_size == 0:
-                    f.write(response.content)
-                else:
-                    downloaded = 0
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if chunk:
-                            f.write(chunk)
-                            downloaded += len(chunk)
+                f.write(content)
+
+            # Register in dedup index if enabled
+            if check_dedup and self.settings.get('media', {}).get('deduplication', {}).get('enabled', True):
+                file_hash = self.calculate_hash(output_path)
+                self.register_file(file_hash, str(output_path))
 
             self.stats[f'{media_type}s']['downloaded'] += 1
             logger.info(f"✓ Downloaded: {output_path.name} ({self._format_size(output_path.stat().st_size)})")
-            return True
+            return True, str(output_path)
 
         except requests.exceptions.RequestException as e:
             logger.error(f"✗ Failed to download {url}: {e}")
             self.stats[f'{media_type}s']['failed'] += 1
-            return False
+            return False, None
         except Exception as e:
             logger.error(f"✗ Error downloading {url}: {e}")
             self.stats[f'{media_type}s']['failed'] += 1
-            return False
+            return False, None
 
     def _get_filename_from_url(self, url: str, default_ext: str = '.jpg') -> str:
         """
@@ -575,7 +595,7 @@ class MediaDownloader:
 
     def download_images_from_post(self, post: Dict, creator_id: str, referer: Optional[str]) -> Dict[str, List[str]]:
         """
-        Download all images from a post
+        Download all images from a post with deduplication
 
         Args:
             post: Post dictionary
@@ -587,6 +607,14 @@ class MediaDownloader:
         """
         downloaded = []
         relatives = []
+
+        # Check settings - should we download images?
+        media_settings = self.settings.get('media', {})
+        image_settings = media_settings.get('images', {})
+
+        if not image_settings.get('download_content_images', True):
+            logger.debug("Image download disabled in settings")
+            return {'absolute': [], 'relative': []}
 
         # Get image URLs
         image_urls = self._flatten_urls([
@@ -603,40 +631,52 @@ class MediaDownloader:
         creator_dir.mkdir(parents=True, exist_ok=True)
 
         post_id = post.get('post_id', 'unknown')
+        min_width = image_settings.get('min_size', {}).get('width', 400)
+        min_height = image_settings.get('min_size', {}).get('height', 400)
 
         # Download each image
         for i, url in enumerate(image_urls):
             self.stats['images']['total'] += 1
 
             filename = self._get_filename_from_url(url, '.jpg')
-            filename = f"{post_id}_{i:02d}_{filename}"
+            output_path = creator_dir / filename  # Temporary name, will be renamed with hash
 
-            output_path = creator_dir / filename
+            # Download with deduplication
+            success, final_path = self.download_file(
+                url, output_path, 'image',
+                referer=referer,
+                check_dedup=image_settings.get('deduplication', True),
+                post_id=post_id,
+                index=i
+            )
 
-            if self.download_file(url, output_path, 'image', referer=referer):
+            if success and final_path:
+                final_path_obj = Path(final_path)
+
                 # Validate image size to filter out small avatars/icons
-                if not self._validate_image_size(output_path, min_width=400, min_height=400):
+                if not self._validate_image_size(final_path_obj, min_width=min_width, min_height=min_height):
                     # Remove the small image
                     try:
-                        output_path.unlink()
+                        final_path_obj.unlink()
                         self.stats['images']['downloaded'] -= 1
                         self.stats['images']['skipped'] += 1
+                        logger.debug(f"Removed small image: {final_path_obj.name}")
                     except Exception:
                         pass
                     time.sleep(0.5)
                     continue
 
-                abs_path = str(output_path)
-                if abs_path not in downloaded:
-                    downloaded.append(abs_path)
+                if final_path not in downloaded:
+                    downloaded.append(final_path)
                     try:
-                        relatives.append(output_path.relative_to(self.output_dir).as_posix())
+                        relatives.append(final_path_obj.relative_to(self.output_dir).as_posix())
                     except ValueError:
-                        relatives.append(abs_path)
+                        relatives.append(final_path)
 
             # Small delay between downloads
             time.sleep(0.5)
 
+        logger.info(f"📸 Images: {len(downloaded)} downloaded, {self.stats['images']['deduplicated']} deduplicated")
         return {'absolute': downloaded, 'relative': relatives}
 
     def download_videos_from_post(
