@@ -2,13 +2,22 @@
 """
 Web Viewer - Local web app to preview scraped Patreon posts
 Displays posts with formatting similar to Patreon before uploading to Notion
+
+DUAL MODE: Reads from PostgreSQL (if flag enabled) or JSON (fallback)
 """
 
 import json
 import sys
+import os
 from pathlib import Path
 from datetime import datetime
 from flask import Flask, render_template, jsonify, request, send_from_directory
+from dotenv import load_dotenv
+from urllib.parse import quote_plus
+from sqlalchemy import create_engine, text
+
+# Load environment variables
+load_dotenv()
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -155,8 +164,114 @@ app.jinja_env.filters['date_eu'] = format_date_eu
 app.jinja_env.filters['creator_name'] = get_creator_display_name
 
 
-def load_all_posts():
-    """Load all posts from JSON files (raw and processed)"""
+# ============================================================================
+# PostgreSQL Integration (Dual Mode)
+# ============================================================================
+
+def use_postgresql() -> bool:
+    """Check if PostgreSQL mode is enabled via flag file"""
+    flag_path = Path(__file__).parent.parent / "config" / "use_postgresql.flag"
+    return flag_path.exists()
+
+
+def get_database_url() -> str:
+    """Build PostgreSQL connection URL from environment variables"""
+    db_user = os.getenv('DB_USER', 'postgres')
+    db_password = os.getenv('DB_PASSWORD')
+    db_host = os.getenv('DB_HOST', 'localhost')
+    db_port = os.getenv('DB_PORT', '5432')
+    db_name = os.getenv('DB_NAME', 'alejandria')
+
+    if not db_password:
+        raise ValueError("DB_PASSWORD not found in .env file")
+
+    encoded_password = quote_plus(db_password)
+    return f"postgresql://{db_user}:{encoded_password}@{db_host}:{db_port}/{db_name}"
+
+
+def load_posts_from_postgres():
+    """Load all posts from PostgreSQL database"""
+    try:
+        print("🐘 Loading posts from PostgreSQL...")
+        engine = create_engine(get_database_url())
+
+        with engine.connect() as conn:
+            # Get all posts (not deleted)
+            query = text("""
+                SELECT
+                    post_id,
+                    creator_id,
+                    post_url,
+                    title,
+                    full_content,
+                    content_blocks,
+                    published_at,
+                    created_at,
+                    updated_at,
+                    creator_name,
+                    creator_avatar,
+                    like_count,
+                    comment_count,
+                    images,
+                    videos,
+                    audios,
+                    attachments,
+                    image_local_paths,
+                    video_local_paths,
+                    audio_local_paths,
+                    video_streams,
+                    video_subtitles,
+                    patreon_tags,
+                    status
+                FROM posts
+                WHERE deleted_at IS NULL
+                ORDER BY post_id DESC
+            """)
+
+            result = conn.execute(query)
+            rows = result.fetchall()
+
+            posts = []
+            for row in rows:
+                post = {
+                    'post_id': row[0],
+                    'creator_id': row[1],
+                    'post_url': row[2],
+                    'title': row[3],
+                    'full_content': row[4],
+                    'content_blocks': row[5],
+                    'published_at': row[6].isoformat() if row[6] else None,
+                    'created_at': row[7].isoformat() if row[7] else None,
+                    'updated_at': row[8].isoformat() if row[8] else None,
+                    'creator_name': row[9],
+                    'creator_avatar': row[10],
+                    'like_count': row[11],
+                    'comment_count': row[12],
+                    'images': row[13],
+                    'videos': row[14],
+                    'audios': row[15],
+                    'attachments': row[16],
+                    'image_local_paths': row[17],
+                    'video_local_paths': row[18],
+                    'audio_local_paths': row[19],
+                    'video_streams': row[20],
+                    'video_subtitles': row[21],
+                    'patreon_tags': row[22],
+                    'status': row[23]
+                }
+                posts.append(post)
+
+            print(f"✅ Loaded {len(posts)} posts from PostgreSQL")
+            return posts
+
+    except Exception as e:
+        print(f"❌ Error loading from PostgreSQL: {e}")
+        print(f"   Falling back to JSON...")
+        return None
+
+
+def load_posts_from_json():
+    """Load all posts from JSON files (raw and processed) - ORIGINAL METHOD"""
     all_posts = []
 
     # Try raw directory first
@@ -199,6 +314,30 @@ def load_all_posts():
     all_posts.sort(key=lambda x: x.get('post_id', ''), reverse=True)
 
     return all_posts
+
+
+def load_all_posts():
+    """
+    Load all posts using dual mode:
+    - If PostgreSQL flag exists: load from PostgreSQL
+    - Otherwise: load from JSON files (fallback)
+    """
+    # DUAL MODE: Check if PostgreSQL is enabled
+    if use_postgresql():
+        print("🐘 PostgreSQL mode enabled - loading from database...")
+        posts = load_posts_from_postgres()
+
+        # If PostgreSQL fails, fallback to JSON
+        if posts is None:
+            print("⚠️  PostgreSQL failed, falling back to JSON...")
+            posts = load_posts_from_json()
+        else:
+            print(f"✅ Loaded {len(posts)} posts from PostgreSQL")
+
+        return posts
+    else:
+        print("📝 PostgreSQL mode disabled - loading from JSON files...")
+        return load_posts_from_json()
 
 
 @app.route('/')

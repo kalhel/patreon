@@ -186,53 +186,40 @@ It never used JSON storage, so no dual mode is needed.
 
 ---
 
-## FASE 3: Web Viewer Update 🌐
+## FASE 3: Web Viewer Update ✅
 
 ### Goal:
 Update web viewer to read from PostgreSQL with fallback to JSON.
 
-### Files to modify:
-- `web/viewer.py`
-- `web/templates/settings.html`
+### Files modified:
+- ✅ `web/viewer.py` - Main viewer with dual mode support
+- `web/templates/settings.html` (optional - future enhancement)
 
-### Strategy: Dual Mode with Flag
+### Changes completed:
 
-```python
-# web/viewer.py
-import os
-from pathlib import Path
+**1. Updated `web/viewer.py`:**
+- ✅ Added PostgreSQL imports (dotenv, sqlalchemy, quote_plus)
+- ✅ Created `use_postgresql()` - Checks for flag file
+- ✅ Created `get_database_url()` - Builds connection from .env
+- ✅ Created `load_posts_from_postgres()` - Loads all posts from PostgreSQL
+- ✅ Created `load_posts_from_json()` - Original JSON loading logic (extracted)
+- ✅ Modified `load_all_posts()` - Dual mode with automatic fallback
 
-USE_POSTGRES = os.path.exists('config/use_postgresql.flag')
+**2. Dual mode behavior:**
+- If flag exists: Loads from PostgreSQL
+- If PostgreSQL fails: Automatic fallback to JSON
+- If flag doesn't exist: Loads from JSON directly
+- Graceful error handling with user-friendly messages
 
-def load_all_posts():
-    """Load posts from PostgreSQL or JSON based on flag"""
-    if USE_POSTGRES:
-        return load_posts_from_postgres()
-    else:
-        return load_posts_from_json()  # Existing code
+**3. PostgreSQL query:**
+- Loads all non-deleted posts
+- Retrieves all 24 columns including content_blocks, media paths, tags
+- Converts timestamps to ISO format for JSON compatibility
+- Orders by post_id DESC (newest first)
 
-def load_posts_from_postgres():
-    """Load posts from PostgreSQL database"""
-    from sqlalchemy import create_engine, text
-    # ... implementation
-
-def load_posts_from_json():
-    """Load posts from JSON files (existing code)"""
-    # Keep existing implementation unchanged
-```
-
-### Changes needed:
-
-**1. Create database helper:**
-- `web/db_helper.py` - Database connection and query functions
-
-**2. Update `load_all_posts()` function:**
-- Check flag
-- Branch to PostgreSQL or JSON loader
-
-**3. Update `settings.html`:**
-- Show PostgreSQL stats if enabled
-- Show JSON file stats if disabled
+**4. Test script created:**
+- `test_web_viewer_postgres.py` - 4 comprehensive tests
+- Tests flag detection, database connection, post loading, function imports
 
 ### Activation:
 ```bash
@@ -299,8 +286,8 @@ git revert <commit-hash>
 3. ✅ **FASE 2.3:** Update Phase 3 collections scraper
 4. ✅ **FASE 2.2:** Update Phase 2 detail extractor
 5. ✅ **FASE 2.1:** Phase 1 URL collector (already uses PostgreSQL)
-6. ⏳ **FASE 3:** Update web viewer with dual mode (next)
-7. ✅ **FASE 4:** Complete testing and validation
+6. ✅ **FASE 3:** Update web viewer with dual mode
+7. ⏳ **FASE 4:** Complete testing and validation (next)
 
 ---
 
@@ -328,6 +315,10 @@ git revert <commit-hash>
   - ✅ Phase 3 collections scraper (dual mode implemented)
   - ✅ Phase 2 detail extractor (dual mode implemented)
   - ✅ Phase 1 URL collector (already uses PostgreSQL)
+- ✅ FASE 3: Web viewer update (completed)
+  - ✅ Dual mode with PostgreSQL support
+  - ✅ Automatic fallback to JSON
+  - ✅ Test script created
 
 ---
 
