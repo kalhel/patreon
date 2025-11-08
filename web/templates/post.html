@@ -701,6 +701,14 @@
                         </span>
                         <span class="count">{{ audio_count }}</span>
                     </div>
+                    <a href="#attachments-section" class="meta-icon-pill {% if has_attachments %}active{% endif %}" title="{{ attachment_count }} adjuntos" style="text-decoration: none;">
+                        <span class="icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                        </span>
+                        <span class="count">{{ attachment_count }}</span>
+                    </a>
                     <div class="meta-icon-pill emoji {% if comments_count %}active{% endif %}" title="{{ comments_count }} comentarios">
                         <span class="icon" aria-hidden="true">💬</span>
                         <span class="count">{{ comments_count }}</span>
@@ -946,7 +954,7 @@
                 {% set local_attachments = post.attachment_local_paths if post.attachment_local_paths else [] %}
                 {% set attachment_urls = post.attachments if post.attachments else [] %}
                 {% if local_attachments or attachment_urls %}
-                    <div class="attachments-section">
+                    <div class="attachments-section" id="attachments-section">
                         <div class="attachments-header">
                             <svg class="attachment-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>

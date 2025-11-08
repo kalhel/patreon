@@ -531,11 +531,13 @@ def view_post(post_id):
     image_local = post.get('image_local_paths') or []
     audio_local = post.get('audio_local_paths') or []
     video_local = post.get('video_local_paths') or []
+    attachment_local = post.get('attachment_local_paths') or []
 
     # Count actual downloaded media
     image_count = len(image_local) if image_local else len(post.get('images') or [])
     audio_count = len(audio_local) if audio_local else len(post.get('audios') or [])
     video_count = len(video_local) if video_local else len(post.get('videos') or [])
+    attachment_count = len(attachment_local) if attachment_local else len(post.get('attachments') or [])
 
     # If no media arrays exist, fall back to counting content_blocks (old data)
     if not image_count and content_blocks:
@@ -624,9 +626,11 @@ def view_post(post_id):
         image_count=image_count,
         video_count=video_count,
         audio_count=audio_count,
+        attachment_count=attachment_count,
         has_images=image_count > 0,
         has_videos=video_count > 0,
         has_audio=audio_count > 0,
+        has_attachments=attachment_count > 0,
         published_label=published_label,
         date_skip_values=sorted(date_skip_originals),
         date_skip_values_lower=sorted(date_skip_lower),
