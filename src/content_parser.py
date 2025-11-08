@@ -307,20 +307,10 @@ class ContentBlockParser:
                 seen_audio_urls.add(url)
 
             # Filter duplicate YouTube embeds and iframes
+            # NOTE: Skip deduplication here because it's already handled in _add_paragraph_block
+            # If we deduplicate again, we'll filter out the blocks we just added
             if block['type'] == 'youtube_embed':
-                url = block.get('url', '')
-                # Extract video ID for deduplication
-                video_id = None
-                if 'youtube.com' in url or 'youtu.be' in url:
-                    if 'v=' in url:
-                        video_id = url.split('v=')[1].split('&')[0]
-                    elif 'embed/' in url:
-                        video_id = url.split('embed/')[1].split('?')[0]
-
-                if video_id and video_id in self.youtube_urls:
-                    continue  # Already seen this video
-                if video_id:
-                    self.youtube_urls.add(video_id)
+                pass  # Keep all youtube_embed blocks (already deduplicated)
 
             # Filter duplicate YouTube iframes (use video ID for deduplication)
             if block['type'] == 'iframe':
