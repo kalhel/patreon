@@ -1448,52 +1448,52 @@ class MediaDownloader:
 
                     logger.info(f"  📝 [YOUTUBE] Attempting to download subtitles ({', '.join(subtitle_langs)})...")
 
-                    for lang in subtitle_langs:
-                        subtitle_command = base_command + [
-                            '--skip-download',        # Don't re-download the video
-                            '--write-subs',           # Manual subtitles
-                        ]
+                    # Download ALL languages in a single command (more reliable than separate commands)
+                    subtitle_command = base_command + [
+                        '--skip-download',        # Don't re-download the video
+                        '--write-subs',           # Manual subtitles
+                    ]
 
-                        # Add auto-subs if enabled in settings
-                        if auto_subtitles:
-                            subtitle_command.append('--write-auto-subs')
+                    # Add auto-subs if enabled in settings
+                    if auto_subtitles:
+                        subtitle_command.append('--write-auto-subs')
 
-                        subtitle_command.extend([
-                            '--sub-langs', lang,      # One language at a time
-                            '--sub-format', 'vtt',
-                            '--convert-subs', 'vtt',
-                            '--ignore-errors',        # Continue if this language fails
-                            '--no-warnings',
-                            '-o', str(creator_dir / f'{filename_base}.%(ext)s'),
-                            url
-                        ])
+                    subtitle_command.extend([
+                        '--sub-langs', ','.join(subtitle_langs),  # All languages in one command
+                        '--sub-format', 'vtt',
+                        '--convert-subs', 'vtt',
+                        '--ignore-errors',        # Continue if this language fails
+                        '--no-warnings',
+                        '-o', str(creator_dir / f'{filename_base}.%(ext)s'),
+                        url
+                    ])
 
-                        try:
-                            logger.info(f"  🔄 [YOUTUBE] Downloading {lang} subtitles...")
-                            sub_result = subprocess.run(
-                                subtitle_command,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE,
-                                check=False,
-                                text=True,
-                                timeout=60  # 1 minute timeout for subtitles
-                            )
+                    try:
+                        logger.info(f"  🔄 [YOUTUBE] Downloading subtitles...")
+                        sub_result = subprocess.run(
+                            subtitle_command,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            check=False,
+                            text=True,
+                            timeout=60  # 1 minute timeout for subtitles
+                        )
 
-                            if sub_result.returncode != 0:
-                                if '429' in sub_result.stderr or 'Too Many Requests' in sub_result.stderr:
-                                    logger.warning(f"  ⚠️  [YOUTUBE] Rate limited for {lang} subtitles")
-                                else:
-                                    logger.warning(f"  ⚠️  [YOUTUBE] {lang} subtitles download failed (return code: {sub_result.returncode})")
-                                    if sub_result.stderr:
-                                        logger.warning(f"      Error: {sub_result.stderr[:200]}")
+                        if sub_result.returncode != 0:
+                            if '429' in sub_result.stderr or 'Too Many Requests' in sub_result.stderr:
+                                logger.warning(f"  ⚠️  [YOUTUBE] Rate limited for subtitles")
                             else:
-                                # Log success for debugging
-                                if sub_result.stdout:
-                                    logger.info(f"  ✓ [YOUTUBE] {lang} subtitle command output: {sub_result.stdout[:500]}")
+                                logger.warning(f"  ⚠️  [YOUTUBE] Subtitle download failed (return code: {sub_result.returncode})")
                                 if sub_result.stderr:
-                                    logger.info(f"  ℹ️  [YOUTUBE] {lang} stderr: {sub_result.stderr[:500]}")
-                        except Exception as e:
-                            logger.warning(f"  ⚠️  [YOUTUBE] Error downloading {lang} subtitles: {e}")
+                                    logger.warning(f"      Error: {sub_result.stderr[:200]}")
+                        else:
+                            # Log success for debugging
+                            if sub_result.stdout:
+                                logger.info(f"  ✓ [YOUTUBE] Subtitle command output: {sub_result.stdout[:500]}")
+                            if sub_result.stderr:
+                                logger.info(f"  ℹ️  [YOUTUBE] stderr: {sub_result.stderr[:500]}")
+                    except Exception as e:
+                        logger.warning(f"  ⚠️  [YOUTUBE] Error downloading subtitles: {e}")
 
                     # Check for subtitle files with various naming patterns from yt-dlp
                     # Patterns: .es.vtt, .en.vtt, .es-es.vtt, .en-US.vtt, .es-orig.vtt, etc.
