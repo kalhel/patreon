@@ -398,7 +398,7 @@
                                     <img src="{{ url_for('static', filename=creator.avatar) }}"
                                          style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #333;" loading="lazy">
                                     {% endif %}
-                                    <div class="url-display">{{ creator.avatar if creator.avatar else 'No avatar' }}</div>
+                                    <div class="url-display avatar-filename">{{ creator.avatar if creator.avatar else 'No avatar' }}</div>
                                 </div>
                             </div>
                             <div class="form-group">
@@ -1042,10 +1042,13 @@
                         creatorData.avatar = uploadResult.avatar_filename;
                     }
                 } else {
-                    // Keep existing avatar
-                    const currentAvatar = item.querySelector('.url-display').textContent;
-                    if (currentAvatar !== 'No avatar') {
-                        creatorData.avatar = currentAvatar;
+                    // Keep existing avatar - get it from view mode using specific class
+                    const avatarFilename = item.querySelector('.avatar-filename');
+                    if (avatarFilename) {
+                        const currentAvatar = avatarFilename.textContent.trim();
+                        if (currentAvatar && currentAvatar !== 'No avatar') {
+                            creatorData.avatar = currentAvatar;
+                        }
                     }
                 }
 
