@@ -241,8 +241,7 @@ class ContentBlockParser:
             'load more',
             'related posts',
             'popular posts',
-            'youtube',
-            'privacy-enhanced mode'
+            'privacy-enhanced mode'  # YouTube embed footer text
         ]
 
         # UI labels that appear as standalone paragraphs
@@ -822,6 +821,32 @@ class ContentBlockParser:
         for img in images:
             # Process each image as a separate block (maintains order)
             self._add_image_block(img)
+
+        # Check if paragraph contains YouTube links that should be embeds
+        youtube_links = element.find_all('a', href=True)
+        for link in youtube_links:
+            href = link.get('href', '')
+            if 'youtube.com/watch' in href or 'youtu.be/' in href:
+                # Extract video ID
+                video_id = None
+                if 'v=' in href:
+                    video_id = href.split('v=')[1].split('&')[0].split('#')[0]
+                elif 'youtu.be/' in href:
+                    video_id = href.split('youtu.be/')[1].split('?')[0].split('#')[0]
+
+                if video_id and video_id not in self.youtube_urls:
+                    self.youtube_urls.add(video_id)
+                    # Add YouTube embed block
+                    best_thumbnail = find_best_youtube_thumbnail(video_id)
+                    self.order += 1
+                    self.blocks.append({
+                        'type': 'youtube_embed',
+                        'order': self.order,
+                        'url': f'https://www.youtube.com/watch?v={video_id}',
+                        'video_id': video_id,
+                        'thumbnail': best_thumbnail
+                    })
+                    logger.info(f"Detected YouTube link in paragraph: {video_id}")
 
         # Then, extract and add text content (if any)
         text = self._extract_formatted_text(element)
