@@ -115,6 +115,7 @@ def update_post_details_in_postgres(post_data: Dict):
                     images = EXCLUDED.images,
                     image_local_paths = EXCLUDED.image_local_paths,
                     patreon_tags = EXCLUDED.patreon_tags,
+                    deleted_at = NULL,
                     updated_at = NOW()
             """)
 

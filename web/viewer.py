@@ -1252,8 +1252,16 @@ def reset_creator_posts():
                     WHERE platform_id = :creator_id
                 )
             """)
-
             conn.execute(reset_sql, {'creator_id': creator_id})
+
+            # Soft-delete posts so they disappear from index until reprocessed
+            delete_sql = text("""
+                UPDATE posts
+                SET deleted_at = NOW()
+                WHERE creator_id = :creator_id
+            """)
+            conn.execute(delete_sql, {'creator_id': creator_id})
+
             conn.commit()
 
             return jsonify({
