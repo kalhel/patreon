@@ -471,8 +471,11 @@ def index():
         # Sort videos according to content_blocks order (Vimeo before YouTube, etc.)
         content_blocks = post.get('content_blocks', [])
         if content_blocks and local_video_paths:
-            # Get video blocks in order
-            video_blocks = [b for b in content_blocks if b.get('type') in ['video', 'youtube_embed', 'vimeo_embed']]
+            # Get video blocks in order (sorted by order field)
+            video_blocks = sorted(
+                [b for b in content_blocks if b.get('type') in ['video', 'youtube_embed', 'vimeo_embed']],
+                key=lambda b: b.get('order', 999)
+            )
 
             if len(video_blocks) > 1 and len(local_video_paths) > 1:
                 # Create a mapping of video URL patterns to local paths
@@ -588,8 +591,11 @@ def view_post(post_id):
 
     # Sort videos according to content_blocks order (Vimeo before YouTube, etc.)
     if content_blocks and video_local and len(video_local) > 1:
-        # Get video blocks in order
-        video_blocks = [b for b in content_blocks if b.get('type') in ['video', 'youtube_embed', 'vimeo_embed']]
+        # Get video blocks in order (sorted by order field)
+        video_blocks = sorted(
+            [b for b in content_blocks if b.get('type') in ['video', 'youtube_embed', 'vimeo_embed']],
+            key=lambda b: b.get('order', 999)
+        )
 
         if len(video_blocks) > 1:
             sorted_videos = []
@@ -612,6 +618,9 @@ def view_post(post_id):
                     sorted_videos.append(path)
 
             video_local = sorted_videos
+
+        # Update post with sorted videos
+        post['video_local_paths'] = video_local
 
     # Count actual downloaded media
     image_count = len(image_local) if image_local else len(post.get('images') or [])
@@ -700,10 +709,11 @@ def view_post(post_id):
                 cleaned.append(entry_str)
         return cleaned
 
-    local_video_paths = filter_by_extension(post.get('video_local_paths'), {'.mp4', '.m4v', '.mov', '.webm', '.mkv'})
+    # Note: video_local_paths already sorted and updated above (line 630)
+    # local_video_paths = filter_by_extension(post.get('video_local_paths'), {'.mp4', '.m4v', '.mov', '.webm', '.mkv'})
     local_audio_paths = filter_by_extension(post.get('audio_local_paths'), {'.mp3', '.m4a', '.aac', '.wav', '.flac', '.ogg', '.opus'})
 
-    post['video_local_paths'] = local_video_paths
+    # post['video_local_paths'] = local_video_paths  # Already sorted above, don't overwrite
     post['audio_local_paths'] = local_audio_paths
 
     # Get collection info for "back to collection" button

@@ -796,119 +796,43 @@
                 {% endif %}
 
 
-                {# Show videos ONLY if they are at the very beginning (position 0-2) - move them below title #}
-                {# If video is in middle of content (position >= 3), it will be shown in correct position within content_blocks loop #}
+                {# Simplified: Just show videos in their content_blocks position #}
                 {% set local_videos = post.video_local_paths if post.video_local_paths is defined and post.video_local_paths else [] %}
                 {% set local_subtitles = post.video_subtitles_relative if post.video_subtitles_relative is defined and post.video_subtitles_relative else [] %}
                 {% set video_urls = post.videos if post.videos else [] %}
 
-                {# Check if first video block is at beginning (order 0-2) #}
-                {% set first_video_order = namespace(value=999) %}
                 {% if post.content_blocks %}
-                    {% for block in post.content_blocks %}
-                        {% if block.type == 'video' and first_video_order.value == 999 %}
-                            {% set first_video_order.value = block.order %}
-                        {% endif %}
-                    {% endfor %}
-                {% endif %}
-
-                {# Only show video here if it was at the very beginning (order 0-2) #}
-                {% if local_videos and first_video_order.value <= 2 %}
-                    {% set primary_video = local_videos[0] %}
-                    {# Extract original filename from URL #}
-                    {% if video_urls and video_urls|length > 0 %}
-                        {% set url_path = video_urls[0].split('?')[0] %}
-                        {% set video_filename = url_path.split('/')[-1] %}
-                    {% else %}
-                        {% set video_filename = primary_video.split('/')[-1] %}
-                    {% endif %}
-                    <div class="content-block video">
-                        <video controls preload="metadata" crossorigin="anonymous" id="main-video">
-                            <source src="{{ url_for('media_file', filename=primary_video) }}?original={{ video_filename | urlencode }}#t=3" type="video/mp4">
-                            {% if local_subtitles and local_subtitles|length > 0 %}
-                                <track kind="subtitles" src="{{ url_for('media_file', filename=local_subtitles[0]) }}" default>
-                            {% endif %}
-                            Your browser does not support the video tag.
-                        </video>
-                    </div>
-                {% endif %}
-
-                {% if post.content_blocks %}
-                    {# Pre-process: Find videos that should be moved after their reference text #}
-                    {% set videos_to_move = namespace(items={}) %}
+                    {# Simple counter to track which video to show next - using list for mutability #}
+                    {% set video_index = [0] %}
                     {% set sorted_blocks = post.content_blocks | sort(attribute='order') %}
 
-                    {% for idx in range(sorted_blocks | length - 1) %}
-                        {% set current = sorted_blocks[idx] %}
-                        {% set next = sorted_blocks[idx + 1] %}
-                        {# Check if current is video and next paragraph mentions it (contains youtu link or "flash" etc) #}
-                        {% if current.type == 'video' and next.type == 'paragraph' %}
-                            {% if next.text and (('youtu' in next.text.lower()) or ('flash' in next.text.lower()) or ('video' in next.text.lower())) %}
-                                {# Mark this video to be shown after the reference paragraph #}
-                                {% set _ = videos_to_move.items.update({current.order: next.order}) %}
-                            {% endif %}
-                        {% endif %}
-                    {% endfor %}
-
-                    {# Now iterate through content_blocks for text content #}
+                    {# Now iterate through content_blocks #}
                     {% set shown_tags = namespace(value=false) %}
                     {% for block in sorted_blocks %}
-                        {% if block.type == 'comments_header' or block.type == 'comment' %}
+                        {% if block.get('type') == 'comments_header' or block.get('type') == 'comment' %}
                             {# Skip comments for now, will show them later #}
-                        {% elif block.type == 'heading_1' %}
+                        {% elif block.get('type') == 'heading_1' %}
                             {# Skip heading_1 blocks - already shown from post.title above #}
 
-                        {% elif block.type == 'heading_2' %}
+                        {% elif block.get('type') == 'heading_2' %}
                             <div class="content-block heading-2">
                                 <h2>{{ block.text | markdown | safe }}</h2>
                             </div>
 
-                        {% elif block.type == 'heading_3' %}
+                        {% elif block.get('type') == 'heading_3' %}
                             <div class="content-block heading-3">
                                 <h3>{{ block.text | markdown | safe }}</h3>
                             </div>
 
-                        {% elif block.type == 'paragraph' %}
+                        {% elif block.get('type') == 'paragraph' %}
                             {% set paragraph_text = (block.text or '') | trim %}
                             {% if paragraph_text and paragraph_text not in date_skip_values and paragraph_text | lower not in date_skip_values_lower %}
                             <div class="content-block paragraph">
                                 <p>{{ block.text | markdown | safe }}</p>
                             </div>
-
-                            {# Check if any video should be shown after this paragraph #}
-                            {% for video_order, after_order in videos_to_move.items.items() %}
-                                {% if after_order == block.order and local_videos %}
-                                    {# Find the video block and render it here #}
-                                    {% for video_block in sorted_blocks %}
-                                        {% if video_block.order == video_order and video_block.type == 'video' %}
-                                            {% set video_index = loop.index0 if loop.index0 < local_videos|length else 0 %}
-                                            {% set video_path = local_videos[video_index] %}
-                                            {% set video_url = video_urls[video_index] if video_index < video_urls|length else '' %}
-
-                                            {# Extract original filename from URL #}
-                                            {% if video_url %}
-                                                {% set url_path = video_url.split('?')[0] %}
-                                                {% set video_filename = url_path.split('/')[-1] %}
-                                            {% else %}
-                                                {% set video_filename = video_path.split('/')[-1] %}
-                                            {% endif %}
-
-                                            <div class="content-block video">
-                                                <video controls preload="metadata" crossorigin="anonymous">
-                                                    <source src="{{ url_for('media_file', filename=video_path) }}?original={{ video_filename | urlencode }}#t=3" type="video/mp4">
-                                                    {% if local_subtitles and video_index < local_subtitles|length %}
-                                                        <track kind="subtitles" src="{{ url_for('media_file', filename=local_subtitles[video_index]) }}" default>
-                                                    {% endif %}
-                                                    Your browser does not support the video tag.
-                                                </video>
-                                            </div>
-                                        {% endif %}
-                                    {% endfor %}
-                                {% endif %}
-                            {% endfor %}
                             {% endif %}
 
-                        {% elif block.type == 'image' %}
+                        {% elif block.get('type') == 'image' %}
                             {# Show image using local path if available, otherwise remote URL #}
                             {% if block.media_id %}
                                 {# Find local path for this media_id #}
@@ -940,38 +864,31 @@
                                 {% endif %}
                             {% endif %}
 
-                        {% elif block.type == 'video' %}
-                            {# Show video in correct position ONLY if it's in middle of content (order >= 3) #}
-                            {# Videos at beginning (order 0-2) are already shown above, after title #}
-                            {# Skip videos that should be moved after their reference paragraph #}
-                            {% if block.order >= 3 and local_videos and block.order not in videos_to_move.items %}
-                                {% set video_index = loop.index0 if loop.index0 < local_videos|length else 0 %}
-                                {% set video_path = local_videos[video_index] %}
-                                {% set video_url = video_urls[video_index] if video_index < video_urls|length else '' %}
+                        {% elif block.get('type') == 'video' %}
+                            {# Show video - use video_index counter to get the right video from the sorted list #}
+                            {% if local_videos and video_index[0] < local_videos|length %}
+                                {% set current_video_idx = video_index[0] %}
+                                {% set video_path = local_videos[current_video_idx] %}
+                                {% set _ = video_index.append(video_index.pop() + 1) %}
 
-                                {# Extract original filename from URL #}
-                                {% if video_url %}
-                                    {% set url_path = video_url.split('?')[0] %}
-                                    {% set video_filename = url_path.split('/')[-1] %}
-                                {% else %}
-                                    {% set video_filename = video_path.split('/')[-1] %}
-                                {% endif %}
+                                {# Extract filename for display #}
+                                {% set video_filename = video_path.split('/')[-1] %}
 
                                 <div class="content-block video">
                                     <video controls preload="metadata" crossorigin="anonymous">
                                         <source src="{{ url_for('media_file', filename=video_path) }}?original={{ video_filename | urlencode }}#t=3" type="video/mp4">
-                                        {% if local_subtitles and video_index < local_subtitles|length %}
-                                            <track kind="subtitles" src="{{ url_for('media_file', filename=local_subtitles[video_index]) }}" default>
+                                        {% if local_subtitles and current_video_idx < local_subtitles|length %}
+                                            <track kind="subtitles" src="{{ url_for('media_file', filename=local_subtitles[current_video_idx]) }}" default>
                                         {% endif %}
                                         Your browser does not support the video tag.
                                     </video>
                                 </div>
                             {% endif %}
 
-                        {% elif block.type == 'audio' %}
+                        {% elif block.get('type') == 'audio' %}
                             {# SKIP - Audios se muestran desde audio_local_paths después de tags #}
 
-                        {% elif block.type == 'bulleted_list' %}
+                        {% elif block.get('type') == 'bulleted_list' %}
                             <div class="content-block bulleted-list">
                                 <ul>
                                     {% for item in block['items'] %}
@@ -980,7 +897,7 @@
                                 </ul>
                             </div>
 
-                        {% elif block.type == 'numbered_list' %}
+                        {% elif block.get('type') == 'numbered_list' %}
                             <div class="content-block numbered-list">
                                 <ol>
                                     {% for item in block['items'] %}
@@ -989,12 +906,12 @@
                                 </ol>
                             </div>
 
-                        {% elif block.type == 'quote' %}
+                        {% elif block.get('type') == 'quote' %}
                             <div class="content-block quote">
                                 <blockquote>{{ block.text | markdown | safe }}</blockquote>
                             </div>
 
-                        {% elif block.type == 'youtube_embed' %}
+                        {% elif block.get('type') == 'youtube_embed' %}
                             <div class="content-block youtube-embed">
                                 {% set video_id = block.url.split('v=')[1].split('&')[0] if 'v=' in block.url else block.url.split('/')[-1] %}
                                 <iframe
@@ -1004,7 +921,7 @@
                                 </iframe>
                             </div>
 
-                        {% elif block.type == 'vimeo_embed' %}
+                        {% elif block.get('type') == 'vimeo_embed' %}
                             <div class="content-block youtube-embed">
                                 {% set video_id = block.url.split('/')[-1].split('?')[0] %}
                                 <iframe
@@ -1015,7 +932,7 @@
                                 </iframe>
                             </div>
 
-                        {% elif block.type == 'iframe' %}
+                        {% elif block.get('type') == 'iframe' %}
                             <div class="content-block iframe-embed">
                                 <iframe src="{{ block.url }}" frameborder="0" allowfullscreen></iframe>
                             </div>
@@ -1180,7 +1097,7 @@
                 {% if has_comments %}
                     <div class="comments-section">
                         {% for block in post.content_blocks | sort(attribute='order') %}
-                            {% if block.type == 'comments_header' %}
+                            {% if block.get('type') == 'comments_header' %}
                                 <button class="comments-toggle" id="commentsToggle">
                                     <span>{{ block.text }}</span>
                                     <span class="arrow">▼</span>
@@ -1190,7 +1107,7 @@
 
                         <div class="comments-list" id="commentsList">
                             {% for block in post.content_blocks | sort(attribute='order') %}
-                                {% if block.type == 'comment' %}
+                                {% if block.get('type') == 'comment' %}
                                     <div class="comment {% if block.get('level', 0) > 0 %}comment-reply{% endif %}">
                                         <div class="comment-author">
                                             {{ block.author }}
