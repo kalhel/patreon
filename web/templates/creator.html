@@ -238,17 +238,34 @@
                 <h3><a href="/post/{{ post.post_id }}">{{ post.title or 'Untitled Post' }}</a></h3>
 
                 <div class="post-stats">
-                    {% if post.content_blocks %}
+                    {# Count media using downloaded files first (most reliable), then URLs, then content_blocks (old data) #}
+                    {% set img_count_local = post.image_local_paths | length if post.image_local_paths else 0 %}
+                    {% set aud_count_local = post.audio_local_paths | length if post.audio_local_paths else 0 %}
+                    {% set vid_count_local = post.video_local_paths | length if post.video_local_paths else 0 %}
+
+                    {% set img_count_url = post.images | length if post.images else 0 %}
+                    {% set aud_count_url = post.audios | length if post.audios else 0 %}
+                    {% set vid_count_url = post.videos | length if post.videos else 0 %}
+
+                    {% set img_count = img_count_local if img_count_local > 0 else img_count_url %}
+                    {% set aud_count = aud_count_local if aud_count_local > 0 else aud_count_url %}
+                    {% set vid_count = vid_count_local if vid_count_local > 0 else vid_count_url %}
+
+                    {# Fall back to content_blocks only if no media arrays (old data compatibility) #}
+                    {% if img_count == 0 and post.content_blocks %}
                         {% set img_count = post.content_blocks | selectattr('type', 'equalto', 'image') | list | length %}
-                        {% set vid_count = (post.content_blocks | selectattr('type', 'equalto', 'video') | list | length) + (post.content_blocks | selectattr('type', 'equalto', 'youtube_embed') | list | length) %}
-                        {% set aud_count = post.content_blocks | selectattr('type', 'equalto', 'audio') | list | length %}
-                        {% set com_count = post.content_blocks | selectattr('type', 'equalto', 'comment') | list | length %}
-                    {% else %}
-                        {% set img_count = post.images | length if post.images else 0 %}
-                        {% set vid_count = post.videos | length if post.videos else 0 %}
-                        {% set aud_count = post.audios | length if post.audios else 0 %}
-                        {% set com_count = 0 %}
                     {% endif %}
+                    {% if aud_count == 0 and post.content_blocks %}
+                        {% set aud_count = post.content_blocks | selectattr('type', 'equalto', 'audio') | list | length %}
+                    {% endif %}
+                    {% if vid_count == 0 and post.content_blocks %}
+                        {% set vid_count = (post.content_blocks | selectattr('type', 'equalto', 'video') | list | length) + (post.content_blocks | selectattr('type', 'equalto', 'youtube_embed') | list | length) %}
+                    {% endif %}
+
+                    {# Count attachments #}
+                    {% set att_count = post.attachments | length if post.attachments else 0 %}
+
+                    {% set com_count = post.content_blocks | selectattr('type', 'equalto', 'comment') | list | length if post.content_blocks else 0 %}
 
                     <div class="stat-item">
                         <span class="label">Images</span>
@@ -261,6 +278,10 @@
                     <div class="stat-item">
                         <span class="label">Audio</span>
                         <span class="value">{{ aud_count }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="label">Attachments</span>
+                        <span class="value">{{ att_count }}</span>
                     </div>
                     <div class="stat-item">
                         <span class="label">Comments</span>

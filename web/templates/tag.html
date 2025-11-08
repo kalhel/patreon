@@ -711,42 +711,66 @@
                     </div>
 
                     <div class="footer-meta-icons">
-                        {% if post.content_blocks %}
+                        {# Count media using downloaded files first (most reliable), then URLs, then content_blocks (old data) #}
+                        {% set img_count_local = post.image_local_paths | length if post.image_local_paths else 0 %}
+                        {% set aud_count_local = post.audio_local_paths | length if post.audio_local_paths else 0 %}
+                        {% set vid_count_local = post.video_local_paths | length if post.video_local_paths else 0 %}
+
+                        {% set img_count_url = post.images | length if post.images else 0 %}
+                        {% set aud_count_url = post.audios | length if post.audios else 0 %}
+                        {% set vid_count_url = post.videos | length if post.videos else 0 %}
+
+                        {% set img_count = img_count_local if img_count_local > 0 else img_count_url %}
+                        {% set aud_count = aud_count_local if aud_count_local > 0 else aud_count_url %}
+                        {% set vid_count = vid_count_local if vid_count_local > 0 else vid_count_url %}
+
+                        {# Fall back to content_blocks only if no media arrays (old data compatibility) #}
+                        {% if img_count == 0 and post.content_blocks %}
                             {% set img_count = post.content_blocks | selectattr('type', 'equalto', 'image') | list | length %}
-                            {% set vid_count_blocks = (post.content_blocks | selectattr('type', 'equalto', 'video') | list | length) + (post.content_blocks | selectattr('type', 'equalto', 'youtube_embed') | list | length) %}
-                            {% set vid_count_local = post.video_local_paths | length if post.video_local_paths else 0 %}
-                            {% set vid_count = vid_count_blocks if vid_count_blocks > 0 else vid_count_local %}
+                        {% endif %}
+                        {% if aud_count == 0 and post.content_blocks %}
                             {% set aud_count = post.content_blocks | selectattr('type', 'equalto', 'audio') | list | length %}
-                            {% set com_count = post.content_blocks | selectattr('type', 'equalto', 'comment') | list | length %}
-                        {% else %}
-                            {% set img_count = post.images | length if post.images else 0 %}
-                            {% set vid_count_old = post.videos | length if post.videos else 0 %}
-                            {% set vid_count_local = post.video_local_paths | length if post.video_local_paths else 0 %}
-                            {% set vid_count = vid_count_old if vid_count_old > 0 else vid_count_local %}
-                            {% set aud_count = post.audios | length if post.audios else 0 %}
-                            {% set com_count = 0 %}
+                        {% endif %}
+                        {% if vid_count == 0 and post.content_blocks %}
+                            {% set vid_count = (post.content_blocks | selectattr('type', 'equalto', 'video') | list | length) + (post.content_blocks | selectattr('type', 'equalto', 'youtube_embed') | list | length) %}
                         {% endif %}
 
-                        <span class="meta-icon {% if img_count > 0 %}active{% endif %}" title="Images">
+                        {# Count attachments #}
+                        {% set att_count = post.attachments | length if post.attachments else 0 %}
+
+                        {% set com_count = post.content_blocks | selectattr('type', 'equalto', 'comment') | list | length if post.content_blocks else 0 %}
+
+                        <span class="meta-icon-with-count {% if img_count > 0 %}active{% endif %}" title="Images">
                             <span class="icon">
                                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
                                 </svg>
                             </span>
+                            <span class="count">{{ img_count }}</span>
                         </span>
-                        <span class="meta-icon {% if vid_count > 0 %}active{% endif %}" title="Videos">
+                        <span class="meta-icon-with-count {% if vid_count > 0 %}active{% endif %}" title="Videos">
                             <span class="icon">
                                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
                                 </svg>
                             </span>
+                            <span class="count">{{ vid_count }}</span>
                         </span>
-                        <span class="meta-icon {% if aud_count > 0 %}active{% endif %}" title="Audio">
+                        <span class="meta-icon-with-count {% if aud_count > 0 %}active{% endif %}" title="Audio">
                             <span class="icon">
                                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
                                 </svg>
                             </span>
+                            <span class="count">{{ aud_count }}</span>
+                        </span>
+                        <span class="meta-icon-with-count {% if att_count > 0 %}active{% endif %}" title="Attachments">
+                            <span class="icon">
+                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                            </span>
+                            <span class="count">{{ att_count }}</span>
                         </span>
                         <span class="meta-icon-with-count {% if com_count > 0 %}active{% endif %}" title="Comments">
                             💬 <span class="count">{{ com_count }}</span>
