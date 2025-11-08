@@ -39,7 +39,7 @@ app = Flask(__name__,
 # Configure caching
 cache_config = {
     'CACHE_TYPE': os.getenv('CACHE_TYPE', 'SimpleCache'),  # SimpleCache or RedisCache
-    'CACHE_DEFAULT_TIMEOUT': int(os.getenv('CACHE_TIMEOUT', 300)),  # 5 minutes default
+    'CACHE_DEFAULT_TIMEOUT': int(os.getenv('CACHE_TIMEOUT', 900)),  # 15 minutes default (increased from 5)
 }
 
 # If using Redis cache
@@ -236,7 +236,7 @@ def get_database_url() -> str:
     return f"postgresql://{db_user}:{encoded_password}@{db_host}:{db_port}/{db_name}"
 
 
-@cache.memoize(timeout=300)  # Cache for 5 minutes
+@cache.memoize(timeout=900)  # Cache for 15 minutes (optimized)
 def load_posts_from_postgres():
     """Load all posts from PostgreSQL database with collections"""
     try:
@@ -393,7 +393,7 @@ def load_posts_from_postgres():
         return None
 
 
-@cache.memoize(timeout=300)  # Cache for 5 minutes
+@cache.memoize(timeout=900)  # Cache for 15 minutes (optimized)
 def load_posts_from_json():
     """Load all posts from JSON files (raw and processed) - ORIGINAL METHOD"""
     all_posts = []
@@ -469,6 +469,10 @@ def index():
     """Homepage showing all posts"""
     posts = load_all_posts()
 
+    # Ensure creators config is loaded (populates CREATOR_AVATARS)
+    if not CREATOR_AVATARS:
+        load_creators_config()
+
     def ensure_list(value):
         if not value:
             return []
@@ -537,7 +541,7 @@ def index():
             creator_display_name = creator_id or "Unknown Creator"
         post['display_creator_name'] = creator_display_name
 
-    # Group by creator (original logic - DO NOT CHANGE)
+    # Group by creator and build consistent avatar mapping
     creators = {}
     creator_avatars = {}
     for post in posts:
@@ -546,16 +550,16 @@ def index():
             creators[creator_id] = []
         creators[creator_id].append(post)
 
-        if creator_id not in creator_avatars:
-            if creator_id in CREATOR_AVATARS:
-                creator_avatars[creator_id] = f"/static/{CREATOR_AVATARS[creator_id]}"
-            elif post.get('creator_avatar'):
-                creator_avatars[creator_id] = post['creator_avatar']
+        # Build avatar mapping ONLY from CREATOR_AVATARS (loaded from creators.json)
+        # This is the single source of truth - managed from /settings page
+        if creator_id not in creator_avatars and creator_id in CREATOR_AVATARS:
+            creator_avatars[creator_id] = f"/static/{CREATOR_AVATARS[creator_id]}"
 
-    # DEBUG: Print creator post counts
+    # DEBUG: Print creator post counts and avatars
     print("\n=== DEBUG: Creator Post Counts ===")
     for creator_id, creator_posts in creators.items():
-        print(f"{creator_id}: {len(creator_posts)} posts")
+        avatar = creator_avatars.get(creator_id, 'NO AVATAR')
+        print(f"{creator_id}: {len(creator_posts)} posts | Avatar: {avatar}")
     print("===================================\n")
 
     # Load creator colors from config

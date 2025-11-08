@@ -1666,8 +1666,8 @@
                             <!-- DEBUG AUTO SUBTITLE: {{ auto_subtitle }} -->
                             <!-- DEBUG ALL SUBTITLES: all_subtitles = {{ all_subtitles }} (count: {{ all_subtitles|length }}) -->
                             <div class="content-preview video-preview">
-                                <video controls preload="metadata">
-                                    <source src="{{ url_for('media_file', filename=first_video) }}#t=3" type="video/mp4">
+                                <video class="lazy-video" controls preload="none" poster="">
+                                    <source data-src="{{ url_for('media_file', filename=first_video) }}#t=3" type="video/mp4">
                                     {% if all_subtitles and all_subtitles|length > 0 %}
                                         {% for subtitle_path in all_subtitles %}
                                             {# Detect language from filename #}
@@ -2635,6 +2635,38 @@
             audioSpeeds[postId] = newSpeed;
             button.textContent = newSpeed + 'x';
         }
+    </script>
+
+    <!-- Lazy loading for videos - Performance optimization -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Lazy load videos when they become visible
+            const videoObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const video = entry.target;
+                        const source = video.querySelector('source[data-src]');
+
+                        if (source && source.dataset.src) {
+                            // Load the video source
+                            source.src = source.dataset.src;
+                            video.load();
+
+                            // Stop observing this video
+                            observer.unobserve(video);
+                        }
+                    }
+                });
+            }, {
+                // Start loading when video is 200px away from viewport
+                rootMargin: '200px'
+            });
+
+            // Observe all lazy videos
+            document.querySelectorAll('video.lazy-video').forEach(video => {
+                videoObserver.observe(video);
+            });
+        });
     </script>
 </body>
 </html>
