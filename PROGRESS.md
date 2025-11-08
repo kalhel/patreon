@@ -741,14 +741,56 @@ Phase 2 consiste en migrar los scripts Python existentes para que usen PostgreSQ
 
 ---
 
+## 🔧 Troubleshooting: Recuperación de Posts Faltantes
+
+**Fecha**: 2025-11-08
+**Problema**: AstroByMax mostraba 80 URLs rastreadas pero solo 77 posts en la base de datos.
+
+### Diagnóstico
+
+Los posts 96097452, 77933294, y 42294201 tenían `phase2_status='completed'` en `scraping_status` pero no existían en la tabla `posts`. Esto indica un bug en Phase 2: procesó los posts pero falló al insertarlos, sin embargo los marcó como completados.
+
+### Solución
+
+1. **Resetear posts a pending**:
+   ```bash
+   python3 tools/reset_missing_posts_to_pending.py
+   ```
+   Este script marca los posts como `phase2_status='pending'` para que Phase 2 pueda reprocesarlos.
+
+2. **Re-ejecutar Phase 2**:
+   ```bash
+   python3 src/phase2_detail_extractor.py --creator astrobymax
+   ```
+   Phase 2 procesa solo los posts pendientes.
+
+3. **Verificar recuperación**:
+   - Verificar en la web que ahora muestra 80 posts procesados
+   - La tabla `posts` debe tener 80 registros para AstroByMax
+
+### Scripts útiles
+
+- `tools/reset_missing_posts_to_pending.py` - Resetear posts específicos a pending
+- `scripts/migrate_to_schema_v2.py` - Migración completa a schema v2 (ya ejecutada)
+
+### Lecciones aprendidas
+
+1. Phase 2 debe tener mejor manejo de errores al insertar en la tabla `posts`
+2. No marcar como `completed` hasta que la transacción SQL confirme el INSERT
+3. Settings page ahora lee correctamente de PostgreSQL (verificar `content_blocks` no `full_content`)
+
+---
+
 ## 📝 Notas Importantes
 
 - **Contraseñas**: Cambiar todas las contraseñas por defecto en producción
 - **Backups**: Siempre hacer backup antes de cambios grandes
 - **Testing**: Probar cada componente antes de continuar
 - **Documentación**: Actualizar este archivo después de cada paso
+- **Organización**: Scripts de procesamiento van en `src/`, scripts de mantenimiento en `scripts/`, herramientas en `tools/`
 
 ---
 
 **Última edición por**: Claude
+**Última actualización**: 2025-11-08 (Post recovery procedure + Repository cleanup)
 **Contacto en caso de problemas**: [Definir canal de comunicación]
