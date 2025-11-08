@@ -348,7 +348,7 @@ class PatreonScraperV2:
             creator_id: Creator identifier
 
         Returns:
-            Dictionary with post data
+            Dictionary with post data, or None if post doesn't belong to this creator
         """
         try:
             post_data = {
@@ -386,6 +386,52 @@ class PatreonScraperV2:
             # If no post_id found, skip this element
             if 'post_id' not in post_data:
                 return None
+
+            # CRITICAL FIX: Validate that this post belongs to the expected creator
+            # Extract creator name/link from the post element to verify ownership
+            try:
+                # Try to find creator link or name in the post card
+                # Patreon usually has a link like /user?u=12345 or text with creator name
+                creator_links = element.find_elements(By.CSS_SELECTOR, "a[href*='/user?u='], a[data-tag='creator-name']")
+
+                post_belongs_to_creator = False
+
+                for link in creator_links:
+                    link_href = link.get_attribute('href') or ''
+                    link_text = link.text.strip().lower()
+
+                    # Check if the link or text contains the expected creator_id
+                    if creator_id.lower() in link_href.lower() or creator_id.lower() in link_text:
+                        post_belongs_to_creator = True
+                        break
+
+                # If we couldn't find creator links, check the post URL itself
+                # Posts from the creator should be on their page
+                if not post_belongs_to_creator and 'post_url' in post_data:
+                    # Extract creator from URL pattern like patreon.com/creator_id/posts/
+                    url_match = re.search(r'patreon\.com/([^/]+)/', post_data['post_url'])
+                    if url_match:
+                        url_creator = url_match.group(1).lower()
+                        if url_creator == creator_id.lower() or url_creator == 'posts':
+                            post_belongs_to_creator = True
+
+                # If we still can't verify, we're on the creator's page so accept it
+                # but log a warning
+                if not post_belongs_to_creator:
+                    # As a last resort, check current page URL
+                    current_url = self.driver.current_url.lower()
+                    if creator_id.lower() in current_url:
+                        # We're on the creator's page, likely a legitimate post
+                        post_belongs_to_creator = True
+                        logger.debug(f"Post {post_data.get('post_id')} validated by page URL")
+                    else:
+                        # Cannot verify creator - reject this post
+                        logger.warning(f"⚠️  Rejecting post {post_data.get('post_id')} - cannot verify it belongs to {creator_id}")
+                        return None
+
+            except Exception as e:
+                logger.debug(f"Could not validate creator for post, accepting: {e}")
+                # If validation fails, accept the post (fail-safe)
 
             # Extract title
             try:
