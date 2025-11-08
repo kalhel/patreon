@@ -830,8 +830,7 @@ def settings():
                         FROM posts
                         WHERE creator_id = :creator_id
                           AND deleted_at IS NULL
-                          AND full_content IS NOT NULL
-                          AND full_content != ''
+                          AND content_blocks IS NOT NULL
                     """), {'creator_id': creator_id})
                     row = result.fetchone()
                     if row:
