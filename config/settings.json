@@ -2,16 +2,13 @@
   "media": {
     "images": {
       "download_content_images": true,
-      "skip_avatars": true,
-      "skip_covers": true,
-      "skip_thumbnails": true,
       "min_size": {
         "width": 400,
         "height": 400,
-        "note": "Filter out small icons/avatars"
+        "note": "Filter out small icons/avatars (secondary filter after data-media-id)"
       },
       "deduplication": true,
-      "note": "Download content images, skip avatars/covers/icons, deduplicate"
+      "note": "Scraper filters by data-media-id attribute (only content images), min_size is secondary filter"
     },
     "patreon": {
       "videos": {
