@@ -1480,6 +1480,14 @@
                     </span>
                     <span>With Audio</span>
                 </button>
+                <button class="content-filter-btn" id="filterAttachments">
+                    <span class="icon">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                    </span>
+                    <span>With Attachments</span>
+                </button>
                 <button class="content-filter-btn" id="toggleTags">
                     <span class="icon">
                         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -1534,6 +1542,9 @@
                         {% set vid_count = (post.content_blocks | selectattr('type', 'equalto', 'video') | list | length) + (post.content_blocks | selectattr('type', 'equalto', 'youtube_embed') | list | length) %}
                     {% endif %}
 
+                    {# Count attachments #}
+                    {% set att_count = post.attachments | length if post.attachments else 0 %}
+
                     {% set com_count = post.content_blocks | selectattr('type', 'equalto', 'comment') | list | length if post.content_blocks else 0 %}
                     <div class="post-card-compact"
                          data-title="{{ (post.title or 'Untitled Post') | lower }}"
@@ -1543,7 +1554,8 @@
                          data-content="{{ (post.full_content[:500] if post.full_content else '') | lower }}"
                          data-has-images="{{ 'true' if img_count > 0 else 'false' }}"
                          data-has-videos="{{ 'true' if vid_count > 0 else 'false' }}"
-                         data-has-audio="{{ 'true' if aud_count > 0 else 'false' }}">
+                         data-has-audio="{{ 'true' if aud_count > 0 else 'false' }}"
+                         data-has-attachments="{{ 'true' if att_count > 0 else 'false' }}">
 
                         <!-- Header Negro -->
                         <div class="post-card-footer-black">
@@ -1577,6 +1589,14 @@
                                         </svg>
                                     </span>
                                     <span class="count">{{ aud_count }}</span>
+                                </span>
+                                <span class="meta-icon-with-count {% if att_count > 0 %}active{% endif %}" title="Attachments">
+                                    <span class="icon">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                    </span>
+                                    <span class="count">{{ att_count }}</span>
                                 </span>
                                 <span class="meta-icon-with-count {% if com_count > 0 %}active{% endif %}" title="Comments">
                                     💬 <span class="count">{{ com_count }}</span>
@@ -1838,6 +1858,7 @@
         const filterImages = document.getElementById('filterImages');
         const filterVideos = document.getElementById('filterVideos');
         const filterAudio = document.getElementById('filterAudio');
+        const filterAttachments = document.getElementById('filterAttachments');
         const toggleTags = document.getElementById('toggleTags');
         const toggleCollections = document.getElementById('toggleCollections');
         const tagsFilter = document.getElementById('tagsFilter');
@@ -1851,7 +1872,8 @@
         let contentFilters = {
             images: false,
             videos: false,
-            audio: false
+            audio: false,
+            attachments: false
         };
         let tagsVisible = false;
         let tagsExpanded = false;
@@ -1899,6 +1921,12 @@
 
         filterAudio.addEventListener('click', function() {
             contentFilters.audio = !contentFilters.audio;
+            this.classList.toggle('selected');
+            filterPosts();
+        });
+
+        filterAttachments.addEventListener('click', function() {
+            contentFilters.attachments = !contentFilters.attachments;
             this.classList.toggle('selected');
             filterPosts();
         });
@@ -2220,6 +2248,7 @@
                 const hasImages = card.dataset.hasImages === 'true';
                 const hasVideos = card.dataset.hasVideos === 'true';
                 const hasAudio = card.dataset.hasAudio === 'true';
+                const hasAttachments = card.dataset.hasAttachments === 'true';
 
                 // Check if this post is in search results (if using API)
                 let searchMatch = true;
@@ -2316,10 +2345,11 @@
 
                 // Content type filters
                 let contentMatch = true;
-                if (contentFilters.images || contentFilters.videos || contentFilters.audio) {
+                if (contentFilters.images || contentFilters.videos || contentFilters.audio || contentFilters.attachments) {
                     contentMatch = (contentFilters.images && hasImages) ||
                                    (contentFilters.videos && hasVideos) ||
-                                   (contentFilters.audio && hasAudio);
+                                   (contentFilters.audio && hasAudio) ||
+                                   (contentFilters.attachments && hasAttachments);
                 }
 
                 // Tag filters

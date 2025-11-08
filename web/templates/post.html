@@ -509,6 +509,103 @@
             line-height: 1.7 !important;
             font-style: normal !important;
         }
+
+        /* Attachments Section */
+        .attachments-section {
+            margin: 32px 0;
+            padding: 24px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 1px solid #e1e4e8;
+        }
+
+        .attachments-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #d1d5db;
+        }
+
+        .attachments-header h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .attachment-icon {
+            width: 24px;
+            height: 24px;
+            fill: none;
+            stroke: #6b7280;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .attachments-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .attachment-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #1f2937;
+            transition: all 0.2s ease;
+        }
+
+        .attachment-item:hover {
+            background: #f3f4f6;
+            border-color: #9ca3af;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .doc-icon {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: #6366f1;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            flex-shrink: 0;
+        }
+
+        .filename {
+            flex: 1;
+            font-size: 15px;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .download-icon {
+            width: 18px;
+            height: 18px;
+            fill: none;
+            stroke: #9ca3af;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            flex-shrink: 0;
+            opacity: 0.7;
+            transition: opacity 0.2s ease;
+        }
+
+        .attachment-item:hover .download-icon {
+            opacity: 1;
+            stroke: #6366f1;
+        }
     </style>
 </head>
 <body>
@@ -654,6 +751,31 @@
                             </div>
                         </div>
                     {% endfor %}
+                {% endif %}
+
+                {# Show attachments (PDFs, documents, etc.) #}
+                {% if post.attachments and post.attachments|length > 0 %}
+                    <div class="attachments-section">
+                        <div class="attachments-header">
+                            <svg class="attachment-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <h3>Attachments ({{ post.attachments|length }})</h3>
+                        </div>
+                        <div class="attachments-list">
+                            {% for attachment in post.attachments %}
+                                <a href="{{ attachment.url }}" class="attachment-item" target="_blank" rel="noopener">
+                                    <svg class="doc-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                    </svg>
+                                    <span class="filename">{{ attachment.filename }}</span>
+                                    <svg class="download-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                    </svg>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
                 {% endif %}
 
                 {# Show videos from local files #}
