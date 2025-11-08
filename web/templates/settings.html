@@ -987,9 +987,21 @@
         }
 
         function toggleEditCreator(creatorId) {
+            console.log('toggleEditCreator called with:', creatorId);
             const item = document.querySelector(`[data-creator-id="${creatorId}"]`);
+            console.log('Found item:', item);
+
+            if (!item) {
+                console.error('Could not find creator item with id:', creatorId);
+                alert('Error: Could not find creator element');
+                return;
+            }
+
             const viewMode = item.querySelector('.view-mode');
             const editMode = item.querySelector('.edit-mode');
+
+            console.log('viewMode:', viewMode);
+            console.log('editMode:', editMode);
 
             if (viewMode.style.display === 'none') {
                 viewMode.style.display = 'block';
