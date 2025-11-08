@@ -781,6 +781,86 @@ Los posts 96097452, 77933294, y 42294201 tenían `phase2_status='completed'` en 
 
 ---
 
+## 🐛 BUG CRÍTICO: Phase 1 colecta URLs de otros creadores
+
+**Fecha descubrimiento**: 2025-11-08
+**Severidad**: Alta
+**Estado**: Identificado, pendiente de fix
+
+### Descripción del bug
+
+Phase 1 URL Collector (`src/phase1_url_collector.py` → `src/patreon_scraper_v2.py`) colecta **TODAS** las URLs que contengan `/posts/` en la página del creator, sin verificar que pertenezcan al creator correcto.
+
+### Causa raíz
+
+En `src/patreon_scraper_v2.py` línea 366:
+```python
+links = element.find_elements(By.CSS_SELECTOR, "a[href*='/posts/']")
+```
+
+Este selector extrae:
+- ✅ Posts del creator (correcto)
+- ❌ Posts compartidos de otros creators
+- ❌ Posts en recomendaciones
+- ❌ Posts en publicidad
+
+**NO hay validación** que verifique que el post pertenezca al creator.
+
+### Impacto
+
+Para AstroByMax:
+- 80 URLs en `scraping_status`
+- 77 posts legítimos en `posts` table
+- 3 posts incorrectos: `96097452`, `77933294`, `42294201` (pertenecen a otros creators)
+
+Otros creators pueden estar afectados también.
+
+### Solución temporal
+
+1. **Identificar posts incorrectos**:
+   ```bash
+   python3 tools/verify_post_ownership.py
+   ```
+   Visita cada URL manualmente en Patreon y verifica el creator.
+
+2. **Limpiar posts incorrectos**:
+   ```bash
+   python3 tools/cleanup_incorrect_posts.py
+   ```
+   Elimina los posts verificados como incorrectos.
+
+### Solución permanente (TODO)
+
+Modificar `src/patreon_scraper_v2.py` para validar que cada post pertenezca al creator:
+
+**Opción 1**: Verificar el creator name en el HTML del post
+```python
+# Extraer el creator name del post card
+creator_elem = element.find_element(By.CSS_SELECTOR, "[data-tag='creator-name']")
+post_creator = creator_elem.text.strip()
+
+# Solo agregar si coincide con el creator esperado
+if post_creator.lower() == expected_creator_name.lower():
+    posts.append(post_data)
+```
+
+**Opción 2**: Después de extraer la URL, hacer una verificación HTTP
+```python
+# Fetch post page and verify it belongs to correct creator
+response = requests.get(post_url)
+if expected_creator_id in response.url or expected_creator_name in response.text:
+    posts.append(post_data)
+```
+
+**Opción 3**: Usar API de Patreon si está disponible
+
+### Scripts creados para este bug
+
+- `tools/verify_post_ownership.py` - Listar URLs para verificación manual
+- `tools/cleanup_incorrect_posts.py` - Eliminar posts verificados como incorrectos
+
+---
+
 ## 📝 Notas Importantes
 
 - **Contraseñas**: Cambiar todas las contraseñas por defecto en producción
