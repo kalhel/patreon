@@ -594,8 +594,10 @@
                                 {% if db_enabled and status.phase1_processed > 0 %}
                                 <button class="btn-small"
                                         onclick="resetCreatorPosts('{{ status.creator_id }}', {{ status.phase1_processed }})"
-                                        style="background: #ff9800; border: none; cursor: pointer; padding: 0.5rem 1rem; border-radius: 6px; color: white; font-size: 0.85rem; font-weight: 500;">
-                                    🔄 Reset Posts
+                                        style="background: #dc3545; border: none; cursor: pointer; padding: 0.5rem 1rem; border-radius: 6px; color: white; font-size: 0.85rem; font-weight: 500; transition: all 0.2s;"
+                                        onmouseover="this.style.background='#c82333'"
+                                        onmouseout="this.style.background='#dc3545'">
+                                    🔄 Reset
                                 </button>
                                 {% else %}
                                 <span style="color: rgba(255, 255, 255, 0.3); font-size: 0.85rem;">N/A</span>
@@ -911,10 +913,14 @@
                               `python3 src/phase2_detail_extractor.py --creator ${creatorId}`;
 
             if (!confirm(confirmMsg)) {
+                console.log('Reset cancelado por el usuario');
                 return;
             }
 
+            console.log(`Iniciando reset para creator: ${creatorId}`);
+
             try {
+                console.log('Enviando request a /api/creator/reset-posts...');
                 const response = await fetch('/api/creator/reset-posts', {
                     method: 'POST',
                     headers: {
@@ -923,22 +929,22 @@
                     body: JSON.stringify({ creator_id: creatorId })
                 });
 
+                console.log('Response status:', response.status);
                 const result = await response.json();
+                console.log('Response data:', result);
 
                 if (result.success) {
-                    alert(`✅ Reset completado!\n\n` +
-                          `Posts reseteados: ${result.reset_count}\n` +
-                          `Creator: ${creatorId}\n\n` +
-                          `Ahora ejecuta:\n` +
-                          `python3 src/phase2_detail_extractor.py --creator ${creatorId}`);
-
-                    // Reload page to show updated stats
+                    console.log(`✅ Reset completado! Posts reseteados: ${result.reset_count}`);
+                    alert(`✅ Reset completado!\n\nPosts reseteados: ${result.reset_count}\nCreator: ${creatorId}\n\nAhora ejecuta:\npython3 src/phase2_detail_extractor.py --creator ${creatorId}`);
                     window.location.reload();
                 } else {
-                    alert('❌ Error reseteando posts:\n' + result.message);
+                    console.error('❌ Error:', result.message);
+                    alert('❌ Error reseteando posts:\n' + result.message + '\n\nMira la consola (F12) para más detalles');
                 }
             } catch (error) {
-                alert('❌ Error reseteando posts:\n' + error.message);
+                console.error('❌ Exception:', error);
+                console.error('Error completo:', error.stack);
+                alert('❌ Error reseteando posts:\n' + error.message + '\n\nMira la consola (F12) para más detalles');
             }
         }
     </script>
