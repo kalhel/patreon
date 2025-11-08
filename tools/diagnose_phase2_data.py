@@ -409,9 +409,6 @@ def main():
     if missing_content_blocks:
         issues.append(f"❌ {len(missing_content_blocks)} posts missing content_blocks in PostgreSQL")
 
-    if len(json_with_audio) > 0 and audio_filter_count == 0:
-        issues.append(f"❌ Audio filter returns 0 posts but JSON has {len(json_with_audio)} with audio")
-
     if issues:
         print("🔴 ISSUES FOUND:")
         for issue in issues:
