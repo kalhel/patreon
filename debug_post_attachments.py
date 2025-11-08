@@ -56,10 +56,21 @@ def main():
     print(f"Title: {title}")
     print()
 
-    # Parse JSON fields
-    attachments = json.loads(attachments_json) if attachments_json else []
-    attachment_local = json.loads(attachment_local_json) if attachment_local_json else []
-    content_blocks = json.loads(content_blocks_json) if content_blocks_json else []
+    # Parse JSON fields (PostgreSQL may return as dict/list or as string)
+    if isinstance(attachments_json, str):
+        attachments = json.loads(attachments_json) if attachments_json else []
+    else:
+        attachments = attachments_json if attachments_json else []
+
+    if isinstance(attachment_local_json, str):
+        attachment_local = json.loads(attachment_local_json) if attachment_local_json else []
+    else:
+        attachment_local = attachment_local_json if attachment_local_json else []
+
+    if isinstance(content_blocks_json, str):
+        content_blocks = json.loads(content_blocks_json) if content_blocks_json else []
+    else:
+        content_blocks = content_blocks_json if content_blocks_json else []
 
     print("-" * 80)
     print("1. SQL FIELDS (raw data)")
