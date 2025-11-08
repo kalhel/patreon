@@ -71,25 +71,36 @@ def update_post_details_in_postgres(post_data: Dict):
         engine = create_engine(get_database_url())
 
         with engine.connect() as conn:
-            # Update post with full details
-            update_sql = text("""
-                UPDATE posts
-                SET
-                    title = :title,
-                    full_content = :full_content,
-                    content_blocks = CAST(:content_blocks AS jsonb),
-                    post_metadata = CAST(:post_metadata AS jsonb),
-                    published_at = :published_at,
-                    video_streams = CAST(:video_streams AS jsonb),
-                    video_subtitles = CAST(:video_subtitles AS jsonb),
-                    video_local_paths = :video_local_paths,
-                    audios = :audios,
-                    audio_local_paths = :audio_local_paths,
-                    images = :images,
-                    image_local_paths = :image_local_paths,
-                    patreon_tags = :patreon_tags,
+            # UPSERT post with full details (INSERT or UPDATE if exists)
+            upsert_sql = text("""
+                INSERT INTO posts (
+                    post_id, creator_id, post_url, title, full_content,
+                    content_blocks, post_metadata, published_at,
+                    video_streams, video_subtitles, video_local_paths,
+                    audios, audio_local_paths, images, image_local_paths,
+                    patreon_tags, created_at, updated_at
+                ) VALUES (
+                    :post_id, :creator_id, :post_url, :title, :full_content,
+                    CAST(:content_blocks AS jsonb), CAST(:post_metadata AS jsonb), :published_at,
+                    CAST(:video_streams AS jsonb), CAST(:video_subtitles AS jsonb), :video_local_paths,
+                    :audios, :audio_local_paths, :images, :image_local_paths,
+                    :patreon_tags, NOW(), NOW()
+                )
+                ON CONFLICT (post_id) DO UPDATE SET
+                    title = EXCLUDED.title,
+                    full_content = EXCLUDED.full_content,
+                    content_blocks = EXCLUDED.content_blocks,
+                    post_metadata = EXCLUDED.post_metadata,
+                    published_at = EXCLUDED.published_at,
+                    video_streams = EXCLUDED.video_streams,
+                    video_subtitles = EXCLUDED.video_subtitles,
+                    video_local_paths = EXCLUDED.video_local_paths,
+                    audios = EXCLUDED.audios,
+                    audio_local_paths = EXCLUDED.audio_local_paths,
+                    images = EXCLUDED.images,
+                    image_local_paths = EXCLUDED.image_local_paths,
+                    patreon_tags = EXCLUDED.patreon_tags,
                     updated_at = NOW()
-                WHERE post_id = :post_id
             """)
 
             # Prepare data for update
@@ -100,8 +111,10 @@ def update_post_details_in_postgres(post_data: Dict):
                               if block.get('type') == 'text' and block.get('text')]
                 full_content = '\n\n'.join(text_blocks)
 
-            update_params = {
+            upsert_params = {
                 'post_id': post_data.get('post_id'),
+                'creator_id': post_data.get('creator_id'),
+                'post_url': post_data.get('post_url'),
                 'title': post_data.get('title'),
                 'full_content': full_content,
                 'content_blocks': json.dumps(post_data.get('content_blocks', [])),
@@ -117,10 +130,10 @@ def update_post_details_in_postgres(post_data: Dict):
                 'patreon_tags': post_data.get('patreon_tags')
             }
 
-            conn.execute(update_sql, update_params)
+            conn.execute(upsert_sql, upsert_params)
             conn.commit()
 
-            logger.info(f"   🐘 Updated post {post_data.get('post_id')} in PostgreSQL")
+            logger.info(f"   🐘 Upserted post {post_data.get('post_id')} in PostgreSQL")
 
     except Exception as e:
         logger.error(f"   ❌ Error updating PostgreSQL: {e}")
