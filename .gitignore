@@ -14,7 +14,6 @@ config/*.key
 data/raw/
 data/processed/
 data/media/
-data/*.db
 *.json.bak
 
 # Logs
