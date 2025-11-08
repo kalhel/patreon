@@ -92,7 +92,8 @@ class MediaDownloader:
         self.stats = {
             'images': {'total': 0, 'downloaded': 0, 'failed': 0, 'skipped': 0, 'deduplicated': 0},
             'videos': {'total': 0, 'downloaded': 0, 'failed': 0, 'skipped': 0, 'deduplicated': 0},
-            'audios': {'total': 0, 'downloaded': 0, 'failed': 0, 'skipped': 0, 'deduplicated': 0}
+            'audios': {'total': 0, 'downloaded': 0, 'failed': 0, 'skipped': 0, 'deduplicated': 0},
+            'attachments': {'total': 0, 'downloaded': 0, 'failed': 0, 'skipped': 0, 'deduplicated': 0}
         }
         self.min_video_size_bytes = 15 * 1024 * 1024  # 15 MB threshold to detect previews
 
