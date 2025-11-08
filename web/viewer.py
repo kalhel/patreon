@@ -536,7 +536,14 @@ def view_post(post_id):
     # Count actual downloaded media
     image_count = len(image_local) if image_local else len(post.get('images') or [])
     audio_count = len(audio_local) if audio_local else len(post.get('audios') or [])
-    video_count = len(video_local) if video_local else len(post.get('videos') or [])
+
+    # Filter videos field to only count actual video files (not images)
+    # Old data may have image URLs in the videos field
+    video_extensions = ('.mp4', '.webm', '.ogg', '.mov', '.avi', '.m4v', '.mkv', '.m3u8', '.ts')
+    videos_raw = post.get('videos') or []
+    actual_videos = [v for v in videos_raw if any(v.lower().split('?')[0].endswith(ext) for ext in video_extensions)]
+    video_count = len(video_local) if video_local else len(actual_videos)
+
     attachment_count = len(attachment_local) if attachment_local else len(post.get('attachments') or [])
 
     # If no media arrays exist, fall back to counting content_blocks (old data)
