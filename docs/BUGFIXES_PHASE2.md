@@ -361,12 +361,305 @@ Shows exactly how viewer counts audio for first few posts.
 
 ---
 
+---
+
+## BUG #3: Attachments Column Type Mismatch (text[] vs JSONB)
+
+### Symptom
+- Implemented attachments feature (PDF/document extraction)
+- Code successfully extracts attachments with filename and URL
+- When reprocessing post with attachments, got database error:
+```
+psycopg2.errors.DatatypeMismatch: column "attachments" is of type text[] but expression is of type jsonb
+```
+
+### Root Cause
+**Schema mismatch between initial design and implementation:**
+
+**Original schema** (`schema/schema_v2.sql`):
+```sql
+attachments TEXT[]  -- Simple array of strings
+```
+
+**Implementation needs** (structured data):
+```json
+[
+  {
+    "filename": "document.pdf",
+    "url": "https://patreon.com/file/..."
+  }
+]
+```
+
+The original `text[]` type couldn't store structured objects with both filename and URL.
+
+### Error Context
+**File:** `src/phase2_detail_extractor.py` (line ~200)
+
+```python
+upsert_params = {
+    # ...
+    'attachments': json.dumps(post_data.get('attachments', [])),  # Sends JSONB
+}
+
+# SQL INSERT:
+CAST(:attachments AS jsonb)  # Tries to cast to jsonb
+```
+
+PostgreSQL rejected the INSERT because:
+- Column defined as `text[]`
+- Code sending JSONB data
+- Cannot implicitly convert
+
+### Solution Part 1: Schema Migration
+
+**Challenge:** Cannot alter column type directly due to view dependency.
+
+**Error when trying direct ALTER:**
+```sql
+ALTER TABLE posts ALTER COLUMN attachments TYPE jsonb;
+
+-- ERROR: cannot alter type of column "attachments" because other objects depend on it
+-- DETAIL: view posts_with_collections depends on column "attachments"
+```
+
+**Solution:** Drop view → Alter column → Recreate view
+
+**Migration script** (`database/migrations/003_alter_attachments_to_jsonb.sql`):
+
+```sql
+-- Step 1: Get current view definition
+SELECT pg_get_viewdef('posts_with_collections', true);
+
+-- Step 2: Drop the view
+DROP VIEW IF EXISTS posts_with_collections;
+
+-- Step 3: Alter column type
+ALTER TABLE posts
+ALTER COLUMN attachments TYPE jsonb
+USING CASE
+    WHEN attachments IS NULL THEN '[]'::jsonb
+    ELSE '[]'::jsonb
+END;
+
+-- Step 4: Recreate view with correct type
+CREATE VIEW posts_with_collections AS
+SELECT
+    p.*,
+    COALESCE(
+        json_agg(
+            json_build_object(
+                'collection_id', pc.collection_id,
+                'collection_name', c.name,
+                'added_at', pc.added_at
+            )
+        ) FILTER (WHERE pc.collection_id IS NOT NULL),
+        '[]'::json
+    ) as collections
+FROM posts p
+LEFT JOIN post_collections pc ON p.post_id = pc.post_id
+LEFT JOIN collections c ON pc.collection_id = c.id
+GROUP BY p.post_id;
+```
+
+**Execution:**
+```bash
+psql -h localhost -U patreon_user -d alejandria -f database/migrations/003_alter_attachments_to_jsonb.sql
+```
+
+### Solution Part 2: Code Implementation
+
+**Files modified for attachments feature:**
+
+1. **`src/content_parser.py`** - Extract attachments from HTML
+```python
+def _extract_attachments(self, driver: WebDriver) -> list:
+    """Extract PDF/document attachments from post"""
+    attachments = []
+
+    # Find attachment containers
+    containers = driver.find_elements(By.CSS_SELECTOR, '[data-tag="post-attachments"]')
+
+    for container in containers:
+        links = container.find_elements(By.CSS_SELECTOR, 'a[data-tag="post-attachment-link"]')
+
+        for link in links:
+            url = link.get_attribute('href')
+            filename = link.find_element(By.TAG_NAME, 'p').text.strip()
+
+            if url:
+                attachments.append({
+                    'filename': filename,
+                    'url': url
+                })
+                logger.info(f"  ✓ Found attachment: {filename}")
+
+    return attachments
+```
+
+2. **`src/patreon_scraper_v2.py`** - Include attachments in scraped data
+```python
+parsed_data = parse_post_page(self.driver)
+post_detail['attachments'] = parsed_data.get('attachments', [])
+```
+
+3. **`src/phase2_detail_extractor.py`** - UPSERT with JSONB attachments
+```python
+INSERT INTO posts (
+    post_id, creator_id, source_id, ..., attachments, ...
+) VALUES (
+    :post_id, :creator_id, :source_id, ..., CAST(:attachments AS jsonb), ...
+)
+ON CONFLICT (post_id) DO UPDATE SET
+    attachments = EXCLUDED.attachments,
+    ...
+```
+
+4. **`web/templates/post.html`** - Display attachments with professional UI
+```html
+{% if post.attachments and post.attachments|length > 0 %}
+<div class="attachments-section">
+    <div class="attachments-header">
+        <svg class="attachment-icon" viewBox="0 0 24 24">
+            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586..."/>
+        </svg>
+        <h3>Attachments ({{ post.attachments|length }})</h3>
+    </div>
+    <div class="attachments-list">
+        {% for attachment in post.attachments %}
+        <a href="{{ attachment.url }}" class="attachment-item" target="_blank">
+            <svg class="doc-icon">...</svg>
+            <span class="filename">{{ attachment.filename }}</span>
+            <svg class="download-icon">...</svg>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+```
+
+5. **`web/templates/index.html`** - Attachment counter and filter
+```jinja2
+{# Count attachments #}
+{% set att_count = post.attachments | length if post.attachments else 0 %}
+
+{# Display counter with icon #}
+<span class="meta-icon-with-count {% if att_count > 0 %}active{% endif %}"
+      title="Attachments">
+    <span class="icon"><svg>...</svg></span>
+    <span class="count">{{ att_count }}</span>
+</span>
+
+{# Filter button #}
+<button class="content-filter-btn" id="filterAttachments">
+    <span class="icon"><svg>...</svg></span>
+    <span>With Attachments</span>
+</button>
+```
+
+JavaScript filter logic:
+```javascript
+const contentFilters = {
+    images: false,
+    videos: false,
+    audio: false,
+    attachments: false
+};
+
+filterAttachments.addEventListener('click', function() {
+    contentFilters.attachments = !contentFilters.attachments;
+    this.classList.toggle('selected');
+    filterPosts();
+});
+```
+
+### Verification Steps
+
+1. **Check schema migration:**
+```bash
+psql -h localhost -U patreon_user -d alejandria -c "\d posts" | grep attachments
+# Expected: attachments | jsonb
+```
+
+2. **Test extraction with post containing attachments:**
+```bash
+# Mark post as pending
+psql -h localhost -U patreon_user -d alejandria -c \
+  "UPDATE posts SET deleted_at = NOW() WHERE post_id = '102666922';"
+
+# Reprocess post
+cd src
+python3 phase2_detail_extractor.py --post 102666922
+```
+
+3. **Verify database storage:**
+```bash
+psql -h localhost -U patreon_user -d alejandria -c "
+SELECT
+    post_id,
+    title,
+    jsonb_pretty(attachments) as attachments
+FROM posts
+WHERE post_id = '102666922';
+"
+```
+
+Expected output:
+```json
+[
+  {
+    "filename": "example.pdf",
+    "url": "https://www.patreon.com/file/..."
+  }
+]
+```
+
+4. **Test web UI:**
+- Open `http://localhost:5555/post/102666922`
+- Verify attachments section appears with professional styling
+- Verify attachment download link works
+- Open `http://localhost:5555/`
+- Verify attachment counter shows on post card
+- Verify "With Attachments" filter works
+
+### Commits
+- `[hash]` - FEAT: Add attachments extraction to content parser
+- `[hash]` - FEAT: Add attachments to Phase 2 scraper and UPSERT
+- `[hash]` - FEAT: Add attachments UI to post.html with professional styling
+- `[hash]` - FEAT: Add attachments counter and filter to index.html
+- `[hash]` - SCHEMA: Migrate attachments column from text[] to jsonb
+
+### Lessons Learned
+
+1. **Always verify schema types match implementation needs**
+   - Simple `text[]` insufficient for structured data
+   - Use JSONB for objects with multiple fields
+
+2. **Check for view dependencies before altering columns**
+   - Use `\d+ table_name` in psql to see dependencies
+   - Drop dependent views before ALTER, recreate after
+
+3. **Document schema migrations properly**
+   - Save migration scripts for reproducibility
+   - Include rollback instructions if needed
+
+4. **Test full flow after schema changes**
+   - Scraper extraction
+   - Database insertion
+   - Web UI display
+   - Filtering functionality
+
+---
+
 ## Related Files
 
 - `src/phase2_detail_extractor.py` - Phase 2 scraper (UPSERT logic)
+- `src/content_parser.py` - HTML content extraction (attachments)
+- `src/patreon_scraper_v2.py` - Main scraper coordination
 - `web/viewer.py` - Single post view (media counting)
-- `web/templates/index.html` - Post list view (media counting)
-- `web/templates/post.html` - Single post template
+- `web/templates/index.html` - Post list view (media counting, filters)
+- `web/templates/post.html` - Single post template (attachment display)
 - `tools/diagnose_phase2_data.py` - Comprehensive diagnostic
 - `tools/validate_phase2_upsert.py` - Pre-commit validation
 - `schema/schema_v2.sql` - Database schema
+- `database/migrations/003_alter_attachments_to_jsonb.sql` - Schema migration

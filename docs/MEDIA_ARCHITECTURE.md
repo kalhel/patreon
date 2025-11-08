@@ -51,7 +51,7 @@ CREATE TABLE posts (
     videos JSONB,          -- Array of video URLs (Patreon-hosted)
     video_streams JSONB,   -- Video stream metadata
     video_subtitles JSONB, -- Subtitle metadata
-    attachments JSONB,     -- Other attachments
+    attachments JSONB,     -- PDF/document attachments [{filename, url}]
 
     -- Downloaded media paths (from Phase 3 downloader)
     image_local_paths TEXT[],  -- Relative paths to downloaded images
@@ -131,6 +131,231 @@ CREATE TABLE posts (
 2. **Download tracking** - Separate phase for downloading
 3. **Storage efficiency** - Don't duplicate URLs
 4. **Query performance** - Easier to filter by array columns
+
+---
+
+## Attachments Structure
+
+### What are Attachments?
+
+Attachments are downloadable files (PDFs, documents, etc.) that creators include with their posts. Unlike embedded media (images, audio, video), attachments are external files that users download separately.
+
+### Storage Format
+
+Attachments are stored in the `attachments` JSONB column as an array of objects:
+
+```jsonb
+[
+  {
+    "filename": "Guide_to_Astronomy.pdf",
+    "url": "https://www.patreon.com/file/..."
+  },
+  {
+    "filename": "Star_Chart_2024.pdf",
+    "url": "https://www.patreon.com/file/..."
+  }
+]
+```
+
+### Schema Evolution
+
+**Original design** (schema_v2.sql):
+```sql
+attachments TEXT[]  -- Simple array of filenames
+```
+
+**Current design** (after migration):
+```sql
+attachments JSONB  -- Structured objects with filename + URL
+```
+
+**Migration:** See `database/migrations/003_alter_attachments_to_jsonb.sql`
+
+**Reason for change:**
+- Need to store both filename AND download URL
+- `text[]` insufficient for structured data
+- JSONB allows flexible querying and indexing
+
+### Extraction Process
+
+**File:** `src/content_parser.py`
+
+```python
+def _extract_attachments(self, driver: WebDriver) -> list:
+    """
+    Extract PDF/document attachments from Patreon post.
+    Returns: List of dicts with {filename, url}
+    """
+    attachments = []
+
+    # Find attachment containers by data-tag
+    containers = driver.find_elements(
+        By.CSS_SELECTOR,
+        '[data-tag="post-attachments"]'
+    )
+
+    for container in containers:
+        # Find all attachment links
+        links = container.find_elements(
+            By.CSS_SELECTOR,
+            'a[data-tag="post-attachment-link"]'
+        )
+
+        for link in links:
+            url = link.get_attribute('href')
+            filename = link.find_element(By.TAG_NAME, 'p').text.strip()
+
+            if url:
+                attachments.append({
+                    'filename': filename,
+                    'url': url
+                })
+                logger.info(f"  ✓ Found attachment: {filename}")
+
+    return attachments
+```
+
+### Database Storage
+
+**Phase 2 UPSERT** (`src/phase2_detail_extractor.py`):
+
+```python
+upsert_params = {
+    # ... other params ...
+    'attachments': json.dumps(post_data.get('attachments', [])),
+}
+
+upsert_sql = text("""
+INSERT INTO posts (
+    post_id, creator_id, source_id, ..., attachments, ...
+) VALUES (
+    :post_id, :creator_id, :source_id, ..., CAST(:attachments AS jsonb), ...
+)
+ON CONFLICT (post_id) DO UPDATE SET
+    attachments = EXCLUDED.attachments,
+    ...
+""")
+```
+
+### Web Viewer Display
+
+**Template:** `web/templates/post.html`
+
+```html
+{% if post.attachments and post.attachments|length > 0 %}
+<div class="attachments-section">
+    <div class="attachments-header">
+        <!-- Professional document icon -->
+        <svg class="attachment-icon" viewBox="0 0 24 24">
+            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        <h3>Attachments ({{ post.attachments|length }})</h3>
+    </div>
+
+    <div class="attachments-list">
+        {% for attachment in post.attachments %}
+        <a href="{{ attachment.url }}"
+           class="attachment-item"
+           target="_blank"
+           download>
+            <svg class="doc-icon">...</svg>
+            <span class="filename">{{ attachment.filename }}</span>
+            <svg class="download-icon">...</svg>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+```
+
+**Styling features:**
+- Professional document icons (SVG)
+- Hover effects for download links
+- Download icon indicator
+- Responsive design
+- Consistent with media sections (audio, video, images)
+
+### Index Page Counter and Filter
+
+**Template:** `web/templates/index.html`
+
+**Count attachments:**
+```jinja2
+{% set att_count = post.attachments | length if post.attachments else 0 %}
+```
+
+**Display counter with icon:**
+```html
+<span class="meta-icon-with-count {% if att_count > 0 %}active{% endif %}"
+      title="Attachments">
+    <span class="icon">
+        <svg viewBox="0 0 24 24">
+            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586..."/>
+        </svg>
+    </span>
+    <span class="count">{{ att_count }}</span>
+</span>
+```
+
+**Filter button:**
+```html
+<button class="content-filter-btn" id="filterAttachments">
+    <span class="icon"><svg>...</svg></span>
+    <span>With Attachments</span>
+</button>
+```
+
+**JavaScript filter logic:**
+```javascript
+const contentFilters = {
+    images: false,
+    videos: false,
+    audio: false,
+    attachments: false  // NEW
+};
+
+filterAttachments.addEventListener('click', function() {
+    contentFilters.attachments = !contentFilters.attachments;
+    this.classList.toggle('selected');
+    filterPosts();
+});
+
+// In filterPostsImmediate():
+const hasAttachments = card.dataset.hasAttachments === 'true';
+
+if (contentFilters.images || contentFilters.videos ||
+    contentFilters.audio || contentFilters.attachments) {
+    contentMatch = (contentFilters.images && hasImages) ||
+                   (contentFilters.videos && hasVideos) ||
+                   (contentFilters.audio && hasAudio) ||
+                   (contentFilters.attachments && hasAttachments);
+}
+```
+
+### Query Examples
+
+**Find posts with attachments:**
+```sql
+SELECT post_id, title, attachments
+FROM posts
+WHERE attachments IS NOT NULL
+  AND jsonb_array_length(attachments) > 0;
+```
+
+**Find specific attachment by filename:**
+```sql
+SELECT post_id, title, att->>'filename' as filename
+FROM posts,
+     jsonb_array_elements(attachments) as att
+WHERE att->>'filename' ILIKE '%astronomy%';
+```
+
+**Count total attachments across all posts:**
+```sql
+SELECT COUNT(*)
+FROM posts,
+     jsonb_array_elements(attachments) as att;
+```
 
 ---
 
