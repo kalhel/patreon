@@ -647,10 +647,11 @@
                         <span style="font-weight: 500; color: rgba(255, 255, 255, 0.9);">Download content images</span>
                     </label>
 
-                    <label style="display: flex; align-items: center; margin-bottom: 1rem; cursor: pointer;">
-                        <input type="checkbox" id="skip-avatars" style="margin-right: 10px; width: 18px; height: 18px;">
-                        <span style="color: rgba(255, 255, 255, 0.8);">Skip avatars/icons (&lt;400x400px)</span>
-                    </label>
+                    <div style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(33, 150, 243, 0.1); border-left: 3px solid #2196F3; border-radius: 4px;">
+                        <small style="color: rgba(255, 255, 255, 0.7);">
+                            ℹ️ Avatars, covers & thumbnails are automatically filtered by scraper (data-media-id)
+                        </small>
+                    </div>
 
                     <label style="display: flex; align-items: center; margin-bottom: 1rem; cursor: pointer;">
                         <input type="checkbox" id="dedup-images" style="margin-right: 10px; width: 18px; height: 18px;">
@@ -788,7 +789,6 @@
 
                     // Images
                     document.getElementById('download-images').checked = settings.images.download_content_images;
-                    document.getElementById('skip-avatars').checked = settings.images.skip_avatars;
                     document.getElementById('dedup-images').checked = settings.images.deduplication;
                     document.getElementById('min-width').value = settings.images.min_size.width;
                     document.getElementById('min-height').value = settings.images.min_size.height;
@@ -814,16 +814,13 @@
                     media: {
                         images: {
                             download_content_images: document.getElementById('download-images').checked,
-                            skip_avatars: document.getElementById('skip-avatars').checked,
-                            skip_covers: true,
-                            skip_thumbnails: true,
                             min_size: {
                                 width: parseInt(document.getElementById('min-width').value),
                                 height: parseInt(document.getElementById('min-height').value),
-                                note: "Filter out small icons/avatars"
+                                note: "Filter out small icons/avatars (secondary filter after data-media-id)"
                             },
                             deduplication: document.getElementById('dedup-images').checked,
-                            note: "Download content images, skip avatars/covers/icons, deduplicate"
+                            note: "Scraper filters by data-media-id attribute (only content images), min_size is secondary filter"
                         },
                         patreon: {
                             videos: {
