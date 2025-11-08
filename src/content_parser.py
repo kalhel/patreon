@@ -731,7 +731,14 @@ class ContentBlockParser:
             })
 
     def _add_paragraph_block(self, element):
-        """Add paragraph block with inline formatting"""
+        """Add paragraph block with inline formatting, and extract images first"""
+        # First, check if this paragraph contains images
+        images = element.find_all('img')
+        for img in images:
+            # Process each image as a separate block (maintains order)
+            self._add_image_block(img)
+
+        # Then, extract and add text content (if any)
         text = self._extract_formatted_text(element)
         if text:
             self.order += 1
