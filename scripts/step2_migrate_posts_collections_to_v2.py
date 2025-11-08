@@ -53,6 +53,7 @@ def main():
     db_url = get_database_url()
     engine = create_engine(db_url, pool_pre_ping=True)
 
+    # First, check current state (no transaction needed)
     with engine.connect() as conn:
         print("✅ Connected")
         print()
@@ -91,12 +92,12 @@ def main():
                 print("Aborted by user")
                 return 1
 
-        # ====================================================================
-        # START TRANSACTION
-        # ====================================================================
-        trans = conn.begin()
-
-        try:
+    # ====================================================================
+    # START TRANSACTION - Use engine.begin() for automatic transaction management
+    # ====================================================================
+    print("💾 Starting transaction...")
+    try:
+        with engine.begin() as conn:
             # ================================================================
             # STEP 2.1: Migrate POSTS table
             # ================================================================
@@ -254,11 +255,10 @@ def main():
             print()
 
             # ================================================================
-            # COMMIT TRANSACTION
+            # Transaction will auto-commit when exiting the 'with' block
             # ================================================================
             print("💾 Committing transaction...")
-            trans.commit()
-            print("✅ COMMITTED")
+            print("✅ Transaction will be committed automatically")
             print()
 
             print("=" * 80)
@@ -270,23 +270,23 @@ def main():
             print(f"  - {collections_count} collections migrated to schema v2")
             print()
             print("⚠️  NOTE: Old creator_id columns still exist but are NOT USED")
-            print("   They can be removed later with step3 if everything works")
+            print("   They can be removed later if everything works")
             print()
 
-            return 0
+    except Exception as e:
+        print()
+        print("=" * 80)
+        print("  ❌ ERROR OCCURRED - ROLLING BACK")
+        print("=" * 80)
+        print()
+        print(f"Error: {e}")
+        print()
+        print("✅ Transaction rolled back automatically - database unchanged")
+        print()
+        return 1
 
-        except Exception as e:
-            print()
-            print("=" * 80)
-            print("  ❌ ERROR OCCURRED - ROLLING BACK")
-            print("=" * 80)
-            print()
-            print(f"Error: {e}")
-            print()
-            trans.rollback()
-            print("✅ Rolled back successfully - database unchanged")
-            print()
-            return 1
+    # If we reach here, transaction committed successfully
+    return 0
 
 
 if __name__ == "__main__":
