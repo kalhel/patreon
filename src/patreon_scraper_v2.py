@@ -894,7 +894,15 @@ class PatreonScraperV2:
             elif lowered.startswith('data:'):
                 return
             else:
-                download_urls.add(url)
+                # Only add URLs with video extensions (not PDFs, images, etc.)
+                # Extract file extension before query params
+                url_path = lowered.split('?')[0]
+                video_extensions = ('.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv', '.flv', '.wmv')
+                if url_path.endswith(video_extensions):
+                    download_urls.add(url)
+                else:
+                    # Skip non-video files (PDFs, images, etc.)
+                    logger.debug(f"  ⏭️ Skipping non-video URL from API: {url[:80]}...")
 
         def collect(obj):
             if isinstance(obj, dict):
