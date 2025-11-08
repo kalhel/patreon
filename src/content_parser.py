@@ -121,6 +121,7 @@ class ContentBlockParser:
         self.blocks = []
         self.order = 0
         self.youtube_urls = set()  # Track YouTube URLs to avoid duplicates
+        self.vimeo_urls = set()    # Track Vimeo URLs to avoid duplicates
 
         try:
             # Extract post metadata (header info)
@@ -128,6 +129,9 @@ class ContentBlockParser:
 
             # Extract YouTube embeds from JSON-LD schema
             self._extract_json_ld_embeds(driver)
+
+            # Extract Vimeo embeds from iframes (with full player URL including app_id)
+            self._extract_vimeo_iframes(driver)
 
             # Then parse main content
             content_element = self._find_content_element(driver)
@@ -550,16 +554,20 @@ class ContentBlockParser:
 
                         # Handle Vimeo embeds
                         elif embed_url and 'vimeo.com' in embed_url:
-                            self.order += 1
-                            block_data = {
-                                'type': 'vimeo_embed',
-                                'order': self.order,
-                                'url': embed_url,
-                                'thumbnail': data.get('thumbnailUrl', ''),
-                                'description': data.get('description', '')
-                            }
-                            self.blocks.append(block_data)
-                            logger.info(f"Found Vimeo embed: {embed_url}")
+                            # Check if this Vimeo URL was already added (deduplication)
+                            if embed_url not in self.vimeo_urls:
+                                self.vimeo_urls.add(embed_url)
+
+                                self.order += 1
+                                block_data = {
+                                    'type': 'vimeo_embed',
+                                    'order': self.order,
+                                    'url': embed_url,
+                                    'thumbnail': data.get('thumbnailUrl', ''),
+                                    'description': data.get('description', '')
+                                }
+                                self.blocks.append(block_data)
+                                logger.info(f"Found Vimeo embed: {embed_url}")
 
                 except json.JSONDecodeError as e:
                     logger.debug(f"Error parsing JSON-LD: {e}")
@@ -567,6 +575,58 @@ class ContentBlockParser:
 
         except Exception as e:
             logger.error(f"Error extracting JSON-LD embeds: {e}")
+
+    def _extract_vimeo_iframes(self, driver: WebDriver):
+        """
+        Extract Vimeo embeds from actual iframes (with full player URL including app_id)
+        This replaces any Vimeo URLs extracted from JSON-LD with the correct player URLs
+        """
+        try:
+            # Find all iframes
+            iframes = driver.find_elements(By.TAG_NAME, 'iframe')
+
+            for iframe in iframes:
+                src = iframe.get_attribute('src')
+
+                # Check if it's a Vimeo player iframe
+                if src and 'player.vimeo.com' in src:
+                    # Extract video ID
+                    video_id = None
+                    if '/video/' in src:
+                        video_id = src.split('/video/')[1].split('?')[0]
+
+                    if video_id and src not in self.vimeo_urls:
+                        self.vimeo_urls.add(src)
+
+                        # Check if we already have this video ID from JSON-LD
+                        # If so, update the URL; if not, add new block
+                        existing_block = None
+                        for block in self.blocks:
+                            if (block.get('type') == 'vimeo_embed' and
+                                video_id in block.get('url', '')):
+                                existing_block = block
+                                break
+
+                        if existing_block:
+                            # Update existing block with full player URL
+                            old_url = existing_block['url']
+                            existing_block['url'] = src
+                            logger.info(f"Updated Vimeo embed URL: {video_id} (player URL with app_id)")
+                        else:
+                            # Add new block (shouldn't happen often)
+                            self.order += 1
+                            block_data = {
+                                'type': 'vimeo_embed',
+                                'order': self.order,
+                                'url': src,
+                                'thumbnail': '',
+                                'description': ''
+                            }
+                            self.blocks.append(block_data)
+                            logger.info(f"Found Vimeo iframe: {src}")
+
+        except Exception as e:
+            logger.error(f"Error extracting Vimeo iframes: {e}")
 
     def _extract_comments(self, driver: WebDriver):
         """Extract comments from the page using data-tag attributes"""

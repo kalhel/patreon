@@ -1654,6 +1654,12 @@ class MediaDownloader:
         else:
             base_command = [yt_dlp_executable]
 
+        # Create cookie file from Patreon session (for embedded videos)
+        cookie_file = self._create_temp_cookie_file()
+
+        # Get post URL for referer header (Vimeo requires embedding page context)
+        post_url = post.get('post_url', '')
+
         for idx, block in enumerate(vimeo_blocks):
             url = block.get('url', '')
 
@@ -1685,20 +1691,30 @@ class MediaDownloader:
             output_format = download_settings.get('format', 'mp4')
 
             # Build format string based on quality setting
+            # Note: Vimeo uses HLS streams, so we don't specify ext (it handles merging automatically)
             if quality == 'best':
-                format_str = f'bestvideo[ext={output_format}]+bestaudio[ext=m4a]/best[ext={output_format}]/best'
+                format_str = 'bestvideo+bestaudio/best'
             else:
                 format_str = quality
 
-            # Download video
+            # Build download command with Patreon cookies and referer
             video_command = base_command + [
                 '--format', format_str,
                 '--merge-output-format', output_format,
                 '--no-mtime',
                 '--no-warnings',
-                '-o', str(creator_dir / f'{filename_base}.%(ext)s'),
-                url
+                '-o', str(creator_dir / f'{filename_base}.%(ext)s')
             ]
+
+            # Add Patreon cookies (embedded videos may be accessible via Patreon session)
+            if cookie_file:
+                video_command.extend(['--cookies', cookie_file])
+
+            # Add referer header (critical for Vimeo embeds - tells Vimeo the video is embedded in Patreon)
+            if post_url:
+                video_command.extend(['--referer', post_url])
+
+            video_command.append(url)
 
             try:
                 logger.info(f"  🔄 [VIMEO] Downloading video {video_id}...")
@@ -1744,6 +1760,13 @@ class MediaDownloader:
 
             # Small delay between downloads
             time.sleep(1)
+
+        # Clean up temporary cookie file
+        if cookie_file:
+            try:
+                os.remove(cookie_file)
+            except OSError:
+                pass
 
         logger.info(f"  ✓ [VIMEO] Downloaded {len(downloaded_videos)} video(s)")
 
