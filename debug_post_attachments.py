@@ -103,8 +103,8 @@ def main():
     print("-" * 80)
     print(f"Link blocks with 'patreon.com/file': {len(link_blocks)}")
 
+    unique_media_ids = {}
     if link_blocks:
-        unique_media_ids = {}
         for i, block in enumerate(link_blocks, 1):
             url = block.get('url', '')
             text = block.get('text', 'N/A')
