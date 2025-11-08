@@ -26,7 +26,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 try:
     from postgres_tracker import PostgresTracker
     POSTGRES_AVAILABLE = True
-except:
+except ImportError as e:
+    print(f"⚠️  PostgreSQL tracker not available: {e}")
     POSTGRES_AVAILABLE = False
 
 app = Flask(__name__,
@@ -793,14 +794,21 @@ def settings():
     # Try to load PostgreSQL stats if available
     db_stats = {}
     db_enabled = False
+    print(f"🔍 DEBUG: POSTGRES_AVAILABLE = {POSTGRES_AVAILABLE}")
     if POSTGRES_AVAILABLE:
         try:
+            print("🔍 DEBUG: Creating PostgresTracker...")
             tracker = PostgresTracker()
+            print("🔍 DEBUG: Getting all_creator_stats...")
             all_stats = tracker.get_all_creator_stats()
+            print(f"🔍 DEBUG: Got stats for {len(all_stats)} creators")
             db_stats = all_stats if all_stats else {}
             db_enabled = True
+            print(f"🔍 DEBUG: db_enabled = True")
         except Exception as e:
-            print(f"Warning: Could not load PostgreSQL stats: {e}")
+            print(f"❌ Warning: Could not load PostgreSQL stats: {e}")
+            import traceback
+            traceback.print_exc()
             db_enabled = False
 
     # Get processing status for each creator
