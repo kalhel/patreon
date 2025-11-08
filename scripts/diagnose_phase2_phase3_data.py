@@ -124,28 +124,30 @@ def check_postgresql_data(engine):
             phase1_result = conn.execute(phase1_query, {'creator_id': creator_id}).fetchone()
 
             # Phase 2: posts table (detail extraction)
+            # Note: posts table uses schema v1 (creator_id VARCHAR, not source_id)
             phase2_query = text("""
                 SELECT
                     COUNT(*) as total,
-                    COUNT(CASE WHEN content IS NOT NULL AND content != '' THEN 1 END) as with_content,
+                    COUNT(CASE WHEN full_content IS NOT NULL AND full_content != '' THEN 1 END) as with_content,
                     COUNT(CASE WHEN content_blocks IS NOT NULL THEN 1 END) as with_blocks,
                     MAX(updated_at) as last_updated
                 FROM posts p
-                JOIN creator_sources cs ON cs.id = p.source_id
-                WHERE cs.platform_id = :creator_id
+                WHERE p.creator_id = :creator_id
+                  AND p.deleted_at IS NULL
             """)
             phase2_result = conn.execute(phase2_query, {'creator_id': creator_id}).fetchone()
 
             # Phase 3: collections table
+            # Note: collections table uses schema v1 (creator_id VARCHAR, not source_id)
             phase3_query = text("""
                 SELECT
                     COUNT(DISTINCT col.id) as total_collections,
                     COUNT(pc.post_id) as total_post_collection_links,
                     MAX(col.updated_at) as last_updated
                 FROM collections col
-                JOIN creator_sources cs ON cs.id = col.source_id
-                LEFT JOIN post_collections pc ON pc.collection_id = col.id
-                WHERE cs.platform_id = :creator_id
+                LEFT JOIN post_collections pc ON pc.collection_id = col.collection_id
+                WHERE col.creator_id = :creator_id
+                  AND col.deleted_at IS NULL
             """)
             phase3_result = conn.execute(phase3_query, {'creator_id': creator_id}).fetchone()
 
