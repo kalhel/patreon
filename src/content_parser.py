@@ -6,6 +6,7 @@ Maintains order, formatting, and structure for processing
 
 import json
 import logging
+import re
 import requests
 from typing import List, Dict, Optional
 from bs4 import BeautifulSoup
@@ -837,28 +838,23 @@ class ContentBlockParser:
             # Process each image as a separate block (maintains order)
             self._add_image_block(img)
 
-        # Check if paragraph contains YouTube links that should be embeds
+        # Check if paragraph contains YouTube links (both as <a> tags and plain text URLs)
         # This handles cases where creators paste YouTube links directly in text
         # rather than using Patreon's video embed feature (common in some creators)
+
+        # Method 1: Check <a href="..."> links
         youtube_links = element.find_all('a', href=True)
         for link in youtube_links:
             href = link.get('href', '')
             if 'youtube.com/watch' in href or 'youtu.be/' in href:
-                # Extract video ID from URL
-                # Supports formats:
-                # - https://www.youtube.com/watch?v=VIDEO_ID
-                # - https://youtu.be/VIDEO_ID
-                # - URLs with additional parameters (&t=123, #timestamp, etc.)
                 video_id = None
                 if 'v=' in href:
                     video_id = href.split('v=')[1].split('&')[0].split('#')[0]
                 elif 'youtu.be/' in href:
                     video_id = href.split('youtu.be/')[1].split('?')[0].split('#')[0]
 
-                # Only add if we haven't seen this video before (avoid duplicates)
                 if video_id and video_id not in self.youtube_urls:
                     self.youtube_urls.add(video_id)
-                    # Add YouTube embed block with best available thumbnail
                     best_thumbnail = find_best_youtube_thumbnail(video_id)
                     self.order += 1
                     self.blocks.append({
@@ -869,6 +865,31 @@ class ContentBlockParser:
                         'thumbnail': best_thumbnail
                     })
                     logger.info(f"Detected YouTube link in paragraph: {video_id}")
+
+        # Method 2: Check plain text for YouTube URLs (not wrapped in <a> tags)
+        paragraph_text = element.get_text()
+        # Match YouTube URLs in plain text
+        youtube_patterns = [
+            r'https?://(?:www\.)?youtube\.com/watch\?v=([a-zA-Z0-9_-]+)',
+            r'https?://youtu\.be/([a-zA-Z0-9_-]+)'
+        ]
+
+        for pattern in youtube_patterns:
+            matches = re.finditer(pattern, paragraph_text)
+            for match in matches:
+                video_id = match.group(1)
+                if video_id and video_id not in self.youtube_urls:
+                    self.youtube_urls.add(video_id)
+                    best_thumbnail = find_best_youtube_thumbnail(video_id)
+                    self.order += 1
+                    self.blocks.append({
+                        'type': 'youtube_embed',
+                        'order': self.order,
+                        'url': f'https://www.youtube.com/watch?v={video_id}',
+                        'video_id': video_id,
+                        'thumbnail': best_thumbnail
+                    })
+                    logger.info(f"Detected YouTube URL in plain text: {video_id}")
 
         # Then, extract and add text content (if any)
         text = self._extract_formatted_text(element)
