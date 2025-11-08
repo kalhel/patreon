@@ -1747,6 +1747,83 @@ class MediaDownloader:
                     block['type'] = 'video'
                     block['vimeo_downloaded'] = True
                     block['vimeo_video_id'] = video_id
+
+                    # Try to download subtitles (if available)
+                    logger.info(f"  📝 [VIMEO] Attempting to download subtitles...")
+
+                    # Use a temp filename to avoid conflicts with existing video
+                    import tempfile
+                    temp_base = f'vimeo_subs_{video_id}_temp'
+
+                    subtitle_command = base_command + [
+                        '--write-subs',              # Download subtitles
+                        '--write-auto-subs',         # Include auto-generated
+                        '--sub-langs', 'en-x-autogen,en,es',  # Auto-gen English, English, Spanish
+                        '--sub-format', 'vtt',
+                        '--skip-download',           # Don't re-download video
+                        '--no-warnings',
+                        '-o', str(creator_dir / f'{temp_base}.%(ext)s')
+                    ]
+
+                    # Add cookies and referer for subtitles too
+                    if cookie_file:
+                        subtitle_command.extend(['--cookies', cookie_file])
+                    if post_url:
+                        subtitle_command.extend(['--referer', post_url])
+
+                    subtitle_command.append(url)
+
+                    try:
+                        logger.info(f"  🔄 [VIMEO] Downloading subtitles...")
+                        sub_result = subprocess.run(
+                            subtitle_command,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            check=False,
+                            text=True,
+                            timeout=60
+                        )
+
+                        # Check for subtitle files with temp name
+                        import glob
+                        temp_subtitle_files = glob.glob(str(creator_dir / f'{temp_base}*.vtt'))
+
+                        if temp_subtitle_files:
+                            # Rename subtitle files to match video filename
+                            for temp_sub in temp_subtitle_files:
+                                temp_path = Path(temp_sub)
+                                # Extract language code from temp filename
+                                # e.g., vimeo_subs_123_temp.en-x-autogen.vtt -> 141632966_vm00_en.vtt
+                                parts = temp_path.name.split('.')
+                                if len(parts) >= 3:  # has extension and language
+                                    lang_code = parts[-2]  # e.g., 'en-x-autogen' or 'en'
+                                    # Simplify language code
+                                    if 'en' in lang_code:
+                                        lang_simple = 'en'
+                                    elif 'es' in lang_code:
+                                        lang_simple = 'es'
+                                    else:
+                                        lang_simple = lang_code
+
+                                    final_name = f'{filename_base}_{lang_simple}.vtt'
+                                    final_path = creator_dir / final_name
+
+                                    # Rename/move file
+                                    import shutil
+                                    shutil.move(str(temp_path), str(final_path))
+                                    logger.info(f"  ✓ [VIMEO] Downloaded subtitle: {final_name}")
+
+                            # Count final subtitle files
+                            final_subs = glob.glob(str(creator_dir / f'{filename_base}_*.vtt'))
+                            logger.info(f"  ✓ [VIMEO] Total {len(final_subs)} subtitle file(s) for video")
+                        else:
+                            logger.info(f"  ℹ️  [VIMEO] No subtitles available for this video")
+
+                    except subprocess.TimeoutExpired:
+                        logger.warning(f"  ⚠️  [VIMEO] Subtitle download timeout")
+                    except Exception as e:
+                        logger.warning(f"  ⚠️  [VIMEO] Error downloading subtitles: {e}")
+
                 else:
                     logger.warning(f"  ⚠️  [VIMEO] Video download failed for {video_id}")
                     logger.warning(f"  Return code: {result.returncode}")
