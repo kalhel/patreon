@@ -71,16 +71,31 @@ def update_post_details_in_postgres(post_data: Dict):
         engine = create_engine(get_database_url())
 
         with engine.connect() as conn:
+            # First, resolve creator_id to source_id
+            creator_id = post_data.get('creator_id')
+            result = conn.execute(text("""
+                SELECT cs.id
+                FROM creator_sources cs
+                WHERE cs.platform = 'patreon'
+                  AND cs.platform_id = :creator_id
+            """), {'creator_id': creator_id})
+
+            row = result.fetchone()
+            if not row:
+                raise ValueError(f"Could not resolve creator '{creator_id}' to source_id")
+
+            source_id = row[0]
+
             # UPSERT post with full details (INSERT or UPDATE if exists)
             upsert_sql = text("""
                 INSERT INTO posts (
-                    post_id, creator_id, post_url, title, full_content,
+                    post_id, creator_id, source_id, post_url, title, full_content,
                     content_blocks, post_metadata, published_at,
                     video_streams, video_subtitles, video_local_paths,
                     audios, audio_local_paths, images, image_local_paths,
                     patreon_tags, created_at, updated_at
                 ) VALUES (
-                    :post_id, :creator_id, :post_url, :title, :full_content,
+                    :post_id, :creator_id, :source_id, :post_url, :title, :full_content,
                     CAST(:content_blocks AS jsonb), CAST(:post_metadata AS jsonb), :published_at,
                     CAST(:video_streams AS jsonb), CAST(:video_subtitles AS jsonb), :video_local_paths,
                     :audios, :audio_local_paths, :images, :image_local_paths,
@@ -113,7 +128,8 @@ def update_post_details_in_postgres(post_data: Dict):
 
             upsert_params = {
                 'post_id': post_data.get('post_id'),
-                'creator_id': post_data.get('creator_id'),
+                'creator_id': creator_id,
+                'source_id': source_id,
                 'post_url': post_data.get('post_url'),
                 'title': post_data.get('title'),
                 'full_content': full_content,
