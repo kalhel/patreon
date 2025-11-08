@@ -760,10 +760,15 @@
 
                 {# Show audio from local files #}
                 {% set local_audios = post.audio_local_paths if post.audio_local_paths is defined and post.audio_local_paths else [] %}
+                {% set audio_urls = post.audios if post.audios else [] %}
                 {% if local_audios %}
-                    {% for audio_path in local_audios %}
-                        {% set audio_filename = audio_path.split('/')[-1] %}
-                        <div class="audio-player-container">
+                    {% for audio_url in audio_urls %}
+                        {% set local_path = local_audios[loop.index0] if loop.index0 < local_audios|length else None %}
+                        {% if local_path %}
+                            {# Extract original filename from URL (before query params) #}
+                            {% set url_path = audio_url.split('?')[0] %}
+                            {% set audio_filename = url_path.split('/')[-1] %}
+                            <div class="audio-player-container">
                             {# Use collection image if post belongs to a collection, otherwise use creator avatar #}
                             {% if post.collections and post.collections|length > 0 and post.collections[0].collection_image_local %}
                                 <img src="{{ url_for('media_file', filename=post.collections[0].collection_image_local) }}" alt="{{ post.collections[0].collection_name }}" class="audio-avatar" loading="lazy">
@@ -773,13 +778,14 @@
                             <div class="audio-player-main">
                                 <button class="audio-btn" onclick="playPause({{ loop.index }})">▶</button>
                                 <div id="waveform-{{ loop.index }}"
-                                     data-audio-src="{{ url_for('media_file', filename=audio_path) }}?original={{ audio_filename | urlencode }}"
-                                     data-waveform-src="{{ url_for('media_file', filename=audio_path|replace('.mp3', '.json')) }}"
+                                     data-audio-src="{{ url_for('media_file', filename=local_path) }}?original={{ audio_filename | urlencode }}"
+                                     data-waveform-src="{{ url_for('media_file', filename=local_path|replace('.mp3', '.json')) }}"
                                      style="flex: 1; min-width: 0;"></div>
                                 <span class="audio-time" id="time-{{ loop.index }}">0:00 / 0:00</span>
                                 <button class="audio-speed" onclick="changeSpeed({{ loop.index }})">1x</button>
                             </div>
                         </div>
+                        {% endif %}
                     {% endfor %}
                 {% endif %}
 
@@ -787,9 +793,16 @@
                 {# Show videos from local files #}
                 {% set local_videos = post.video_local_paths if post.video_local_paths is defined and post.video_local_paths else [] %}
                 {% set local_subtitles = post.video_subtitles_relative if post.video_subtitles_relative is defined and post.video_subtitles_relative else [] %}
+                {% set video_urls = post.videos if post.videos else [] %}
                 {% if local_videos %}
                     {% set primary_video = local_videos[0] %}
-                    {% set video_filename = primary_video.split('/')[-1] %}
+                    {# Extract original filename from URL #}
+                    {% if video_urls and video_urls|length > 0 %}
+                        {% set url_path = video_urls[0].split('?')[0] %}
+                        {% set video_filename = url_path.split('/')[-1] %}
+                    {% else %}
+                        {% set video_filename = primary_video.split('/')[-1] %}
+                    {% endif %}
                     <div class="content-block video">
                         <video controls preload="metadata" crossorigin="anonymous" id="main-video">
                             <source src="{{ url_for('media_file', filename=primary_video) }}?original={{ video_filename | urlencode }}#t=0.1" type="video/mp4">
@@ -840,7 +853,9 @@
                                 {% endfor %}
 
                                 {% if local_img.path %}
-                                {% set img_filename = local_img.path.split('/')[-1] %}
+                                {# Extract original filename from URL #}
+                                {% set url_path = block.url.split('?')[0] %}
+                                {% set img_filename = url_path.split('/')[-1] %}
                                 <div class="content-block image">
                                     <img src="{{ url_for('media_file', filename=local_img.path) }}?original={{ img_filename | urlencode }}" alt="{{ block.caption or '' }}" loading="lazy">
                                     {% if block.caption %}
@@ -910,11 +925,17 @@
 
                     {# If no image blocks found but we have local images, show them at the end #}
                     {% if not has_image_blocks and post.image_local_paths %}
-                        {% for img_path in post.image_local_paths %}
-                            {% set img_filename = img_path.split('/')[-1] %}
-                            <div class="content-block image">
-                                <img src="{{ url_for('media_file', filename=img_path) }}?original={{ img_filename | urlencode }}" alt="Post image" loading="lazy">
-                            </div>
+                        {% set image_urls = post.images if post.images else [] %}
+                        {% for img_url in image_urls %}
+                            {% set local_path = post.image_local_paths[loop.index0] if loop.index0 < post.image_local_paths|length else None %}
+                            {% if local_path %}
+                                {# Extract original filename from URL #}
+                                {% set url_path = img_url.split('?')[0] %}
+                                {% set img_filename = url_path.split('/')[-1] %}
+                                <div class="content-block image">
+                                    <img src="{{ url_for('media_file', filename=local_path) }}?original={{ img_filename | urlencode }}" alt="Post image" loading="lazy">
+                                </div>
+                            {% endif %}
                         {% endfor %}
                     {% endif %}
 
@@ -928,11 +949,17 @@
 
                     {# Show downloaded images (local paths) if available, otherwise show remote URLs #}
                     {% if post.image_local_paths %}
-                        {% for img_path in post.image_local_paths %}
-                        {% set img_filename = img_path.split('/')[-1] %}
-                        <div class="content-block image">
-                            <img src="{{ url_for('media_file', filename=img_path) }}?original={{ img_filename | urlencode }}" alt="Post image" loading="lazy">
-                        </div>
+                        {% set image_urls = post.images if post.images else [] %}
+                        {% for img_url in image_urls %}
+                            {% set local_path = post.image_local_paths[loop.index0] if loop.index0 < post.image_local_paths|length else None %}
+                            {% if local_path %}
+                                {# Extract original filename from URL #}
+                                {% set url_path = img_url.split('?')[0] %}
+                                {% set img_filename = url_path.split('/')[-1] %}
+                                <div class="content-block image">
+                                    <img src="{{ url_for('media_file', filename=local_path) }}?original={{ img_filename | urlencode }}" alt="Post image" loading="lazy">
+                                </div>
+                            {% endif %}
                         {% endfor %}
                     {% elif post.images %}
                         {# Fallback to remote URLs (may have expired tokens) #}
