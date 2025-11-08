@@ -834,9 +834,25 @@
                 {% endif %}
 
                 {% if post.content_blocks %}
+                    {# Pre-process: Find videos that should be moved after their reference text #}
+                    {% set videos_to_move = namespace(items={}) %}
+                    {% set sorted_blocks = post.content_blocks | sort(attribute='order') %}
+
+                    {% for idx in range(sorted_blocks | length - 1) %}
+                        {% set current = sorted_blocks[idx] %}
+                        {% set next = sorted_blocks[idx + 1] %}
+                        {# Check if current is video and next paragraph mentions it (contains youtu link or "flash" etc) #}
+                        {% if current.type == 'video' and next.type == 'paragraph' %}
+                            {% if next.text and (('youtu' in next.text.lower()) or ('flash' in next.text.lower()) or ('video' in next.text.lower())) %}
+                                {# Mark this video to be shown after the reference paragraph #}
+                                {% set _ = videos_to_move.items.update({current.order: next.order}) %}
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+
                     {# Now iterate through content_blocks for text content #}
                     {% set shown_tags = namespace(value=false) %}
-                    {% for block in post.content_blocks | sort(attribute='order') %}
+                    {% for block in sorted_blocks %}
                         {% if block.type == 'comments_header' or block.type == 'comment' %}
                             {# Skip comments for now, will show them later #}
                         {% elif block.type == 'heading_1' %}
@@ -858,6 +874,38 @@
                             <div class="content-block paragraph">
                                 <p>{{ block.text | markdown | safe }}</p>
                             </div>
+
+                            {# Check if any video should be shown after this paragraph #}
+                            {% for video_order, after_order in videos_to_move.items.items() %}
+                                {% if after_order == block.order and local_videos %}
+                                    {# Find the video block and render it here #}
+                                    {% for video_block in sorted_blocks %}
+                                        {% if video_block.order == video_order and video_block.type == 'video' %}
+                                            {% set video_index = loop.index0 if loop.index0 < local_videos|length else 0 %}
+                                            {% set video_path = local_videos[video_index] %}
+                                            {% set video_url = video_urls[video_index] if video_index < video_urls|length else '' %}
+
+                                            {# Extract original filename from URL #}
+                                            {% if video_url %}
+                                                {% set url_path = video_url.split('?')[0] %}
+                                                {% set video_filename = url_path.split('/')[-1] %}
+                                            {% else %}
+                                                {% set video_filename = video_path.split('/')[-1] %}
+                                            {% endif %}
+
+                                            <div class="content-block video">
+                                                <video controls preload="metadata" crossorigin="anonymous">
+                                                    <source src="{{ url_for('media_file', filename=video_path) }}?original={{ video_filename | urlencode }}#t=3" type="video/mp4">
+                                                    {% if local_subtitles and video_index < local_subtitles|length %}
+                                                        <track kind="subtitles" src="{{ url_for('media_file', filename=local_subtitles[video_index]) }}" default>
+                                                    {% endif %}
+                                                    Your browser does not support the video tag.
+                                                </video>
+                                            </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                            {% endfor %}
                             {% endif %}
 
                         {% elif block.type == 'image' %}
@@ -895,7 +943,8 @@
                         {% elif block.type == 'video' %}
                             {# Show video in correct position ONLY if it's in middle of content (order >= 3) #}
                             {# Videos at beginning (order 0-2) are already shown above, after title #}
-                            {% if block.order >= 3 and local_videos %}
+                            {# Skip videos that should be moved after their reference paragraph #}
+                            {% if block.order >= 3 and local_videos and block.order not in videos_to_move.items %}
                                 {% set video_index = loop.index0 if loop.index0 < local_videos|length else 0 %}
                                 {% set video_path = local_videos[video_index] %}
                                 {% set video_url = video_urls[video_index] if video_index < video_urls|length else '' %}
