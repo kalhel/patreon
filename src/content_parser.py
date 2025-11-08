@@ -686,20 +686,23 @@ class ContentBlockParser:
                             url = link.get_attribute('href')
 
                             # Get filename from the <p> tag inside the link
-                            filename = "Unknown"
+                            filename = None
                             try:
                                 p_tag = link.find_element(By.TAG_NAME, 'p')
                                 filename = p_tag.text.strip()
                             except:
                                 # If no <p> tag, try to get text directly
-                                filename = link.text.strip() or "Attachment"
+                                filename = link.text.strip()
 
-                            if url:
+                            # Only add if we have both URL and a valid filename
+                            if url and filename:
                                 attachments.append({
                                     'filename': filename,
                                     'url': url
                                 })
                                 logger.info(f"  ✓ Found attachment: {filename}")
+                            elif url:
+                                logger.warning(f"  ⚠️  Skipping attachment with empty filename: {url}")
 
                         except Exception as e:
                             logger.debug(f"Error extracting attachment link: {e}")
