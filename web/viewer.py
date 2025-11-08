@@ -545,7 +545,9 @@ def view_post(post_id):
     if not audio_count and content_blocks:
         audio_count = count_blocks('audio')
     if not video_count and content_blocks:
-        video_count = count_blocks('video') + count_blocks('youtube_embed')
+        # Only count actual video blocks (youtube_embed/vimeo_embed are NOT downloaded videos)
+        # When YouTube/Vimeo videos are downloaded, they become 'video' blocks
+        video_count = count_blocks('video')
 
     comment_block_count = count_blocks('comment')
 

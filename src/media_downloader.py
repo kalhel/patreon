@@ -1567,6 +1567,173 @@ class MediaDownloader:
             'subtitles_relative': relatives_subtitles
         }
 
+    def download_vimeo_videos_from_post(self, post: Dict, creator_id: str) -> Dict[str, List[str]]:
+        """
+        Download Vimeo videos from vimeo_embed blocks (based on settings)
+
+        Modes:
+        - "embed": Keep as embed, don't download (fast, saves bandwidth)
+        - "download": Download with yt-dlp (slow, local playback)
+
+        Args:
+            post: Post dictionary with content_blocks
+            creator_id: Creator identifier
+
+        Returns:
+            Dict with 'absolute' and 'relative' lists of downloaded video paths
+        """
+        downloaded_videos = []
+        relatives_videos = []
+
+        # Check Vimeo settings
+        vimeo_settings = self.settings.get('media', {}).get('vimeo', {})
+        vimeo_mode = vimeo_settings.get('mode', 'embed')
+
+        # Find vimeo_embed blocks
+        vimeo_blocks = []
+        content_blocks = post.get('content_blocks', [])
+
+        for block in content_blocks:
+            if isinstance(block, dict) and block.get('type') == 'vimeo_embed':
+                url = block.get('url', '')
+                if url:
+                    vimeo_blocks.append(block)
+
+        if not vimeo_blocks:
+            return {
+                'absolute': [],
+                'relative': []
+            }
+
+        # If mode is "embed", just keep the embeds and don't download
+        if vimeo_mode == 'embed':
+            logger.info(f"  🎬 [VIMEO] Found {len(vimeo_blocks)} Vimeo video(s) - keeping as embeds (mode: embed)")
+            return {
+                'absolute': [],
+                'relative': []
+            }
+
+        logger.info(f"  🎬 [VIMEO] Found {len(vimeo_blocks)} Vimeo video(s) to download (mode: download)")
+
+        # Create creator subdirectory
+        creator_dir = self.videos_dir / creator_id
+        creator_dir.mkdir(parents=True, exist_ok=True)
+
+        post_id = post.get('post_id', 'unknown')
+
+        # Find yt-dlp executable (works for Vimeo too)
+        yt_dlp_executable = shutil.which("yt-dlp")
+        if not yt_dlp_executable:
+            python_exe = shutil.which("python3") or shutil.which("python")
+            if python_exe:
+                base_command = [python_exe, "-m", "yt_dlp"]
+            else:
+                logger.warning("  ⚠️  [VIMEO] yt-dlp not found - skipping Vimeo downloads")
+                return {
+                    'absolute': [],
+                    'relative': []
+                }
+        else:
+            base_command = [yt_dlp_executable]
+
+        for idx, block in enumerate(vimeo_blocks):
+            url = block.get('url', '')
+
+            # Extract video ID from Vimeo URL
+            video_id = None
+            if 'vimeo.com' in url:
+                if 'video/' in url:
+                    video_id = url.split('video/')[1].split('?')[0]
+                else:
+                    # Format: player.vimeo.com/video/123456789
+                    parts = url.split('/')
+                    for part in parts:
+                        if part.isdigit():
+                            video_id = part
+                            break
+
+            if not video_id:
+                logger.warning(f"  ⚠️  [VIMEO] Could not extract video ID from: {url}")
+                continue
+
+            logger.info(f"  📥 [VIMEO] Downloading video {idx+1}/{len(vimeo_blocks)}: {video_id}")
+
+            # Output filename pattern
+            filename_base = f"{post_id}_vm{idx:02d}"
+
+            # Get quality and format settings
+            download_settings = vimeo_settings.get('download_settings', {})
+            quality = download_settings.get('quality', 'best')
+            output_format = download_settings.get('format', 'mp4')
+
+            # Build format string based on quality setting
+            if quality == 'best':
+                format_str = f'bestvideo[ext={output_format}]+bestaudio[ext=m4a]/best[ext={output_format}]/best'
+            else:
+                format_str = quality
+
+            # Download video
+            video_command = base_command + [
+                '--format', format_str,
+                '--merge-output-format', output_format,
+                '--no-mtime',
+                '--no-warnings',
+                '-o', str(creator_dir / f'{filename_base}.%(ext)s'),
+                url
+            ]
+
+            try:
+                logger.info(f"  🔄 [VIMEO] Downloading video {video_id}...")
+                result = subprocess.run(
+                    video_command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False,
+                    text=True,
+                    timeout=600  # 10 minute timeout per video
+                )
+
+                # Check for downloaded video file
+                video_path = creator_dir / f'{filename_base}.mp4'
+                if video_path.exists():
+                    file_size = video_path.stat().st_size
+                    logger.info(f"  ✓ [VIMEO] Downloaded video: {video_path.name} ({self._format_size(file_size)})")
+
+                    abs_path = str(video_path)
+                    downloaded_videos.append(abs_path)
+                    try:
+                        relatives_videos.append(video_path.relative_to(self.output_dir).as_posix())
+                    except ValueError:
+                        relatives_videos.append(abs_path)
+
+                    self.stats['videos']['downloaded'] += 1
+                    self.stats['videos']['total'] += 1
+
+                    # Update the content block to be a video block instead of vimeo_embed
+                    block['type'] = 'video'
+                    block['vimeo_downloaded'] = True
+                    block['vimeo_video_id'] = video_id
+                else:
+                    logger.warning(f"  ⚠️  [VIMEO] Video download failed for {video_id}")
+                    logger.warning(f"  Return code: {result.returncode}")
+                    if result.stderr:
+                        logger.warning(f"  Error output: {result.stderr[:500]}")
+
+            except subprocess.TimeoutExpired:
+                logger.error(f"  ❌ [VIMEO] Download timeout for {video_id}")
+            except Exception as e:
+                logger.error(f"  ❌ [VIMEO] Error downloading {video_id}: {e}")
+
+            # Small delay between downloads
+            time.sleep(1)
+
+        logger.info(f"  ✓ [VIMEO] Downloaded {len(downloaded_videos)} video(s)")
+
+        return {
+            'absolute': downloaded_videos,
+            'relative': relatives_videos
+        }
+
     def download_all_from_post(self, post: Dict, creator_id: str) -> Dict:
         """
         Download all media from a post
@@ -1665,6 +1832,13 @@ class MediaDownloader:
             # Add YouTube subtitles to the subtitles lists
             result['video_subtitles'].extend(youtube_result['subtitles_absolute'])
             result['video_subtitles_relative'].extend(youtube_result['subtitles_relative'])
+
+        # Download Vimeo videos (if any vimeo_embed blocks exist)
+        vimeo_result = self.download_vimeo_videos_from_post(post, creator_id)
+        if vimeo_result['absolute']:
+            # Add Vimeo videos to the main video lists
+            result['videos'].extend(vimeo_result['absolute'])
+            result['videos_relative'].extend(vimeo_result['relative'])
 
         total_downloaded = len(result['images']) + len(result['videos']) + len(result['audios']) + len(result['attachments'])
         logger.info(f"  ✓ Downloaded {total_downloaded} files")

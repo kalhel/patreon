@@ -40,6 +40,14 @@
       },
       "note": "mode: 'embed' (fast, no download) or 'download' (slow, requires yt-dlp)"
     },
+    "vimeo": {
+      "mode": "download",
+      "download_settings": {
+        "quality": "best",
+        "format": "mp4"
+      },
+      "note": "mode: 'embed' (fast, no download) or 'download' (slow, requires yt-dlp)"
+    },
     "deduplication": {
       "enabled": true,
       "hash_algorithm": "sha256",
