@@ -255,6 +255,17 @@ def extract_post_details(
             tracker.mark_details_extracted(post_id, success=False, error=error_msg)
             return False
 
+        # Filter videos to only include actual video files (not images)
+        # This prevents image URLs from being stored in the videos field
+        if 'videos' in post_detail and post_detail['videos']:
+            video_extensions = ('.mp4', '.webm', '.ogg', '.mov', '.avi', '.m4v', '.mkv', '.m3u8', '.ts')
+            original_count = len(post_detail['videos'])
+            post_detail['videos'] = [v for v in post_detail['videos']
+                                    if any(v.lower().split('?')[0].endswith(ext) for ext in video_extensions)]
+            filtered_count = original_count - len(post_detail['videos'])
+            if filtered_count > 0:
+                logger.info(f"   🔍 Filtered out {filtered_count} non-video URLs from videos field")
+
         # Merge with existing data
         full_post_data = {
             **post,  # Existing database data

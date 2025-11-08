@@ -521,7 +521,7 @@
 
                 {% set img_count_url = post.images | length if post.images else 0 %}
                 {% set aud_count_url = post.audios | length if post.audios else 0 %}
-                {% set vid_count_url = post.videos | length if post.videos else 0 %}
+                {% set vid_count_url = post.videos | filter_videos | length if post.videos else 0 %}
 
                 {% set img_count = img_count_local if img_count_local > 0 else img_count_url %}
                 {% set aud_count = aud_count_local if aud_count_local > 0 else aud_count_url %}

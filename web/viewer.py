@@ -160,9 +160,22 @@ def get_creator_display_name(creator_id):
     return CREATOR_DISPLAY_NAMES.get(creator_id, creator_id)
 
 
+def filter_actual_videos(videos_list):
+    """
+    Filter video URLs to only include actual video file extensions.
+    Removes image URLs (.jpg, .png, etc.) that may have been incorrectly stored as videos.
+    """
+    if not videos_list:
+        return []
+
+    video_extensions = ('.mp4', '.webm', '.ogg', '.mov', '.avi', '.m4v', '.mkv', '.m3u8', '.ts')
+    return [v for v in videos_list if any(v.lower().split('?')[0].endswith(ext) for ext in video_extensions)]
+
+
 # Register Jinja filters
 app.jinja_env.filters['date_eu'] = format_date_eu
 app.jinja_env.filters['creator_name'] = get_creator_display_name
+app.jinja_env.filters['filter_videos'] = filter_actual_videos
 
 
 # ============================================================================
