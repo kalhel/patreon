@@ -255,13 +255,22 @@ def extract_post_details(
             tracker.mark_details_extracted(post_id, success=False, error=error_msg)
             return False
 
-        # Filter videos to only include actual video files (not images)
-        # This prevents image URLs from being stored in the videos field
+        # Filter videos to only include actual video files (not images or thumbnails)
+        # This prevents image URLs and Mux thumbnails from being stored in the videos field
         if 'videos' in post_detail and post_detail['videos']:
             video_extensions = ('.mp4', '.webm', '.ogg', '.mov', '.avi', '.m4v', '.mkv', '.m3u8', '.ts')
             original_count = len(post_detail['videos'])
-            post_detail['videos'] = [v for v in post_detail['videos']
-                                    if any(v.lower().split('?')[0].endswith(ext) for ext in video_extensions)]
+
+            filtered_videos = []
+            for v in post_detail['videos']:
+                # Check if it has video extension
+                if any(v.lower().split('?')[0].endswith(ext) for ext in video_extensions):
+                    # Exclude Mux thumbnails (URLs with 'time=' parameter are preview images)
+                    if 'stream.mux.com' in v.lower() and 'time=' in v.lower():
+                        continue
+                    filtered_videos.append(v)
+
+            post_detail['videos'] = filtered_videos
             filtered_count = original_count - len(post_detail['videos'])
             if filtered_count > 0:
                 logger.info(f"   🔍 Filtered out {filtered_count} non-video URLs from videos field")
