@@ -1149,16 +1149,19 @@ class MediaDownloader:
         downloaded = []
         relatives = []
 
+        post_id = post.get('post_id', 'unknown')
+
         # Get attachments from post (JSONB format: [{'filename': '...', 'url': '...'}])
         attachments = post.get('attachments', [])
+        logger.info(f"[DEBUG] download_attachments_from_post() called for post {post_id}: attachments={attachments}")
+
         if not attachments:
+            logger.info(f"  ⏭️  [ATTACHMENT] No attachments found in post data - skipping")
             return {'absolute': [], 'relative': []}
 
         # Create creator subdirectory
         creator_dir = self.attachments_dir / creator_id
         creator_dir.mkdir(parents=True, exist_ok=True)
-
-        post_id = post.get('post_id', 'unknown')
 
         for i, attachment in enumerate(attachments):
             # Handle both dict format (from scraper) and URL string (legacy)
@@ -1643,6 +1646,7 @@ class MediaDownloader:
         # Download attachments (PDFs, documents, etc.)
         patreon_attachment_settings = self.settings.get('media', {}).get('patreon', {}).get('attachments', {})
         should_download_attachments = patreon_attachment_settings.get('download', True)
+        logger.info(f"[DEBUG] Attachment download check: should_download={should_download_attachments}, settings={patreon_attachment_settings}")
 
         if should_download_attachments:
             attachments = self.download_attachments_from_post(post, creator_id, referer)
