@@ -93,13 +93,13 @@ def update_post_details_in_postgres(post_data: Dict):
                     content_blocks, post_metadata, published_at,
                     video_streams, video_subtitles, video_local_paths,
                     audios, audio_local_paths, images, image_local_paths,
-                    attachments, patreon_tags, created_at, updated_at
+                    attachments, attachment_local_paths, patreon_tags, created_at, updated_at
                 ) VALUES (
                     :post_id, :creator_id, :source_id, :post_url, :title, :full_content,
                     CAST(:content_blocks AS jsonb), CAST(:post_metadata AS jsonb), :published_at,
                     CAST(:video_streams AS jsonb), CAST(:video_subtitles AS jsonb), :video_local_paths,
                     :audios, :audio_local_paths, :images, :image_local_paths,
-                    CAST(:attachments AS jsonb), :patreon_tags, NOW(), NOW()
+                    CAST(:attachments AS jsonb), :attachment_local_paths, :patreon_tags, NOW(), NOW()
                 )
                 ON CONFLICT (post_id) DO UPDATE SET
                     title = EXCLUDED.title,
@@ -115,6 +115,7 @@ def update_post_details_in_postgres(post_data: Dict):
                     images = EXCLUDED.images,
                     image_local_paths = EXCLUDED.image_local_paths,
                     attachments = EXCLUDED.attachments,
+                    attachment_local_paths = EXCLUDED.attachment_local_paths,
                     patreon_tags = EXCLUDED.patreon_tags,
                     deleted_at = NULL,
                     updated_at = NOW()
@@ -146,6 +147,7 @@ def update_post_details_in_postgres(post_data: Dict):
                 'images': post_data.get('images'),
                 'image_local_paths': post_data.get('image_local_paths'),
                 'attachments': json.dumps(post_data.get('attachments', [])),
+                'attachment_local_paths': post_data.get('attachment_local_paths'),
                 'patreon_tags': post_data.get('patreon_tags')
             }
 
@@ -275,6 +277,8 @@ def extract_post_details(
             full_post_data['audio_local_paths'] = download_result['audios_relative']
         if download_result.get('images_relative'):
             full_post_data['image_local_paths'] = download_result['images_relative']
+        if download_result.get('attachments_relative'):
+            full_post_data['attachment_local_paths'] = download_result['attachments_relative']
 
         # Structure video_subtitles as array of objects with both paths
         if download_result.get('video_subtitles') or download_result.get('video_subtitles_relative'):

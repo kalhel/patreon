@@ -66,6 +66,7 @@ class MediaDownloader:
         self.images_dir = self.output_dir / "images"
         self.videos_dir = self.output_dir / "videos"
         self.audio_dir = self.output_dir / "audio"
+        self.attachments_dir = self.output_dir / "attachments"
 
         # Load settings
         self.settings = self._load_settings(settings_path)
@@ -1133,6 +1134,105 @@ class MediaDownloader:
 
         return {'absolute': downloaded, 'relative': relatives}
 
+    def download_attachments_from_post(self, post: Dict, creator_id: str, referer: Optional[str]) -> Dict[str, List[str]]:
+        """
+        Download all attachment files (PDFs, documents) from a post
+
+        Args:
+            post: Post dictionary
+            creator_id: Creator identifier
+            referer: HTTP referer for authenticated asset requests
+
+        Returns:
+            Dict with 'absolute' and 'relative' lists of downloaded attachment paths
+        """
+        downloaded = []
+        relatives = []
+
+        # Get attachments from post (JSONB format: [{'filename': '...', 'url': '...'}])
+        attachments = post.get('attachments', [])
+        if not attachments:
+            return {'absolute': [], 'relative': []}
+
+        # Create creator subdirectory
+        creator_dir = self.attachments_dir / creator_id
+        creator_dir.mkdir(parents=True, exist_ok=True)
+
+        post_id = post.get('post_id', 'unknown')
+
+        for i, attachment in enumerate(attachments):
+            # Handle both dict format (from scraper) and URL string (legacy)
+            if isinstance(attachment, dict):
+                url = attachment.get('url')
+                original_filename = attachment.get('filename', 'attachment')
+            else:
+                url = attachment
+                original_filename = 'attachment'
+
+            if not url:
+                continue
+
+            # Get file extension from original filename or URL
+            if '.' in original_filename:
+                ext = Path(original_filename).suffix
+            else:
+                ext = Path(url).suffix or '.pdf'  # Default to .pdf if no extension
+
+            # Clean filename: remove special characters, keep extension
+            safe_filename = self._sanitize_filename(original_filename)
+            if not safe_filename.endswith(ext):
+                safe_filename += ext
+
+            output_path = creator_dir / safe_filename  # Temporary name, will be renamed with hash
+
+            # Enable hash-based deduplication for attachments
+            attachment_settings = self.settings.get('media', {}).get('patreon', {}).get('attachments', {})
+            check_dedup = attachment_settings.get('deduplication', True) if 'deduplication' in attachment_settings else self.settings.get('media', {}).get('deduplication', {}).get('enabled', True)
+
+            success, final_path = self.download_file(
+                url, output_path, 'attachment',
+                referer=referer,
+                check_dedup=check_dedup,
+                post_id=post_id,
+                index=i
+            )
+
+            if success and final_path:
+                abs_path = final_path
+                if abs_path not in downloaded:
+                    downloaded.append(abs_path)
+                    try:
+                        relatives.append(Path(final_path).relative_to(self.output_dir).as_posix())
+                    except ValueError:
+                        relatives.append(abs_path)
+
+            time.sleep(0.5)
+
+        if downloaded:
+            logger.info(f"Downloaded {len(downloaded)} attachment(s) for post {post_id}")
+
+        return {'absolute': downloaded, 'relative': relatives}
+
+    def _sanitize_filename(self, filename: str) -> str:
+        """
+        Sanitize filename for safe filesystem storage
+
+        Args:
+            filename: Original filename
+
+        Returns:
+            Sanitized filename
+        """
+        import re
+        # Remove path separators and other dangerous characters
+        safe = re.sub(r'[<>:"/\\|?*]', '_', filename)
+        # Limit length
+        if len(safe) > 200:
+            name_part = safe[:180]
+            ext_part = Path(safe).suffix
+            safe = name_part + ext_part
+        return safe
+
     def _clean_vtt_alignment(self, vtt_path: Path) -> bool:
         """
         Clean alignment parameters from VTT subtitle files.
@@ -1488,7 +1588,9 @@ class MediaDownloader:
             'video_subtitles': [],
             'video_subtitles_relative': [],
             'audios': [],
-            'audios_relative': []
+            'audios_relative': [],
+            'attachments': [],
+            'attachments_relative': []
         }
 
         # Download images
@@ -1538,6 +1640,17 @@ class MediaDownloader:
         else:
             logger.info(f"  ⏭️  [AUDIO] Patreon audio download disabled in settings - skipping")
 
+        # Download attachments (PDFs, documents, etc.)
+        patreon_attachment_settings = self.settings.get('media', {}).get('patreon', {}).get('attachments', {})
+        should_download_attachments = patreon_attachment_settings.get('download', True)
+
+        if should_download_attachments:
+            attachments = self.download_attachments_from_post(post, creator_id, referer)
+            result['attachments'] = attachments['absolute']
+            result['attachments_relative'] = attachments['relative']
+        else:
+            logger.info(f"  ⏭️  [ATTACHMENT] Patreon attachment download disabled in settings - skipping")
+
         # Download YouTube videos (if any youtube_embed blocks exist)
         youtube_result = self.download_youtube_videos_from_post(post, creator_id)
         if youtube_result['absolute']:
@@ -1548,7 +1661,7 @@ class MediaDownloader:
             result['video_subtitles'].extend(youtube_result['subtitles_absolute'])
             result['video_subtitles_relative'].extend(youtube_result['subtitles_relative'])
 
-        total_downloaded = len(result['images']) + len(result['videos']) + len(result['audios'])
+        total_downloaded = len(result['images']) + len(result['videos']) + len(result['audios']) + len(result['attachments'])
         logger.info(f"  ✓ Downloaded {total_downloaded} files")
 
         return result
