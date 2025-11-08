@@ -138,6 +138,9 @@ class ContentBlockParser:
             # Finally, extract comments
             self._extract_comments(driver)
 
+            # Extract attachments
+            attachments = self._extract_attachments(driver)
+
             # Clean up extracted blocks (pass avatar URL to filter it out)
             avatar_url = metadata.get('creator_avatar', '')
             self.blocks = self._clean_blocks(self.blocks, avatar_url=avatar_url)
@@ -145,10 +148,12 @@ class ContentBlockParser:
         except Exception as e:
             logger.error(f"Error parsing page: {e}")
             metadata = {}
+            attachments = []
 
         return {
             'blocks': self.blocks,
-            'metadata': metadata
+            'metadata': metadata,
+            'attachments': attachments
         }
 
     def _extract_post_metadata(self, driver: WebDriver) -> Dict:
@@ -634,6 +639,83 @@ class ContentBlockParser:
 
         except Exception as e:
             logger.error(f"Error extracting comments: {e}")
+
+    def _extract_attachments(self, driver: WebDriver) -> list:
+        """
+        Extract attachments (PDFs, files, etc.) from the post.
+
+        Patreon posts can have downloadable attachments like PDFs, documents, etc.
+        They appear in a div with data-tag="post-attachments" and each file is a link
+        with data-tag="post-attachment-link".
+
+        Args:
+            driver: Selenium WebDriver with loaded page
+
+        Returns:
+            List of dicts with attachment info: [{'filename': '...', 'url': '...'}]
+            Returns empty list if no attachments found.
+
+        Example HTML structure:
+            <div data-tag="post-attachments">
+              <a href="https://www.patreon.com/file?h=102666922&m=301332740"
+                 data-tag="post-attachment-link">
+                <p>Table of Horoscopes.pdf</p>
+              </a>
+            </div>
+        """
+        attachments = []
+
+        try:
+            # Find attachments container
+            attachment_containers = driver.find_elements(By.CSS_SELECTOR, '[data-tag="post-attachments"]')
+
+            if not attachment_containers:
+                return []
+
+            logger.info(f"Found {len(attachment_containers)} attachment container(s)")
+
+            # Process each container (usually just one)
+            for container in attachment_containers:
+                # Find all attachment links within this container
+                try:
+                    attachment_links = container.find_elements(By.CSS_SELECTOR, 'a[data-tag="post-attachment-link"]')
+
+                    for link in attachment_links:
+                        try:
+                            # Get download URL
+                            url = link.get_attribute('href')
+
+                            # Get filename from the <p> tag inside the link
+                            filename = "Unknown"
+                            try:
+                                p_tag = link.find_element(By.TAG_NAME, 'p')
+                                filename = p_tag.text.strip()
+                            except:
+                                # If no <p> tag, try to get text directly
+                                filename = link.text.strip() or "Attachment"
+
+                            if url:
+                                attachments.append({
+                                    'filename': filename,
+                                    'url': url
+                                })
+                                logger.info(f"  ✓ Found attachment: {filename}")
+
+                        except Exception as e:
+                            logger.debug(f"Error extracting attachment link: {e}")
+                            continue
+
+                except Exception as e:
+                    logger.debug(f"Error finding attachment links in container: {e}")
+                    continue
+
+            if attachments:
+                logger.info(f"Total attachments extracted: {len(attachments)}")
+
+        except Exception as e:
+            logger.error(f"Error extracting attachments: {e}")
+
+        return attachments
 
     def _parse_children(self, parent):
         """Recursively parse children elements"""

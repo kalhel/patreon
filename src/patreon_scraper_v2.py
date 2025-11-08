@@ -568,10 +568,11 @@ class PatreonScraperV2:
             pass
 
         try:
-            # Parse entire page including JSON-LD embeds, content, and comments
+            # Parse entire page including JSON-LD embeds, content, comments, and attachments
             parsed_data = parse_post_page(self.driver)
             post_detail['content_blocks'] = parsed_data.get('blocks', [])
             post_detail['post_metadata'] = parsed_data.get('metadata', {})
+            post_detail['attachments'] = parsed_data.get('attachments', [])
 
             # Also extract plain text for backward compatibility
             try:
