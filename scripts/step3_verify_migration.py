@@ -185,13 +185,20 @@ def main():
             SELECT
                 c.name as creator_name,
                 cs.platform,
-                COUNT(p.id) as posts_count,
-                COUNT(DISTINCT col.id) as collections_count
+                COALESCE(p.posts_count, 0) as posts_count,
+                COALESCE(col.collections_count, 0) as collections_count
             FROM creators c
             JOIN creator_sources cs ON cs.creator_id = c.id
-            LEFT JOIN posts p ON p.source_id = cs.id
-            LEFT JOIN collections col ON col.source_id = cs.id
-            GROUP BY c.name, cs.platform
+            LEFT JOIN (
+                SELECT source_id, COUNT(*) as posts_count
+                FROM posts
+                GROUP BY source_id
+            ) p ON p.source_id = cs.id
+            LEFT JOIN (
+                SELECT source_id, COUNT(*) as collections_count
+                FROM collections
+                GROUP BY source_id
+            ) col ON col.source_id = cs.id
             ORDER BY c.name, cs.platform
         """))
 
