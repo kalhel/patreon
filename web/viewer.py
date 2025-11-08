@@ -524,15 +524,26 @@ def view_post(post_id):
     def count_blocks(block_type):
         return sum(1 for block in content_blocks if block.get('type') == block_type)
 
-    image_count = count_blocks('image')
-    video_count = count_blocks('video') + count_blocks('youtube_embed')
-    audio_count = count_blocks('audio')
-    comment_block_count = count_blocks('comment')
+    # Priority: Use downloaded media paths first (most reliable), then URLs, then content_blocks
+    # This is because *_local_paths represent actual downloaded files
+    image_local = post.get('image_local_paths') or []
+    audio_local = post.get('audio_local_paths') or []
+    video_local = post.get('video_local_paths') or []
 
-    if not content_blocks:
-        image_count = len(post.get('images') or [])
-        video_count = len(post.get('videos') or [])
-        audio_count = len(post.get('audios') or [])
+    # Count actual downloaded media
+    image_count = len(image_local) if image_local else len(post.get('images') or [])
+    audio_count = len(audio_local) if audio_local else len(post.get('audios') or [])
+    video_count = len(video_local) if video_local else len(post.get('videos') or [])
+
+    # If no media arrays exist, fall back to counting content_blocks (old data)
+    if not image_count and content_blocks:
+        image_count = count_blocks('image')
+    if not audio_count and content_blocks:
+        audio_count = count_blocks('audio')
+    if not video_count and content_blocks:
+        video_count = count_blocks('video') + count_blocks('youtube_embed')
+
+    comment_block_count = count_blocks('comment')
 
     comments_count = metadata.get('comments_count') or comment_block_count
 
