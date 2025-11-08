@@ -805,7 +805,7 @@
                     {% endif %}
                     <div class="content-block video">
                         <video controls preload="metadata" crossorigin="anonymous" id="main-video">
-                            <source src="{{ url_for('media_file', filename=primary_video) }}?original={{ video_filename | urlencode }}#t=0.1" type="video/mp4">
+                            <source src="{{ url_for('media_file', filename=primary_video) }}?original={{ video_filename | urlencode }}#t=3" type="video/mp4">
                             {% if local_subtitles and local_subtitles|length > 0 %}
                                 <track kind="subtitles" src="{{ url_for('media_file', filename=local_subtitles[0]) }}" default>
                             {% endif %}
