@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import time
 import hashlib
+import glob
 from pathlib import Path
 from pathlib import PurePosixPath
 from typing import Dict, List, Optional, Tuple
@@ -1752,7 +1753,6 @@ class MediaDownloader:
                     logger.info(f"  📝 [VIMEO] Attempting to download subtitles...")
 
                     # Use a temp filename to avoid conflicts with existing video
-                    import tempfile
                     temp_base = f'vimeo_subs_{video_id}_temp'
 
                     subtitle_command = base_command + [
@@ -1785,7 +1785,6 @@ class MediaDownloader:
                         )
 
                         # Check for subtitle files with temp name
-                        import glob
                         temp_subtitle_files = glob.glob(str(creator_dir / f'{temp_base}*.vtt'))
 
                         if temp_subtitle_files:
@@ -1809,7 +1808,6 @@ class MediaDownloader:
                                     final_path = creator_dir / final_name
 
                                     # Rename/move file
-                                    import shutil
                                     shutil.move(str(temp_path), str(final_path))
                                     logger.info(f"  ✓ [VIMEO] Downloaded subtitle: {final_name}")
 
