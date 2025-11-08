@@ -838,14 +838,20 @@ class ContentBlockParser:
             # Process each image as a separate block (maintains order)
             self._add_image_block(img)
 
-        # Check if paragraph contains YouTube links (both as <a> tags and plain text URLs)
-        # This handles cases where creators paste YouTube links directly in text
+        # Check if paragraph contains YouTube/Vimeo links (both as <a> tags and plain text URLs)
+        # This handles cases where creators paste video links directly in text
         # rather than using Patreon's video embed feature (common in some creators)
 
+        # Track detected Vimeo IDs to avoid duplicates
+        if not hasattr(self, 'vimeo_urls'):
+            self.vimeo_urls = set()
+
         # Method 1: Check <a href="..."> links
-        youtube_links = element.find_all('a', href=True)
-        for link in youtube_links:
+        video_links = element.find_all('a', href=True)
+        for link in video_links:
             href = link.get('href', '')
+
+            # YouTube detection
             if 'youtube.com/watch' in href or 'youtu.be/' in href:
                 video_id = None
                 if 'v=' in href:
@@ -865,6 +871,29 @@ class ContentBlockParser:
                         'thumbnail': best_thumbnail
                     })
                     logger.info(f"Detected YouTube link in paragraph: {video_id}")
+
+            # Vimeo detection
+            elif 'vimeo.com/' in href:
+                # Extract video ID from Vimeo URL
+                video_id = None
+                if 'vimeo.com/video/' in href:
+                    video_id = href.split('vimeo.com/video/')[1].split('?')[0].split('#')[0]
+                elif 'vimeo.com/' in href:
+                    # Format: vimeo.com/123456789
+                    parts = href.split('vimeo.com/')[1].split('?')[0].split('#')[0].split('/')
+                    if parts[0].isdigit():
+                        video_id = parts[0]
+
+                if video_id and video_id not in self.vimeo_urls:
+                    self.vimeo_urls.add(video_id)
+                    self.order += 1
+                    self.blocks.append({
+                        'type': 'vimeo_embed',
+                        'order': self.order,
+                        'url': f'https://player.vimeo.com/video/{video_id}',
+                        'video_id': video_id
+                    })
+                    logger.info(f"Detected Vimeo link in paragraph: {video_id}")
 
         # Method 2: Check plain text for YouTube URLs (not wrapped in <a> tags)
         paragraph_text = element.get_text()
@@ -890,6 +919,28 @@ class ContentBlockParser:
                         'thumbnail': best_thumbnail
                     })
                     logger.info(f"Detected YouTube URL in plain text: {video_id}")
+
+        # Method 3: Check plain text for Vimeo URLs (not wrapped in <a> tags or iframes)
+        # Match Vimeo URLs in plain text
+        vimeo_patterns = [
+            r'https?://(?:www\.)?vimeo\.com/(\d+)',
+            r'https?://player\.vimeo\.com/video/(\d+)'
+        ]
+
+        for pattern in vimeo_patterns:
+            matches = re.finditer(pattern, paragraph_text)
+            for match in matches:
+                video_id = match.group(1)
+                if video_id and video_id not in self.vimeo_urls:
+                    self.vimeo_urls.add(video_id)
+                    self.order += 1
+                    self.blocks.append({
+                        'type': 'vimeo_embed',
+                        'order': self.order,
+                        'url': f'https://player.vimeo.com/video/{video_id}',
+                        'video_id': video_id
+                    })
+                    logger.info(f"Detected Vimeo URL in plain text: {video_id}")
 
         # Then, extract and add text content (if any)
         text = self._extract_formatted_text(element)
