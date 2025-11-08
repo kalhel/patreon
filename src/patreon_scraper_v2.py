@@ -862,7 +862,21 @@ class PatreonScraperV2:
         return None
 
     def _enrich_video_sources(self, post_detail: Dict):
-        """Fetch additional downloadable/stream URLs for Patreon-hosted videos"""
+        """
+        Fetch additional downloadable/stream URLs for Patreon-hosted videos.
+
+        Extracts video URLs from Patreon's API data when DOM only has blob: URLs.
+        Filters results to only include actual video files (not PDFs, images, etc.)
+        based on file extensions.
+
+        Args:
+            post_detail: Post dictionary to enrich with video URLs
+
+        Modifies:
+            post_detail['videos']: List of video file URLs
+            post_detail['video_downloads']: Direct download URLs
+            post_detail['video_streams']: M3U8 stream URLs
+        """
 
         post_id = post_detail.get('post_id')
         if not post_id:
@@ -882,6 +896,16 @@ class PatreonScraperV2:
         stream_urls: set = set()
 
         def register(url):
+            """
+            Register a URL as video download or stream.
+
+            Filters URLs to ensure only actual video files are added:
+            - M3U8 files go to stream_urls
+            - Files with video extensions (.mp4, .webm, etc.) go to download_urls
+            - Non-video files (PDFs, images, etc.) are rejected
+
+            This prevents attachments and images from being counted as videos.
+            """
             if not url or not isinstance(url, str):
                 return
             if url.startswith('blob:'):

@@ -1558,7 +1558,26 @@ def api_search_stats():
 
 @app.route('/media/<path:filename>')
 def media_file(filename):
-    """Serve downloaded media files with hash-based filename fallback"""
+    """
+    Serve downloaded media files with hash-based filename fallback.
+
+    Supports optional 'original' query parameter to set download filename.
+    Files are stored with hash-based names for deduplication, but can be
+    downloaded with original filenames using Content-Disposition header.
+
+    Args:
+        filename: Relative path to media file (e.g., 'images/creator/hash_postid.jpg')
+
+    Query Parameters:
+        original: Optional original filename for downloads (e.g., 'photo.jpg')
+
+    Returns:
+        Flask response with file content and appropriate headers
+
+    Examples:
+        /media/images/creator/abc123_456789.jpg
+        /media/audio/creator/def456_789012.mp3?original=podcast.mp3
+    """
     from flask import request
     safe_path = (MEDIA_ROOT / filename).resolve()
 

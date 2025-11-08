@@ -233,6 +233,8 @@ class ContentBlockParser:
             Cleaned list of blocks
         """
         # Phrases that indicate UI elements (not content)
+        # NOTE: Be specific with filters to avoid removing legitimate content
+        # e.g., Don't filter "youtube" as posts may legitimately mention YouTube
         ui_phrases = [
             'patreon feed',
             'join to unlock',
@@ -241,7 +243,7 @@ class ContentBlockParser:
             'load more',
             'related posts',
             'popular posts',
-            'privacy-enhanced mode'  # YouTube embed footer text
+            'privacy-enhanced mode'  # YouTube embed footer text (specific phrase)
         ]
 
         # UI labels that appear as standalone paragraphs
@@ -815,7 +817,20 @@ class ContentBlockParser:
             })
 
     def _add_paragraph_block(self, element):
-        """Add paragraph block with inline formatting, and extract images first"""
+        """
+        Add paragraph block with inline formatting, and extract embedded content.
+
+        Extracts and processes:
+        - Images: Converted to separate image blocks
+        - YouTube links: Converted to youtube_embed blocks
+        - Text content: Preserved with markdown formatting
+
+        This handles cases where creators embed YouTube videos as links rather
+        than using Patreon's native video embed feature.
+
+        Args:
+            element: BeautifulSoup paragraph element
+        """
         # First, check if this paragraph contains images
         images = element.find_all('img')
         for img in images:
@@ -823,20 +838,27 @@ class ContentBlockParser:
             self._add_image_block(img)
 
         # Check if paragraph contains YouTube links that should be embeds
+        # This handles cases where creators paste YouTube links directly in text
+        # rather than using Patreon's video embed feature (common in some creators)
         youtube_links = element.find_all('a', href=True)
         for link in youtube_links:
             href = link.get('href', '')
             if 'youtube.com/watch' in href or 'youtu.be/' in href:
-                # Extract video ID
+                # Extract video ID from URL
+                # Supports formats:
+                # - https://www.youtube.com/watch?v=VIDEO_ID
+                # - https://youtu.be/VIDEO_ID
+                # - URLs with additional parameters (&t=123, #timestamp, etc.)
                 video_id = None
                 if 'v=' in href:
                     video_id = href.split('v=')[1].split('&')[0].split('#')[0]
                 elif 'youtu.be/' in href:
                     video_id = href.split('youtu.be/')[1].split('?')[0].split('#')[0]
 
+                # Only add if we haven't seen this video before (avoid duplicates)
                 if video_id and video_id not in self.youtube_urls:
                     self.youtube_urls.add(video_id)
-                    # Add YouTube embed block
+                    # Add YouTube embed block with best available thumbnail
                     best_thumbnail = find_best_youtube_thumbnail(video_id)
                     self.order += 1
                     self.blocks.append({
