@@ -1559,6 +1559,7 @@ def api_search_stats():
 @app.route('/media/<path:filename>')
 def media_file(filename):
     """Serve downloaded media files with hash-based filename fallback"""
+    from flask import request
     safe_path = (MEDIA_ROOT / filename).resolve()
 
     # If file doesn't exist, try to find it with hash prefix
@@ -1590,6 +1591,11 @@ def media_file(filename):
         mimetype = 'text/vtt'
 
     response = send_from_directory(MEDIA_ROOT, str(relative), mimetype=mimetype)
+
+    # If 'original' parameter is provided, use it as download filename
+    original_name = request.args.get('original')
+    if original_name:
+        response.headers['Content-Disposition'] = f'inline; filename="{original_name}"'
 
     # Add CORS headers for subtitle files to work properly
     response.headers['Access-Control-Allow-Origin'] = '*'
