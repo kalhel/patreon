@@ -1489,7 +1489,9 @@ class MediaDownloader:
                             else:
                                 # Log success for debugging
                                 if sub_result.stdout:
-                                    logger.info(f"  ✓ [YOUTUBE] {lang} subtitle command output: {sub_result.stdout[:150]}")
+                                    logger.info(f"  ✓ [YOUTUBE] {lang} subtitle command output: {sub_result.stdout[:500]}")
+                                if sub_result.stderr:
+                                    logger.info(f"  ℹ️  [YOUTUBE] {lang} stderr: {sub_result.stderr[:500]}")
                         except Exception as e:
                             logger.warning(f"  ⚠️  [YOUTUBE] Error downloading {lang} subtitles: {e}")
 
