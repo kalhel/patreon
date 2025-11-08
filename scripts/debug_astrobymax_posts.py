@@ -50,7 +50,7 @@ def main():
                 COUNT(*) as count
             FROM posts
             WHERE creator_id = 'astrobymax'
-            GROUP BY status
+            GROUP BY deleted_at IS NULL
             ORDER BY count DESC
         """))
 
@@ -71,7 +71,7 @@ def main():
             FROM posts
             WHERE creator_id = 'astrobymax'
               AND deleted_at IS NULL
-            GROUP BY content_status
+            GROUP BY (full_content IS NULL OR full_content = '')
             ORDER BY count DESC
         """))
 
