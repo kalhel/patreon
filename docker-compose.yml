@@ -1,0 +1,207 @@
+# ============================================================================
+# Docker Compose - Patreon Scraper Infrastructure
+# ============================================================================
+# For Phase 0-9 deployment
+# Run with: docker-compose up -d
+# ============================================================================
+
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # PostgreSQL Database
+  # ==========================================================================
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: patreon-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-patreon}
+      POSTGRES_USER: ${DB_USER:-patreon_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-CHANGE_THIS_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-patreon_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Redis Cache & Message Broker
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: patreon-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Web Application (Flask)
+  # ==========================================================================
+  web:
+    build: .
+    container_name: patreon-web
+    command: gunicorn -w 4 -b 0.0.0.0:5000 --timeout 120 web.viewer:app
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - REDIS_URL=redis://redis:6379/0
+      - FLASK_ENV=${FLASK_ENV:-production}
+      - SECRET_KEY=${SECRET_KEY}
+    volumes:
+      - ./data:/app/data:ro
+      - ./config:/app/config:ro
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Celery Worker - Scraping Tasks
+  # ==========================================================================
+  celery-worker-scraping:
+    build: .
+    container_name: patreon-celery-scraping
+    command: celery -A celery_app worker -Q scraping -l info --concurrency=2
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Celery Worker - Media Tasks
+  # ==========================================================================
+  celery-worker-media:
+    build: .
+    container_name: patreon-celery-media
+    command: celery -A celery_app worker -Q media -l info --concurrency=3
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Celery Worker - Transcription Tasks (Phase 6+)
+  # ==========================================================================
+  # celery-worker-transcription:
+  #   build: .
+  #   container_name: patreon-celery-transcription
+  #   command: celery -A celery_app worker -Q transcription -l info --concurrency=1
+  #   environment:
+  #     - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+  #     - REDIS_URL=redis://redis:6379/0
+  #     - CELERY_BROKER_URL=redis://redis:6379/0
+  #     - CELERY_RESULT_BACKEND=redis://redis:6379/1
+  #   volumes:
+  #     - ./data:/app/data
+  #     - ./config:/app/config:ro
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   restart: unless-stopped
+
+  # ==========================================================================
+  # Celery Beat - Scheduled Tasks
+  # ==========================================================================
+  celery-beat:
+    build: .
+    container_name: patreon-celery-beat
+    command: celery -A celery_app beat -l info
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Flower - Celery Monitoring UI
+  # ==========================================================================
+  flower:
+    build: .
+    container_name: patreon-flower
+    command: celery -A celery_app flower --port=5555 --basic_auth=${FLOWER_USER:-admin}:${FLOWER_PASSWORD:-admin}
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    ports:
+      - "5555:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Nginx - Reverse Proxy (Production)
+  # ==========================================================================
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: patreon-nginx
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./data/media:/usr/share/nginx/html/media:ro
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   depends_on:
+  #     - web
+  #   restart: unless-stopped
+
+# ============================================================================
+# Volumes
+# ============================================================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# ============================================================================
+# Networks
+# ============================================================================
+networks:
+  default:
+    name: patreon-network

@@ -1,18 +1,25 @@
 #!/usr/bin/env python3
 """
 Phase 2: Post Detail Extractor
-Extracts full details from posts tracked in Firebase
+Extracts full details from posts tracked in PostgreSQL
 """
 
 import json
 import argparse
 import logging
+import os
 from pathlib import Path
 from typing import List, Dict, Optional
+from dotenv import load_dotenv
+from urllib.parse import quote_plus
+from sqlalchemy import create_engine, text
 from patreon_auth_selenium import PatreonAuthSelenium
 from patreon_scraper_v2 import PatreonScraperV2
-from firebase_tracker import FirebaseTracker, load_firebase_config
+from postgres_tracker import PostgresTracker
 from media_downloader import MediaDownloader
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -26,6 +33,98 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 media_downloader = MediaDownloader()
+
+
+# ============================================================================
+# PostgreSQL Integration Functions
+# ============================================================================
+
+def use_postgresql() -> bool:
+    """Check if PostgreSQL mode is enabled via flag file"""
+    flag_path = Path("config/use_postgresql.flag")
+    return flag_path.exists()
+
+
+def get_database_url() -> str:
+    """Build PostgreSQL connection URL from environment variables"""
+    db_user = os.getenv('DB_USER', 'postgres')
+    db_password = os.getenv('DB_PASSWORD')
+    db_host = os.getenv('DB_HOST', 'localhost')
+    db_port = os.getenv('DB_PORT', '5432')
+    db_name = os.getenv('DB_NAME', 'alejandria')
+
+    if not db_password:
+        raise ValueError("DB_PASSWORD not found in .env file")
+
+    encoded_password = quote_plus(db_password)
+    return f"postgresql://{db_user}:{encoded_password}@{db_host}:{db_port}/{db_name}"
+
+
+def update_post_details_in_postgres(post_data: Dict):
+    """
+    Update post in PostgreSQL with full extracted details
+
+    Args:
+        post_data: Full post data including extracted details
+    """
+    try:
+        engine = create_engine(get_database_url())
+
+        with engine.connect() as conn:
+            # Update post with full details
+            update_sql = text("""
+                UPDATE posts
+                SET
+                    title = :title,
+                    full_content = :full_content,
+                    content_blocks = CAST(:content_blocks AS jsonb),
+                    post_metadata = CAST(:post_metadata AS jsonb),
+                    published_at = :published_at,
+                    video_streams = CAST(:video_streams AS jsonb),
+                    video_subtitles = CAST(:video_subtitles AS jsonb),
+                    video_local_paths = :video_local_paths,
+                    audios = :audios,
+                    audio_local_paths = :audio_local_paths,
+                    images = :images,
+                    image_local_paths = :image_local_paths,
+                    patreon_tags = :patreon_tags,
+                    updated_at = NOW()
+                WHERE post_id = :post_id
+            """)
+
+            # Prepare data for update
+            # Extract full_content from content_blocks for search
+            full_content = ""
+            if post_data.get('content_blocks'):
+                text_blocks = [block.get('text', '') for block in post_data.get('content_blocks', [])
+                              if block.get('type') == 'text' and block.get('text')]
+                full_content = '\n\n'.join(text_blocks)
+
+            update_params = {
+                'post_id': post_data.get('post_id'),
+                'title': post_data.get('title'),
+                'full_content': full_content,
+                'content_blocks': json.dumps(post_data.get('content_blocks', [])),
+                'post_metadata': json.dumps(post_data.get('post_metadata', {})),
+                'published_at': post_data.get('published_at'),
+                'video_streams': json.dumps(post_data.get('video_streams', [])),
+                'video_subtitles': json.dumps(post_data.get('video_subtitles', [])),
+                'video_local_paths': post_data.get('video_local_paths'),
+                'audios': post_data.get('audios'),
+                'audio_local_paths': post_data.get('audio_local_paths'),
+                'images': post_data.get('images'),
+                'image_local_paths': post_data.get('image_local_paths'),
+                'patreon_tags': post_data.get('patreon_tags')
+            }
+
+            conn.execute(update_sql, update_params)
+            conn.commit()
+
+            logger.info(f"   🐘 Updated post {post_data.get('post_id')} in PostgreSQL")
+
+    except Exception as e:
+        logger.error(f"   ❌ Error updating PostgreSQL: {e}")
+        raise
 
 
 def load_config():
@@ -86,7 +185,7 @@ def authenticate(config, headless=True):
 
 def extract_post_details(
     scraper: PatreonScraperV2,
-    tracker: FirebaseTracker,
+    tracker: PostgresTracker,
     post: Dict,
     save_to_json: bool = True
 ) -> bool:
@@ -95,8 +194,8 @@ def extract_post_details(
 
     Args:
         scraper: PatreonScraperV2 instance
-        tracker: FirebaseTracker instance
-        post: Post record from Firebase
+        tracker: PostgresTracker instance
+        post: Post record from database
         save_to_json: Whether to save details to JSON file
 
     Returns:
@@ -124,11 +223,11 @@ def extract_post_details(
 
         # Merge with existing data
         full_post_data = {
-            **post,  # Existing Firebase data
+            **post,  # Existing database data
             **post_detail  # New scraped details
         }
 
-        # CRITICAL: Always preserve the creator_id from Firebase (line 95)
+        # CRITICAL: Always preserve the creator_id from database
         # The scraper might extract incorrect creator info from page HTML
         full_post_data['creator_id'] = creator_id
 
@@ -140,12 +239,27 @@ def extract_post_details(
         full_post_data['downloaded_media'] = download_result
         if download_result.get('videos_relative'):
             full_post_data['video_local_paths'] = download_result['videos_relative']
-        if download_result.get('video_subtitles_relative'):
-            full_post_data['video_subtitles_relative'] = download_result['video_subtitles_relative']
         if download_result.get('audios_relative'):
             full_post_data['audio_local_paths'] = download_result['audios_relative']
         if download_result.get('images_relative'):
             full_post_data['image_local_paths'] = download_result['images_relative']
+
+        # Structure video_subtitles as array of objects with both paths
+        if download_result.get('video_subtitles') or download_result.get('video_subtitles_relative'):
+            abs_subs = download_result.get('video_subtitles', [])
+            rel_subs = download_result.get('video_subtitles_relative', [])
+
+            # Create structured array
+            subtitles = []
+            for i in range(max(len(abs_subs), len(rel_subs))):
+                sub_obj = {}
+                if i < len(abs_subs):
+                    sub_obj['path'] = abs_subs[i]
+                if i < len(rel_subs):
+                    sub_obj['relative_path'] = rel_subs[i]
+                subtitles.append(sub_obj)
+
+            full_post_data['video_subtitles'] = subtitles
 
         # Save to JSON file if requested
         if save_to_json:
@@ -176,15 +290,28 @@ def extract_post_details(
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(existing_posts, f, indent=2, ensure_ascii=False)
 
-            logger.info(f"   💾 Saved to {output_file}")
+            logger.info(f"   💾 Saved to JSON: {output_file}")
 
-        # Mark as extracted in Firebase
+        # DUAL MODE: Also save to PostgreSQL if flag is enabled
+        if use_postgresql():
+            try:
+                logger.info(f"   🐘 PostgreSQL mode enabled - updating database...")
+                update_post_details_in_postgres(full_post_data)
+            except Exception as e:
+                logger.warning(f"   ⚠️  PostgreSQL update failed (continuing): {e}")
+
+        # Mark as extracted in database
         tracker.mark_details_extracted(post_id, success=True)
+
+        # Filter videos to only include actual video files (not images)
+        video_extensions = ('.mp4', '.webm', '.ogg', '.mov', '.avi', '.m3u8', '.ts')
+        actual_videos = [v for v in post_detail.get('videos', [])
+                        if any(v.lower().split('?')[0].endswith(ext) for ext in video_extensions)]
 
         logger.info(f"   ✅ Successfully extracted details for post {post_id}")
         logger.info(f"      - Title: {post_detail.get('title', 'N/A')}")
         logger.info(f"      - Images: {len(post_detail.get('images', []))}")
-        logger.info(f"      - Videos: {len(post_detail.get('videos', []))}")
+        logger.info(f"      - Videos: {len(actual_videos)}")
         logger.info(f"      - Audios: {len(post_detail.get('audios', []))}")
         logger.info(f"      - Tags: {len(post_detail.get('patreon_tags', []))}")
 
@@ -198,7 +325,7 @@ def extract_post_details(
 
 def extract_all_pending(
     scraper: PatreonScraperV2,
-    tracker: FirebaseTracker,
+    tracker: PostgresTracker,
     creator_id: Optional[str] = None,
     limit: Optional[int] = None
 ) -> Dict[str, int]:
@@ -207,7 +334,7 @@ def extract_all_pending(
 
     Args:
         scraper: PatreonScraperV2 instance
-        tracker: FirebaseTracker instance
+        tracker: PostgresTracker instance
         creator_id: Optional filter by creator
         limit: Optional limit on posts to process
 
@@ -265,7 +392,7 @@ def extract_all_pending(
 
 def extract_single_post(
     scraper: PatreonScraperV2,
-    tracker: FirebaseTracker,
+    tracker: PostgresTracker,
     post_id: str
 ) -> bool:
     """
@@ -273,17 +400,17 @@ def extract_single_post(
 
     Args:
         scraper: PatreonScraperV2 instance
-        tracker: FirebaseTracker instance
+        tracker: PostgresTracker instance
         post_id: Post ID to extract
 
     Returns:
         True if successful
     """
-    # Get post from Firebase
+    # Get post from database
     post = tracker.get_post(post_id)
 
     if not post:
-        logger.error(f"❌ Post {post_id} not found in Firebase")
+        logger.error(f"❌ Post {post_id} not found in database")
         return False
 
     # Check if already extracted
@@ -318,7 +445,7 @@ Examples:
   # Extract details for specific post
   python phase2_detail_extractor.py --post 142518617
 
-  # Show Firebase summary
+  # Show PostgreSQL summary
   python phase2_detail_extractor.py --summary
         """
     )
@@ -332,7 +459,7 @@ Examples:
     parser.add_argument('--limit', type=int,
                         help='Limit number of posts to process')
     parser.add_argument('--summary', action='store_true',
-                        help='Show Firebase tracking summary')
+                        help='Show PostgreSQL tracking summary')
     parser.add_argument('--headless', action='store_true', default=True,
                         help='Run browser in headless mode (default: True)')
     parser.add_argument('--no-headless', action='store_false', dest='headless',
@@ -340,9 +467,8 @@ Examples:
 
     args = parser.parse_args()
 
-    # Initialize Firebase tracker
-    database_url, database_secret = load_firebase_config()
-    tracker = FirebaseTracker(database_url, database_secret)
+    # Initialize PostgreSQL tracker
+    tracker = PostgresTracker()
 
     # If only summary requested
     if args.summary:

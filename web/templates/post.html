@@ -13,7 +13,8 @@
             padding: 20px;
             background: #fafafa;
             color: #2b2b2b;
-            line-height: 1.6;
+            font-size: 16px; /* Tamaño Patreon */
+            line-height: 1.7; /* Line-height Patreon */
         }
 
         .post-header {
@@ -346,8 +347,22 @@
         .content-block h2 { font-size: 24px; margin: 30px 0 15px 0; font-weight: 600; }
         .content-block h3 { font-size: 20px; margin: 25px 0 12px 0; font-weight: 600; }
 
-        /* Paragraphs */
-        .content-block.paragraph p { line-height: 1.7; margin: 15px 0; }
+        /* Paragraphs - Estilo Patreon */
+        .content-block.paragraph p {
+            font-size: 16px !important;
+            line-height: 1.7 !important;
+            margin: 15px 0;
+            color: #2b2b2b;
+        }
+
+        /* Aplicar a todo el texto de contenido */
+        .post-content,
+        .post-content p,
+        .post-content div,
+        .content-block {
+            font-size: 16px;
+            line-height: 1.7;
+        }
 
         /* Comments */
         .comments-section {
@@ -466,6 +481,34 @@
             color: #ffffff;
             border-color: #1a1a1a;
         }
+
+        /* Blockquotes - Estilo Patreon con línea vertical */
+        .content-block.quote {
+            margin: 1.5rem 0;
+        }
+
+        .content-block.quote blockquote,
+        blockquote {
+            border-left: 4px solid #1a1a1a !important; /* Línea vertical negra */
+            padding-left: 1.5rem !important;
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+            padding-right: 0;
+            margin: 1rem 0;
+            font-style: normal !important; /* Sin cursiva */
+            font-size: 16px !important;
+            line-height: 1.7 !important;
+            color: #2b2b2b !important;
+            background: transparent !important; /* Sin fondo gris */
+        }
+
+        /* Aplicar estilos al texto dentro de blockquotes */
+        blockquote *,
+        .content-block.quote blockquote * {
+            font-size: 16px !important;
+            line-height: 1.7 !important;
+            font-style: normal !important;
+        }
     </style>
 </head>
 <body>
@@ -473,7 +516,7 @@
         <div class="post-meta-summary">
             <div class="creator-highlight">
                 {% if creator_avatar %}
-                <img src="{{ creator_avatar }}" alt="{{ creator_display_name }}" class="creator-badge">
+                <img src="{{ creator_avatar }}" alt="{{ creator_display_name }}" class="creator-badge" loading="lazy">
                 {% else %}
                 <div class="creator-badge">{{ creator_display_name[:1]|upper }}</div>
                 {% endif %}
@@ -559,129 +602,130 @@
 
             <!-- Content blocks -->
             <div class="post-content">
+                {# Show title from post.title if available (always show before content_blocks) #}
+                {% if post.title %}
+                    <div class="content-block heading-1">
+                        <h1>{{ post.title }}</h1>
+                    </div>
+                {% endif %}
+
+                {# Show collections after title #}
+                {% if post.collections and post.collections|length > 0 %}
+                    <div class="collections-container">
+                        {% for collection in post.collections %}
+                            <a href="/collection/{{ post.creator_id }}/{{ collection.collection_id }}" class="collection-badge-post">
+                                {% if collection.collection_image_local %}
+                                    <img src="{{ url_for('media_file', filename=collection.collection_image_local) }}" alt="{{ collection.collection_name }}" class="collection-image" loading="lazy">
+                                {% endif %}
+                                <span class="collection-label">{{ collection.collection_name }}</span>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {# Show tags after collections #}
+                {% if post.patreon_tags %}
+                    <div class="tags-container">
+                        {% for tag in post.patreon_tags %}
+                        <a href="/tag/{{ tag }}" class="tag">{{ tag }}</a>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {# Show audio from local files #}
+                {% set local_audios = post.audio_local_paths if post.audio_local_paths is defined and post.audio_local_paths else [] %}
+                {% if local_audios %}
+                    {% for audio_path in local_audios %}
+                        <div class="audio-player-container">
+                            {# Use collection image if post belongs to a collection, otherwise use creator avatar #}
+                            {% if post.collections and post.collections|length > 0 and post.collections[0].collection_image_local %}
+                                <img src="{{ url_for('media_file', filename=post.collections[0].collection_image_local) }}" alt="{{ post.collections[0].collection_name }}" class="audio-avatar" loading="lazy">
+                            {% elif creator_avatar %}
+                                <img src="{{ creator_avatar }}" alt="Audio thumbnail" class="audio-avatar" loading="lazy">
+                            {% endif %}
+                            <div class="audio-player-main">
+                                <button class="audio-btn" onclick="playPause({{ loop.index }})">▶</button>
+                                <div id="waveform-{{ loop.index }}"
+                                     data-audio-src="{{ url_for('media_file', filename=audio_path) }}"
+                                     data-waveform-src="{{ url_for('media_file', filename=audio_path|replace('.mp3', '.json')) }}"
+                                     style="flex: 1; min-width: 0;"></div>
+                                <span class="audio-time" id="time-{{ loop.index }}">0:00 / 0:00</span>
+                                <button class="audio-speed" onclick="changeSpeed({{ loop.index }})">1x</button>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                {# Show videos from local files #}
+                {% set local_videos = post.video_local_paths if post.video_local_paths is defined and post.video_local_paths else [] %}
+                {% set local_subtitles = post.video_subtitles_relative if post.video_subtitles_relative is defined and post.video_subtitles_relative else [] %}
+                {% if local_videos %}
+                    {% set primary_video = local_videos[0] %}
+                    <div class="content-block video">
+                        <video controls preload="metadata" crossorigin="anonymous" id="main-video">
+                            <source src="{{ url_for('media_file', filename=primary_video) }}#t=0.1" type="video/mp4">
+                            {% if local_subtitles and local_subtitles|length > 0 %}
+                                <track kind="subtitles" src="{{ url_for('media_file', filename=local_subtitles[0]) }}" default>
+                            {% endif %}
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                {% endif %}
+
                 {% if post.content_blocks %}
-                    {# First pass: show everything except comments #}
+                    {# Now iterate through content_blocks for text content #}
                     {% set shown_tags = namespace(value=false) %}
                     {% for block in post.content_blocks | sort(attribute='order') %}
                         {% if block.type == 'comments_header' or block.type == 'comment' %}
                             {# Skip comments for now, will show them later #}
                         {% elif block.type == 'heading_1' %}
-                            <div class="content-block heading-1">
-                                <h1>{{ block.text }}</h1>
-                            </div>
-
-                            {# Show collections after title #}
-                            {% if post.collections and post.collections|length > 0 %}
-                                <div class="collections-container">
-                                    {% for collection in post.collections %}
-                                        <a href="/collection/{{ post.creator_id }}/{{ collection.collection_id }}" class="collection-badge-post">
-                                            {% if collection.collection_image_local %}
-                                                <img src="{{ url_for('media_file', filename=collection.collection_image_local) }}" alt="{{ collection.collection_name }}" class="collection-image">
-                                            {% endif %}
-                                            <span class="collection-label">{{ collection.collection_name }}</span>
-                                        </a>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-
-                            {# Show tags after collections #}
-                            {% if not shown_tags.value and post.patreon_tags %}
-                                <div class="tags-container">
-                                    {% for tag in post.patreon_tags %}
-                                    <a href="/tag/{{ tag }}" class="tag">{{ tag }}</a>
-                                    {% endfor %}
-                                </div>
-                                {% set shown_tags.value = true %}
-                            {% endif %}
-
-                            {# Show audio after tags - from local files #}
-                            {% set local_audios = post.audio_local_paths if post.audio_local_paths is defined and post.audio_local_paths else [] %}
-                            {% if local_audios %}
-                                {% for audio_path in local_audios %}
-                                    <div class="audio-player-container">
-                                        {# Use collection image if post belongs to a collection, otherwise use creator avatar #}
-                                        {% if post.collections and post.collections|length > 0 and post.collections[0].collection_image_local %}
-                                            <img src="{{ url_for('media_file', filename=post.collections[0].collection_image_local) }}" alt="{{ post.collections[0].collection_name }}" class="audio-avatar">
-                                        {% elif creator_avatar %}
-                                            <img src="{{ creator_avatar }}" alt="Audio thumbnail" class="audio-avatar">
-                                        {% endif %}
-                                        <div class="audio-player-main">
-                                            <button class="audio-btn" onclick="playPause({{ loop.index }})">▶</button>
-                                            <div id="waveform-{{ loop.index }}"
-                                                 data-audio-src="{{ url_for('media_file', filename=audio_path) }}"
-                                                 data-waveform-src="{{ url_for('media_file', filename=audio_path|replace('.mp3', '.json')) }}"
-                                                 style="flex: 1; min-width: 0;"></div>
-                                            <span class="audio-time" id="time-{{ loop.index }}">0:00 / 0:00</span>
-                                            <button class="audio-speed" onclick="changeSpeed({{ loop.index }})">1x</button>
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            {% endif %}
-
-                            {# Show videos after audio #}
-                            {% set local_videos = post.video_local_paths if post.video_local_paths is defined and post.video_local_paths else [] %}
-                            {% set local_subtitles = post.video_subtitles_relative if post.video_subtitles_relative is defined and post.video_subtitles_relative else [] %}
-                            {% if local_videos %}
-                                {% set primary_video = local_videos[0] %}
-                                <!-- DEBUG: primary_video = {{ primary_video }} -->
-                                <!-- DEBUG: video URL = {{ url_for('media_file', filename=primary_video) }} -->
-                                <div class="content-block video">
-                                    <video controls preload="metadata" crossorigin="anonymous" id="main-video">
-                                        <source src="{{ url_for('media_file', filename=primary_video) }}#t=0.1" type="video/mp4">
-                                        {% if local_subtitles and local_subtitles|length > 0 %}
-                                            <track kind="subtitles" src="{{ url_for('media_file', filename=local_subtitles[0]) }}" default>
-                                        {% endif %}
-                                        Your browser does not support the video tag.
-                                    </video>
-                                </div>
-                                <script>
-                                    // Debug video loading
-                                    const video = document.getElementById('main-video');
-                                    video.addEventListener('error', function(e) {
-                                        console.error('❌ Video error:', e);
-                                        console.error('Video src:', video.querySelector('source').src);
-                                    });
-                                    video.addEventListener('loadeddata', function() {
-                                        console.log('✅ Video loaded successfully');
-                                    });
-                                </script>
-                            {% endif %}
+                            {# Skip heading_1 blocks - already shown from post.title above #}
 
                         {% elif block.type == 'heading_2' %}
                             <div class="content-block heading-2">
-                                <h2>{{ block.text }}</h2>
+                                <h2>{{ block.text | markdown | safe }}</h2>
                             </div>
 
                         {% elif block.type == 'heading_3' %}
                             <div class="content-block heading-3">
-                                <h3>{{ block.text }}</h3>
+                                <h3>{{ block.text | markdown | safe }}</h3>
                             </div>
 
                         {% elif block.type == 'paragraph' %}
                             {% set paragraph_text = (block.text or '') | trim %}
                             {% if paragraph_text and paragraph_text not in date_skip_values and paragraph_text | lower not in date_skip_values_lower %}
                             <div class="content-block paragraph">
-                                <p>{{ block.text }}</p>
+                                <p>{{ block.text | markdown | safe }}</p>
                             </div>
                             {% endif %}
 
                         {% elif block.type == 'image' %}
-                            {# Skip Patreon thumbnail images (usually end with /1.png, /2.png, etc.) #}
-                            {% set skip_image = false %}
-                            {% set url_lower = block.url.lower() %}
+                            {# Show image using local path if available, otherwise remote URL #}
+                            {% if block.media_id %}
+                                {# Find local path for this media_id #}
+                                {% set local_img = namespace(path='') %}
+                                {% for img_path in post.image_local_paths %}
+                                    {% if block.media_id in img_path or block.url.split('/')[-2] in img_path %}
+                                        {% set local_img.path = img_path %}
+                                    {% endif %}
+                                {% endfor %}
 
-                            {# Check if it's a Patreon thumbnail pattern #}
-                            {% if 'patreonusercontent.com' in url_lower and ('/1.png' in url_lower or '/2.png' in url_lower or '/3.png' in url_lower) %}
-                                {% set skip_image = true %}
-                            {% endif %}
-
-                            {% if not skip_image %}
-                            <div class="content-block image">
-                                <img src="{{ block.url }}" alt="{{ block.caption or '' }}" loading="lazy">
-                                {% if block.caption %}
-                                <div class="caption">{{ block.caption }}</div>
+                                {% if local_img.path %}
+                                <div class="content-block image">
+                                    <img src="{{ url_for('media_file', filename=local_img.path) }}" alt="{{ block.caption or '' }}" loading="lazy">
+                                    {% if block.caption %}
+                                    <div class="caption">{{ block.caption }}</div>
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                {# Fallback to remote URL if local not found #}
+                                <div class="content-block image">
+                                    <img src="{{ block.url }}" alt="{{ block.caption or '' }}" loading="lazy">
+                                    {% if block.caption %}
+                                    <div class="caption">{{ block.caption }}</div>
+                                    {% endif %}
+                                </div>
                                 {% endif %}
-                            </div>
                             {% endif %}
 
                         {% elif block.type == 'video' %}
@@ -710,7 +754,7 @@
 
                         {% elif block.type == 'quote' %}
                             <div class="content-block quote">
-                                <blockquote>{{ block.text }}</blockquote>
+                                <blockquote>{{ block.text | markdown | safe }}</blockquote>
                             </div>
 
                         {% elif block.type == 'youtube_embed' %}
@@ -731,6 +775,18 @@
                         {% endif %}
                     {% endfor %}
 
+                    {# Check if content_blocks has any image blocks #}
+                    {% set has_image_blocks = post.content_blocks | selectattr('type', 'equalto', 'image') | list | length > 0 %}
+
+                    {# If no image blocks found but we have local images, show them at the end #}
+                    {% if not has_image_blocks and post.image_local_paths %}
+                        {% for img_path in post.image_local_paths %}
+                            <div class="content-block image">
+                                <img src="{{ url_for('media_file', filename=img_path) }}" alt="Post image" loading="lazy">
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
                 {% else %}
                     <!-- Fallback for old format without blocks -->
                     {% if post.full_content %}
@@ -739,7 +795,15 @@
                     </div>
                     {% endif %}
 
-                    {% if post.images %}
+                    {# Show downloaded images (local paths) if available, otherwise show remote URLs #}
+                    {% if post.image_local_paths %}
+                        {% for img_path in post.image_local_paths %}
+                        <div class="content-block image">
+                            <img src="{{ url_for('media_file', filename=img_path) }}" alt="Post image" loading="lazy">
+                        </div>
+                        {% endfor %}
+                    {% elif post.images %}
+                        {# Fallback to remote URLs (may have expired tokens) #}
                         {% for img_url in post.images %}
                         <div class="content-block image">
                             <img src="{{ img_url }}" alt="Post image" loading="lazy">
@@ -784,7 +848,7 @@
                                                 <span style="color: #999; font-weight: normal; font-size: 0.8125rem;"> ↳ replied</span>
                                             {% endif %}
                                         </div>
-                                        <div class="comment-text">{{ block.text }}</div>
+                                        <div class="comment-text">{{ block.text | markdown | safe }}</div>
                                     </div>
                                 {% endif %}
                             {% endfor %}

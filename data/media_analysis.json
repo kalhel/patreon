@@ -1,0 +1,696 @@
+{
+  "total_files": 1095,
+  "total_size": 30834638407,
+  "by_type": {
+    "subtitles": {
+      "count": 57,
+      "size": 24076777,
+      "example_files": [
+        {
+          "name": "128693945_yt00_en.vtt",
+          "size": 347996,
+          "path": "videos/astrobymax"
+        },
+        {
+          "name": "113258529_00.vtt",
+          "size": 113320,
+          "path": "videos/astrobymax"
+        },
+        {
+          "name": "125368504_yt00_en.vtt",
+          "size": 809840,
+          "path": "videos/skyscript"
+        },
+        {
+          "name": "88340652_yt00_en.vtt",
+          "size": 337664,
+          "path": "videos/headonhistory"
+        },
+        {
+          "name": "65262430_yt00_en.vtt",
+          "size": 428863,
+          "path": "videos/headonhistory"
+        }
+      ]
+    },
+    "videos": {
+      "count": 66,
+      "size": 27341337063,
+      "example_files": [
+        {
+          "name": "f40e4415723dbc34_128693945_00.mp4",
+          "size": 145147660,
+          "path": "videos/astrobymax"
+        },
+        {
+          "name": "7dfa41ec9ba0388b_113258529_00.mp4",
+          "size": 332678517,
+          "path": "videos/astrobymax"
+        },
+        {
+          "name": "91735923b9b8616a_105578531_00.mp4",
+          "size": 7802610,
+          "path": "videos/skyscript"
+        },
+        {
+          "name": "908b0aa1e2b6df18_125368504_00.mp4",
+          "size": 380654770,
+          "path": "videos/skyscript"
+        },
+        {
+          "name": "1ccacfc168986bf3_98297450_00.mp4",
+          "size": 2395543,
+          "path": "videos/skyscript"
+        }
+      ]
+    },
+    "images": {
+      "count": 796,
+      "size": 262379343,
+      "example_files": [
+        {
+          "name": "1eb0e627c0bff53f_109053950_00.PNG",
+          "size": 987915,
+          "path": "images/astrobymax"
+        },
+        {
+          "name": "6bad24f6c69114f4_113258529_00.png",
+          "size": 1362405,
+          "path": "images/astrobymax"
+        },
+        {
+          "name": "f25a3eac734de2d9_109053950_00.PNG",
+          "size": 897290,
+          "path": "images/astrobymax"
+        },
+        {
+          "name": "3090487b4fccfe2b_138388885_00.PNG",
+          "size": 88839,
+          "path": "images/astrobymax"
+        },
+        {
+          "name": "20bac2dba9e2f6d5_118220568_00.png",
+          "size": 2372052,
+          "path": "images/astrobymax"
+        }
+      ]
+    },
+    "other": {
+      "count": 88,
+      "size": 945454,
+      "example_files": [
+        {
+          "name": "118624830_00_1.json",
+          "size": 10651,
+          "path": "audio/astrobymax"
+        },
+        {
+          "name": "115965308_00_1.json",
+          "size": 10639,
+          "path": "audio/astrobymax"
+        },
+        {
+          "name": "141079575_00_1.json",
+          "size": 10610,
+          "path": "audio/astrobymax"
+        },
+        {
+          "name": "116138960_00_1.json",
+          "size": 10659,
+          "path": "audio/astrobymax"
+        },
+        {
+          "name": "116138801_00_1.json",
+          "size": 10697,
+          "path": "audio/astrobymax"
+        }
+      ]
+    },
+    "audio": {
+      "count": 88,
+      "size": 3205899770,
+      "example_files": [
+        {
+          "name": "7ed91825689bbb78_115279903_00.mp3",
+          "size": 45569095,
+          "path": "audio/astrobymax"
+        },
+        {
+          "name": "dca964be4b614b77_115965308_00.mp3",
+          "size": 46331623,
+          "path": "audio/astrobymax"
+        },
+        {
+          "name": "7e68dda1e15766b4_115418049_00.mp3",
+          "size": 14158597,
+          "path": "audio/astrobymax"
+        },
+        {
+          "name": "760af285823cea05_141080275_00.mp3",
+          "size": 30432599,
+          "path": "audio/astrobymax"
+        },
+        {
+          "name": "bdc7c11a28aee602_120817329_00.mp3",
+          "size": 26977735,
+          "path": "audio/astrobymax"
+        }
+      ]
+    }
+  },
+  "by_creator": {
+    "astrobymax": {
+      "count": 254,
+      "size": 1128847507,
+      "by_type": {
+        "subtitles": {
+          "count": 2,
+          "size": 461316
+        },
+        "videos": {
+          "count": 2,
+          "size": 477826177
+        },
+        "images": {
+          "count": 223,
+          "size": 133023165
+        },
+        "other": {
+          "count": 13,
+          "size": 138564
+        },
+        "audio": {
+          "count": 14,
+          "size": 517398285
+        }
+      }
+    },
+    "skyscript": {
+      "count": 218,
+      "size": 441374991,
+      "by_type": {
+        "videos": {
+          "count": 3,
+          "size": 390852923
+        },
+        "subtitles": {
+          "count": 1,
+          "size": 809840
+        },
+        "images": {
+          "count": 214,
+          "size": 49712228
+        }
+      }
+    },
+    "headonhistory": {
+      "count": 551,
+      "size": 14910211620,
+      "by_type": {
+        "videos": {
+          "count": 43,
+          "size": 12146959370
+        },
+        "subtitles": {
+          "count": 44,
+          "size": 21445483
+        },
+        "images": {
+          "count": 317,
+          "size": 72696826
+        },
+        "other": {
+          "count": 74,
+          "size": 795943
+        },
+        "audio": {
+          "count": 73,
+          "size": 2668313998
+        }
+      }
+    },
+    "horoiproject": {
+      "count": 72,
+      "size": 14354204289,
+      "by_type": {
+        "subtitles": {
+          "count": 10,
+          "size": 1360138
+        },
+        "videos": {
+          "count": 18,
+          "size": 14325698593
+        },
+        "images": {
+          "count": 42,
+          "size": 6947124
+        },
+        "audio": {
+          "count": 1,
+          "size": 20187487
+        },
+        "other": {
+          "count": 1,
+          "size": 10947
+        }
+      }
+    }
+  },
+  "small_images": [
+    {
+      "name": "collection_566675.jpg",
+      "size": 33374,
+      "dimensions": "360x359",
+      "path": "collections/horoiproject"
+    },
+    {
+      "name": "collection_560423.jpg",
+      "size": 33374,
+      "dimensions": "360x359",
+      "path": "collections/horoiproject"
+    },
+    {
+      "name": "collection_560373.jpg",
+      "size": 33374,
+      "dimensions": "360x359",
+      "path": "collections/horoiproject"
+    },
+    {
+      "name": "collection_560414.jpg",
+      "size": 33374,
+      "dimensions": "360x359",
+      "path": "collections/horoiproject"
+    },
+    {
+      "name": "collection_560407.jpg",
+      "size": 33374,
+      "dimensions": "360x359",
+      "path": "collections/horoiproject"
+    },
+    {
+      "name": "collection_560361.jpg",
+      "size": 33374,
+      "dimensions": "360x359",
+      "path": "collections/horoiproject"
+    },
+    {
+      "name": "collection_560394.jpg",
+      "size": 33374,
+      "dimensions": "360x359",
+      "path": "collections/horoiproject"
+    },
+    {
+      "name": "collection_560366.jpg",
+      "size": 33374,
+      "dimensions": "360x359",
+      "path": "collections/horoiproject"
+    },
+    {
+      "name": "collection_586015.jpg",
+      "size": 33374,
+      "dimensions": "360x359",
+      "path": "collections/horoiproject"
+    },
+    {
+      "name": "collection_560506.jpg",
+      "size": 33374,
+      "dimensions": "360x359",
+      "path": "collections/horoiproject"
+    },
+    {
+      "name": "collection_1520003.jpg",
+      "size": 33374,
+      "dimensions": "360x359",
+      "path": "collections/horoiproject"
+    },
+    {
+      "name": "collection_560475.jpg",
+      "size": 33374,
+      "dimensions": "360x359",
+      "path": "collections/horoiproject"
+    },
+    {
+      "name": "collection_1691311.jpg",
+      "size": 33374,
+      "dimensions": "360x359",
+      "path": "collections/horoiproject"
+    },
+    {
+      "name": "collection_560378.jpg",
+      "size": 33374,
+      "dimensions": "360x359",
+      "path": "collections/horoiproject"
+    },
+    {
+      "name": "collection_560421.jpg",
+      "size": 33374,
+      "dimensions": "360x359",
+      "path": "collections/horoiproject"
+    },
+    {
+      "name": "collection_560433.jpg",
+      "size": 33374,
+      "dimensions": "360x359",
+      "path": "collections/horoiproject"
+    },
+    {
+      "name": "collection_803803.jpg",
+      "size": 33374,
+      "dimensions": "360x359",
+      "path": "collections/horoiproject"
+    },
+    {
+      "name": "collection_560476.jpg",
+      "size": 33374,
+      "dimensions": "360x359",
+      "path": "collections/horoiproject"
+    },
+    {
+      "name": "collection_560403.jpg",
+      "size": 33374,
+      "dimensions": "360x359",
+      "path": "collections/horoiproject"
+    },
+    {
+      "name": "collection_560399.jpg",
+      "size": 33374,
+      "dimensions": "360x359",
+      "path": "collections/horoiproject"
+    }
+  ],
+  "large_files": [
+    {
+      "name": "30d84244aa5da430_94537365_00.mp4",
+      "size": 2065224517,
+      "type": "videos",
+      "path": "videos/horoiproject"
+    },
+    {
+      "name": "88f410341fbcf716_84900156_00.mp4",
+      "size": 1584865225,
+      "type": "videos",
+      "path": "videos/horoiproject"
+    },
+    {
+      "name": "637b6775ee137cca_92340814_00.mp4",
+      "size": 1487913844,
+      "type": "videos",
+      "path": "videos/horoiproject"
+    },
+    {
+      "name": "b7865c3eae6f9bfe_97502518_00.mp4",
+      "size": 1283953151,
+      "type": "videos",
+      "path": "videos/horoiproject"
+    },
+    {
+      "name": "65422248d031fe98_84202351_00.mp4",
+      "size": 1214955003,
+      "type": "videos",
+      "path": "videos/horoiproject"
+    },
+    {
+      "name": "12622593bdf9fe09_86786041_00.mp4",
+      "size": 1009727191,
+      "type": "videos",
+      "path": "videos/horoiproject"
+    },
+    {
+      "name": "64774a9287e72a3d_90017991_00.mp4",
+      "size": 891094974,
+      "type": "videos",
+      "path": "videos/horoiproject"
+    },
+    {
+      "name": "bd62f27aa0007e76_132170013_00.mp4",
+      "size": 753356933,
+      "type": "videos",
+      "path": "videos/horoiproject"
+    },
+    {
+      "name": "cf9f159af3dfd5a1_100236652_00.mp4",
+      "size": 702432460,
+      "type": "videos",
+      "path": "videos/horoiproject"
+    },
+    {
+      "name": "6f15cb106db9ab81_108576025_00.mp4",
+      "size": 624126127,
+      "type": "videos",
+      "path": "videos/headonhistory"
+    }
+  ],
+  "duplicates_by_size": {
+    "58039": [
+      {
+        "name": "bc0a121642d7222e_128693945_00.jpg",
+        "path": "images/astrobymax/bc0a121642d7222e_128693945_00.jpg"
+      },
+      {
+        "name": "collection_872429.jpg",
+        "path": "collections/headonhistory/collection_872429.jpg"
+      }
+    ],
+    "251790": [
+      {
+        "name": "f366c865a3a995ce_133506193_00.jpg",
+        "path": "images/skyscript/f366c865a3a995ce_133506193_00.jpg"
+      },
+      {
+        "name": "82b33c2df98f3773_141596508_00.jpg",
+        "path": "images/headonhistory/82b33c2df98f3773_141596508_00.jpg"
+      }
+    ],
+    "66579": [
+      {
+        "name": "collection_448116.jpg",
+        "path": "collections/astrobymax/collection_448116.jpg"
+      },
+      {
+        "name": "collection_724958.jpg",
+        "path": "collections/astrobymax/collection_724958.jpg"
+      },
+      {
+        "name": "collection_511440.jpg",
+        "path": "collections/astrobymax/collection_511440.jpg"
+      },
+      {
+        "name": "collection_573050.jpg",
+        "path": "collections/astrobymax/collection_573050.jpg"
+      },
+      {
+        "name": "collection_784203.jpg",
+        "path": "collections/astrobymax/collection_784203.jpg"
+      }
+    ],
+    "33374": [
+      {
+        "name": "collection_566675.jpg",
+        "path": "collections/horoiproject/collection_566675.jpg"
+      },
+      {
+        "name": "collection_560423.jpg",
+        "path": "collections/horoiproject/collection_560423.jpg"
+      },
+      {
+        "name": "collection_560373.jpg",
+        "path": "collections/horoiproject/collection_560373.jpg"
+      },
+      {
+        "name": "collection_560414.jpg",
+        "path": "collections/horoiproject/collection_560414.jpg"
+      },
+      {
+        "name": "collection_560407.jpg",
+        "path": "collections/horoiproject/collection_560407.jpg"
+      },
+      {
+        "name": "collection_560361.jpg",
+        "path": "collections/horoiproject/collection_560361.jpg"
+      },
+      {
+        "name": "collection_560394.jpg",
+        "path": "collections/horoiproject/collection_560394.jpg"
+      },
+      {
+        "name": "collection_560366.jpg",
+        "path": "collections/horoiproject/collection_560366.jpg"
+      },
+      {
+        "name": "collection_586015.jpg",
+        "path": "collections/horoiproject/collection_586015.jpg"
+      },
+      {
+        "name": "collection_560506.jpg",
+        "path": "collections/horoiproject/collection_560506.jpg"
+      },
+      {
+        "name": "collection_1520003.jpg",
+        "path": "collections/horoiproject/collection_1520003.jpg"
+      },
+      {
+        "name": "collection_560475.jpg",
+        "path": "collections/horoiproject/collection_560475.jpg"
+      },
+      {
+        "name": "collection_1691311.jpg",
+        "path": "collections/horoiproject/collection_1691311.jpg"
+      },
+      {
+        "name": "collection_560378.jpg",
+        "path": "collections/horoiproject/collection_560378.jpg"
+      },
+      {
+        "name": "collection_560421.jpg",
+        "path": "collections/horoiproject/collection_560421.jpg"
+      },
+      {
+        "name": "collection_560433.jpg",
+        "path": "collections/horoiproject/collection_560433.jpg"
+      },
+      {
+        "name": "collection_803803.jpg",
+        "path": "collections/horoiproject/collection_803803.jpg"
+      },
+      {
+        "name": "collection_560476.jpg",
+        "path": "collections/horoiproject/collection_560476.jpg"
+      },
+      {
+        "name": "collection_560403.jpg",
+        "path": "collections/horoiproject/collection_560403.jpg"
+      },
+      {
+        "name": "collection_560399.jpg",
+        "path": "collections/horoiproject/collection_560399.jpg"
+      }
+    ],
+    "10659": [
+      {
+        "name": "116138960_00_1.json",
+        "path": "audio/astrobymax/116138960_00_1.json"
+      },
+      {
+        "name": "115662784_00_1.json",
+        "path": "audio/astrobymax/115662784_00_1.json"
+      }
+    ],
+    "10827": [
+      {
+        "name": "77933294_00_1.json",
+        "path": "audio/astrobymax/77933294_00_1.json"
+      },
+      {
+        "name": "77933294_01_1.json",
+        "path": "audio/astrobymax/77933294_01_1.json"
+      },
+      {
+        "name": "142518617_00_1.json",
+        "path": "audio/headonhistory/142518617_00_1.json"
+      }
+    ],
+    "10809": [
+      {
+        "name": "80749264_00_1.json",
+        "path": "audio/headonhistory/80749264_00_1.json"
+      },
+      {
+        "name": "142686588_00_1.json",
+        "path": "audio/headonhistory/142686588_00_1.json"
+      },
+      {
+        "name": "64977087_00_1.json",
+        "path": "audio/headonhistory/64977087_00_1.json"
+      }
+    ],
+    "10728": [
+      {
+        "name": "108144948_00_1.json",
+        "path": "audio/headonhistory/108144948_00_1.json"
+      },
+      {
+        "name": "63757671_00_1.json",
+        "path": "audio/headonhistory/63757671_00_1.json"
+      }
+    ],
+    "10756": [
+      {
+        "name": "103366636_00_1.json",
+        "path": "audio/headonhistory/103366636_00_1.json"
+      },
+      {
+        "name": "71520591_00_1.json",
+        "path": "audio/headonhistory/71520591_00_1.json"
+      }
+    ],
+    "10780": [
+      {
+        "name": "135649966_00_1.json",
+        "path": "audio/headonhistory/135649966_00_1.json"
+      },
+      {
+        "name": "67698007_00_1.json",
+        "path": "audio/headonhistory/67698007_00_1.json"
+      }
+    ],
+    "10769": [
+      {
+        "name": "41417981_00_1.json",
+        "path": "audio/headonhistory/41417981_00_1.json"
+      },
+      {
+        "name": "138375125_00_1.json",
+        "path": "audio/headonhistory/138375125_00_1.json"
+      }
+    ],
+    "10729": [
+      {
+        "name": "52022595_00_1.json",
+        "path": "audio/headonhistory/52022595_00_1.json"
+      },
+      {
+        "name": "66466772_00_1.json",
+        "path": "audio/headonhistory/66466772_00_1.json"
+      }
+    ],
+    "10765": [
+      {
+        "name": "69519937_00_1.json",
+        "path": "audio/headonhistory/69519937_00_1.json"
+      },
+      {
+        "name": "76091035_00_1.json",
+        "path": "audio/headonhistory/76091035_00_1.json"
+      }
+    ],
+    "10746": [
+      {
+        "name": "86547744_00_1.json",
+        "path": "audio/headonhistory/86547744_00_1.json"
+      },
+      {
+        "name": "73102347_00_1.json",
+        "path": "audio/headonhistory/73102347_00_1.json"
+      }
+    ]
+  },
+  "duplicates_by_name": {},
+  "naming_patterns": {
+    "collection_*": 30,
+    "88340652_*": 2,
+    "77933294_*": 2,
+    "128693945_*": 1,
+    "f40e4415723dbc34_*": 1,
+    "113258529_*": 1,
+    "7dfa41ec9ba0388b_*": 1,
+    "91735923b9b8616a_*": 1,
+    "125368504_*": 1,
+    "908b0aa1e2b6df18_*": 1,
+    "1ccacfc168986bf3_*": 1,
+    "43fdcdaec951e7ea_*": 1,
+    "65262430_*": 1,
+    "76373161_*": 1,
+    "66174499_*": 1
+  },
+  "directory_structure": {}
+}

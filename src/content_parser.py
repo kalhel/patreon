@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Content Parser - Extracts structured content blocks from Patreon posts
-Maintains order, formatting, and structure for later Notion conversion
+Maintains order, formatting, and structure for processing
 """
 
 import json
@@ -481,6 +481,9 @@ class ContentBlockParser:
         """Find the main content container on the page"""
         selectors = [
             '[data-tag="post-content"]',
+            '.cm-bjFDAN',  # Patreon's main content container
+            '.sc-4aa4e11b-0',  # Patreon's post detail container
+            'div.cm-LIiDtl',  # Patreon's text content wrapper
             '[class*="post-content"]',
             'div[class*="content"]',
             'article',
@@ -490,10 +493,13 @@ class ContentBlockParser:
         for selector in selectors:
             try:
                 element = driver.find_element(By.CSS_SELECTOR, selector)
-                if element:
+                if element and element.text.strip():
+                    logger.info(f"Found content with selector: {selector}")
                     return element
             except:
                 continue
+
+        logger.warning("Could not find content element with any selector")
         return None
 
     def _extract_json_ld_embeds(self, driver: WebDriver):
@@ -698,7 +704,20 @@ class ContentBlockParser:
             elif tag == 'span':
                 # Dive into spans
                 self._parse_children(child)
+            elif tag == 'figure':
+                # Figures wrap images - recurse into them
+                self._parse_children(child)
+            elif tag == 'section':
+                # Sections contain content - recurse into them
+                self._parse_children(child)
+            elif tag in ['strong', 'b', 'em', 'i', 'u', 'mark']:
+                # Inline formatting tags - recurse into them
+                self._parse_children(child)
             # Add more tag handlers as needed
+            else:
+                # Unknown tag - try to recurse if it might contain content
+                if child.children:
+                    self._parse_children(child)
 
     def _add_heading_block(self, level: int, element):
         """Add heading block (h1, h2, h3)"""
@@ -734,19 +753,44 @@ class ContentBlockParser:
             })
 
     def _add_image_block(self, element):
-        """Add image block"""
+        """Add image block - content images from patreonusercontent.com"""
         src = element.get('src', '')
         alt = element.get('alt', '')
+        media_id = element.get('data-media-id', '')
 
-        # Only add if it's a Patreon image
-        if 'patreonusercontent.com' in src:
-            self.order += 1
-            self.blocks.append({
-                'type': 'image',
-                'order': self.order,
-                'url': src,
-                'caption': alt
-            })
+        # Only add if it's a Patreon content image
+        if not src or 'patreonusercontent.com' not in src:
+            return
+
+        # Extract media_id from URL if not in attribute
+        # URL format: https://c10.patreonusercontent.com/4/patreon-media/p/post/123456789/...
+        if not media_id and '/p/post/' in src:
+            try:
+                # Extract post_id from URL as media identifier
+                url_parts = src.split('/p/post/')
+                if len(url_parts) > 1:
+                    post_part = url_parts[1].split('/')[0]
+                    media_id = f"post_{post_part}_{src.split('/')[-1].split('?')[0]}"
+            except:
+                pass
+
+        # If still no media_id, generate one from URL
+        if not media_id:
+            # Use last part of URL (filename) as identifier
+            try:
+                media_id = src.split('/')[-1].split('?')[0]
+            except:
+                media_id = ''
+
+        self.order += 1
+        self.blocks.append({
+            'type': 'image',
+            'order': self.order,
+            'url': src,
+            'caption': alt,
+            'media_id': media_id or 'unknown'
+        })
+        logger.info(f"  ✓ Content image (media_id={media_id or 'extracted'}): {src[:80]}...")
 
     def _add_video_block(self, element):
         """Add video block"""
@@ -869,8 +913,22 @@ class ContentBlockParser:
             })
 
     def _add_quote_block(self, element):
-        """Add quote block"""
-        text = self._extract_formatted_text(element)
+        """Add quote block - preserve paragraph breaks"""
+        # Get all paragraphs in blockquote
+        paragraphs = element.find_all('p', recursive=False)
+
+        if paragraphs:
+            # Join paragraphs with double line breaks
+            texts = []
+            for p in paragraphs:
+                p_text = self._extract_formatted_text(p)
+                if p_text:
+                    texts.append(p_text)
+            text = '\n\n'.join(texts)
+        else:
+            # No <p> tags, extract as-is
+            text = self._extract_formatted_text(element)
+
         if text:
             self.order += 1
             self.blocks.append({
@@ -897,12 +955,59 @@ class ContentBlockParser:
         """
         Extract text with inline formatting preserved as markdown
 
-        Returns formatted text with **bold**, *italic*, etc.
+        Converts:
+        - <strong>, <b> -> **text**
+        - <em>, <i> -> *text*
+        - <u> -> <u>text</u> (HTML, no hay underline en markdown)
+        - <a> -> [text](url)
+
+        Returns formatted text with markdown/HTML mix
         """
-        # For now, just get text - we can enhance this later
-        # to convert <strong> to **text**, <em> to *text*, etc.
-        text = element.get_text(strip=True)
-        return text
+        if not element:
+            return ""
+
+        def process_node(node):
+            """Recursively process nodes preserving structure"""
+            if isinstance(node, str):
+                # Text node - preserve as is (don't strip)
+                return node
+
+            if not hasattr(node, 'name'):
+                return ''
+
+            tag = node.name.lower() if node.name else None
+
+            # Process children recursively
+            children_text = ''.join(process_node(child) for child in node.children)
+
+            # Apply formatting based on tag
+            if tag in ['strong', 'b']:
+                return f"**{children_text}**"
+            elif tag in ['em', 'i']:
+                return f"*{children_text}*"
+            elif tag == 'u':
+                return f"<u>{children_text}</u>"  # HTML underline
+            elif tag == 'a':
+                href = node.get('href', '')
+                if href:
+                    return f"[{children_text}]({href})"
+                return children_text
+            elif tag == 'br':
+                return '\n'
+            elif tag in ['span', 'div', 'p']:
+                # Preserve structure tags
+                return children_text
+            else:
+                return children_text
+
+        result = process_node(element)
+
+        # Clean up excessive whitespace but preserve intentional spacing
+        import re
+        result = re.sub(r'\n\s*\n\s*\n+', '\n\n', result)  # Max 2 newlines
+        result = re.sub(r' +', ' ', result)  # Single spaces only
+
+        return result.strip()
 
 
 def parse_post_content(content_element: WebElement) -> List[Dict]:

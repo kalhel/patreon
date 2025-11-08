@@ -1,0 +1,69 @@
+{
+  "media": {
+    "images": {
+      "download_content_images": true,
+      "skip_avatars": true,
+      "skip_covers": true,
+      "skip_thumbnails": true,
+      "min_size": {
+        "width": 400,
+        "height": 400,
+        "note": "Filter out small icons/avatars"
+      },
+      "deduplication": true,
+      "note": "Download content images, skip avatars/covers/icons, deduplicate"
+    },
+    "patreon": {
+      "videos": {
+        "download": true,
+        "quality": "best",
+        "format": "mp4",
+        "fallback_message": "Ver en Patreon",
+        "deduplication": true,
+        "note": "Hash-based deduplication prevents downloading identical videos"
+      },
+      "audios": {
+        "download": true,
+        "format": "mp3",
+        "deduplication": true,
+        "note": "Hash-based deduplication prevents downloading identical audio files"
+      }
+    },
+    "youtube": {
+      "mode": "download",
+      "download_if_embed_fails": false,
+      "download_settings": {
+        "quality": "best",
+        "subtitles": [
+          "en",
+          "es"
+        ],
+        "auto_subtitles": true,
+        "format": "mp4"
+      },
+      "note": "mode: 'embed' (fast, no download) or 'download' (slow, requires yt-dlp)"
+    },
+    "deduplication": {
+      "enabled": true,
+      "hash_algorithm": "sha256",
+      "use_database": true,
+      "note": "Prevent downloading same file twice using SHA256 hash"
+    }
+  },
+  "scraping": {
+    "max_retries": 3,
+    "retry_delay": 60,
+    "timeout": 300,
+    "headless": true
+  },
+  "celery": {
+    "enabled": false,
+    "broker": "redis://localhost:6379/0",
+    "workers": {
+      "phase1": 2,
+      "phase2": 1,
+      "phase3": 2
+    },
+    "note": "Celery queues for production - disabled for local development"
+  }
+}

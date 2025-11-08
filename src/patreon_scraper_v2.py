@@ -348,7 +348,7 @@ class PatreonScraperV2:
             creator_id: Creator identifier
 
         Returns:
-            Dictionary with post data
+            Dictionary with post data, or None if post doesn't belong to this creator
         """
         try:
             post_data = {
@@ -386,6 +386,52 @@ class PatreonScraperV2:
             # If no post_id found, skip this element
             if 'post_id' not in post_data:
                 return None
+
+            # CRITICAL FIX: Validate that this post belongs to the expected creator
+            # Extract creator name/link from the post element to verify ownership
+            try:
+                # Try to find creator link or name in the post card
+                # Patreon usually has a link like /user?u=12345 or text with creator name
+                creator_links = element.find_elements(By.CSS_SELECTOR, "a[href*='/user?u='], a[data-tag='creator-name']")
+
+                post_belongs_to_creator = False
+
+                for link in creator_links:
+                    link_href = link.get_attribute('href') or ''
+                    link_text = link.text.strip().lower()
+
+                    # Check if the link or text contains the expected creator_id
+                    if creator_id.lower() in link_href.lower() or creator_id.lower() in link_text:
+                        post_belongs_to_creator = True
+                        break
+
+                # If we couldn't find creator links, check the post URL itself
+                # Posts from the creator should be on their page
+                if not post_belongs_to_creator and 'post_url' in post_data:
+                    # Extract creator from URL pattern like patreon.com/creator_id/posts/
+                    url_match = re.search(r'patreon\.com/([^/]+)/', post_data['post_url'])
+                    if url_match:
+                        url_creator = url_match.group(1).lower()
+                        if url_creator == creator_id.lower() or url_creator == 'posts':
+                            post_belongs_to_creator = True
+
+                # If we still can't verify, we're on the creator's page so accept it
+                # but log a warning
+                if not post_belongs_to_creator:
+                    # As a last resort, check current page URL
+                    current_url = self.driver.current_url.lower()
+                    if creator_id.lower() in current_url:
+                        # We're on the creator's page, likely a legitimate post
+                        post_belongs_to_creator = True
+                        logger.debug(f"Post {post_data.get('post_id')} validated by page URL")
+                    else:
+                        # Cannot verify creator - reject this post
+                        logger.warning(f"⚠️  Rejecting post {post_data.get('post_id')} - cannot verify it belongs to {creator_id}")
+                        return None
+
+            except Exception as e:
+                logger.debug(f"Could not validate creator for post, accepting: {e}")
+                # If validation fails, accept the post (fail-safe)
 
             # Extract title
             try:
@@ -559,49 +605,109 @@ class PatreonScraperV2:
             post_detail['full_content'] = ""
 
         try:
-            # Extract all images from post content
-            images = self.driver.find_elements(By.CSS_SELECTOR, 'img')
+            # Extract ONLY content images using data-media-id attribute
+            # This attribute is ONLY present on original content images, not thumbnails or avatars
             image_urls = []
-            for img in images:
+
+            # Method 1: Use data-media-id (most reliable - only on original images)
+            content_images = self.driver.find_elements(By.CSS_SELECTOR, 'img[data-media-id]')
+            logger.info(f"  🔍 Found {len(content_images)} images with data-media-id")
+
+            for img in content_images:
                 src = img.get_attribute('src')
+                media_id = img.get_attribute('data-media-id')
                 if src and 'patreonusercontent.com' in src:
                     image_urls.append(src)
-            post_detail['images'] = list(set(image_urls))
-        except:
+                    logger.info(f"  ✓ Image with data-media-id={media_id}: {src[:80]}...")
+
+            # Method 2: Fallback to URL pattern if no data-media-id found
+            # But exclude thumbnail sizes (eyJ3Ijo in URL = width parameter)
+            if not image_urls:
+                logger.warning(f"  ⚠️ No images with data-media-id found, using fallback (will download thumbnails)")
+                all_images = self.driver.find_elements(By.CSS_SELECTOR, 'img')
+                logger.info(f"  🔍 Fallback: Found {len(all_images)} total img elements")
+
+                for img in all_images:
+                    src = img.get_attribute('src')
+                    if not src or 'patreonusercontent.com' not in src:
+                        continue
+
+                    # ONLY /p/post/ images
+                    if '/p/post/' not in src:
+                        continue
+
+                    # EXCLUDE avatars
+                    if '/p/campaign/' in src or '/p/user/' in src:
+                        continue
+
+                    # EXCLUDE thumbnails (they have width/height parameters in base64)
+                    # eyJ3Ijo = {"w": (width parameter)
+                    # eyJoIjo = {"h": (height parameter)
+                    if 'eyJ3Ijo' in src or 'eyJoIjo' in src:
+                        logger.debug(f"  ⏭️ Skipping thumbnail: {src[:80]}...")
+                        continue
+
+                    if src not in image_urls:
+                        image_urls.append(src)
+                        logger.info(f"  ✓ Fallback image: {src[:80]}...")
+
+            post_detail['images'] = image_urls
+            logger.info(f"  📸 Extracted {len(image_urls)} content images (data-media-id selector)")
+
+        except Exception as e:
+            logger.warning(f"  ⚠️  Error extracting images: {e}")
             post_detail['images'] = []
 
         try:
-            # Extract videos
-            videos = self.driver.find_elements(By.CSS_SELECTOR, 'video, [data-tag="video"]')
+            # Extract videos - ONLY actual <video> elements with video file extensions
+            # Filter out image posters/placeholders (png, jpg, etc.)
+            videos = self.driver.find_elements(By.TAG_NAME, 'video')
             video_urls = []
+            video_extensions = ('.mp4', '.webm', '.ogg', '.mov', '.avi', '.m3u8', '.ts')
+
             for video in videos:
                 src = video.get_attribute('src')
-                if src:
-                    video_urls.append(src)
+                if src and 'patreonusercontent.com' in src:
+                    # Check if it's actually a video file, not an image
+                    url_lower = src.lower().split('?')[0]  # Remove query params before checking
+                    if url_lower.endswith(video_extensions):
+                        video_urls.append(src)
+                        logger.info(f"  ✓ Video file: {src[:80]}...")
+                    else:
+                        logger.debug(f"  ⏭️ Skipping non-video URL in <video> tag: {src[:80]}...")
+
                 # Check for source tags
                 sources = video.find_elements(By.TAG_NAME, 'source')
                 for source in sources:
                     src = source.get_attribute('src')
-                    if src:
-                        video_urls.append(src)
+                    if src and 'patreonusercontent.com' in src:
+                        url_lower = src.lower().split('?')[0]
+                        if url_lower.endswith(video_extensions):
+                            video_urls.append(src)
+                            logger.info(f"  ✓ Video file: {src[:80]}...")
+                        else:
+                            logger.debug(f"  ⏭️ Skipping non-video URL in <source> tag: {src[:80]}...")
+
             post_detail['videos'] = list(set(video_urls))
+            logger.info(f"  🎬 Extracted {len(video_urls)} videos")
         except:
             post_detail['videos'] = []
 
         try:
-            # Extract audio
-            audios = self.driver.find_elements(By.CSS_SELECTOR, 'audio, [data-tag="audio"]')
+            # Extract audio - ONLY actual <audio> elements, not data-tag="audio"
+            audios = self.driver.find_elements(By.TAG_NAME, 'audio')
             audio_urls = []
             for audio in audios:
                 src = audio.get_attribute('src')
-                if src:
+                if src and 'patreonusercontent.com' in src:
                     audio_urls.append(src)
                 sources = audio.find_elements(By.TAG_NAME, 'source')
                 for source in sources:
                     src = source.get_attribute('src')
-                    if src:
+                    if src and 'patreonusercontent.com' in src:
                         audio_urls.append(src)
             post_detail['audios'] = list(set(audio_urls))
+            logger.info(f"  🎵 Extracted {len(audio_urls)} audio files")
         except:
             post_detail['audios'] = []
 

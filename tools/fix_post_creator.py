@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Fix creator_id for post 128693945 in Firebase
+Fix creator_id for post 128693945 in PostgreSQL
 Changes creator_id from 'astrobymax' to 'headonhistory'
 """
 
@@ -10,29 +10,26 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from firebase_tracker import FirebaseTracker, load_firebase_config
+from postgres_tracker import PostgresTracker
 
 def main():
     print("🔥 Fixing creator_id for post 128693945...")
     print()
 
-    # Load Firebase credentials
+    # Initialize PostgreSQL tracker
     try:
-        database_url, database_secret = load_firebase_config()
+        tracker = PostgresTracker()
     except Exception as e:
-        print(f"❌ Error loading Firebase config: {e}")
-        print("   Make sure config/credentials.json exists and is configured.")
+        print(f"❌ Error initializing PostgreSQL tracker: {e}")
+        print("   Make sure .env file exists and is configured.")
         return 1
-
-    # Initialize Firebase tracker
-    tracker = FirebaseTracker(database_url, database_secret)
 
     # Get the post
     post_id = '128693945'
     post = tracker.get_post(post_id)
 
     if not post:
-        print(f"❌ Post {post_id} not found in Firebase")
+        print(f"❌ Post {post_id} not found in database")
         return 1
 
     # Show current state

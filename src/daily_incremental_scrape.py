@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from patreon_auth_selenium import PatreonAuthSelenium
 from patreon_scraper_v2 import PatreonScraperV2
-from firebase_tracker import FirebaseTracker, load_firebase_config
+from postgres_tracker import PostgresTracker
 import json
 
 # Configure logging
@@ -86,7 +86,7 @@ def incremental_collect_urls(scraper, tracker, creator, max_pages=3):
 
     Args:
         scraper: PatreonScraperV2 instance
-        tracker: FirebaseTracker instance
+        tracker: PostgresTracker instance
         creator: Creator configuration
         max_pages: Maximum pages to check (default 3 = ~30-45 recent posts)
 
@@ -102,11 +102,11 @@ def incremental_collect_urls(scraper, tracker, creator, max_pages=3):
     logger.info(f"   (Will stop at first known post)")
     logger.info(f"{'='*60}\n")
 
-    # Get existing posts from Firebase
+    # Get existing posts from database
     existing_posts = tracker.get_all_posts()
     existing_post_ids = set(existing_posts.keys())
 
-    logger.info(f"📊 Existing posts in Firebase: {len(existing_post_ids)}")
+    logger.info(f"📊 Existing posts in database: {len(existing_post_ids)}")
 
     # Scrape with early stop
     new_posts = []
@@ -155,7 +155,7 @@ def incremental_collect_urls(scraper, tracker, creator, max_pages=3):
 
                     logger.info(f"   ✨ NEW: {post_id} - {post.get('title', 'Untitled')[:50]}")
 
-                    # Add to Firebase
+                    # Add to database
                     tracker.add_post(
                         post_id=post_id,
                         post_url=post['post_url'],
@@ -253,7 +253,7 @@ Examples:
 
 How it works:
   1. Scrapes only recent posts (first 3 pages ≈ 45 posts)
-  2. Stops when it finds posts that already exist in Firebase
+  2. Stops when it finds posts that already exist in database
   3. Much faster than full scrape (seconds vs minutes)
   4. Perfect for daily cron jobs
 
@@ -275,9 +275,8 @@ Perfect for:
 
     args = parser.parse_args()
 
-    # Initialize Firebase
-    database_url, database_secret = load_firebase_config()
-    tracker = FirebaseTracker(database_url, database_secret)
+    # Initialize PostgreSQL tracker
+    tracker = PostgresTracker()
 
     # Load config
     config = load_config()

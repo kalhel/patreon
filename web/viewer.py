@@ -2,27 +2,70 @@
 """
 Web Viewer - Local web app to preview scraped Patreon posts
 Displays posts with formatting similar to Patreon before uploading to Notion
+
+DUAL MODE: Reads from PostgreSQL (if flag enabled) or JSON (fallback)
 """
 
 import json
 import sys
+import os
 from pathlib import Path
 from datetime import datetime
 from flask import Flask, render_template, jsonify, request, send_from_directory
+from dotenv import load_dotenv
+from urllib.parse import quote_plus
+from sqlalchemy import create_engine, text
+
+# Load environment variables
+load_dotenv()
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-# Import Firebase tracker for live status
+# Import PostgreSQL tracker for live status
 try:
-    from firebase_tracker import FirebaseTracker, load_firebase_config
-    FIREBASE_AVAILABLE = True
-except:
-    FIREBASE_AVAILABLE = False
+    from postgres_tracker import PostgresTracker
+    POSTGRES_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️  PostgreSQL tracker not available: {e}")
+    POSTGRES_AVAILABLE = False
 
 app = Flask(__name__,
             template_folder='templates',
             static_folder='static')
+
+# Custom Jinja2 filter for basic markdown to HTML
+import re
+
+@app.template_filter('markdown')
+def markdown_filter(text):
+    """Convert basic markdown to HTML (preserves HTML tags like <u>)"""
+    if not text:
+        return ''
+
+    # Links FIRST: [text](url) -> <a href="url">text</a>
+    text = re.sub(r'\[([^\]]+)\]\(([^\)]+)\)', r'<a href="\2" target="_blank">\1</a>', text)
+
+    # Auto-link bare URLs: http://example.com or https://example.com
+    # Negative lookbehind to avoid double-linking already processed URLs
+    text = re.sub(
+        r'(?<!\()(?<!href=")(https?://[^\s<>"]+)',
+        r'<a href="\1" target="_blank">\1</a>',
+        text
+    )
+
+    # Bold: **text** -> <strong>text</strong>
+    text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
+
+    # Italic: *text* -> <em>text</em>
+    text = re.sub(r'\*(.+?)\*', r'<em>\1</em>', text)
+
+    # HTML tags like <u>text</u> are already valid, leave as is
+
+    # Line breaks: \n -> <br>
+    text = text.replace('\n', '<br>')
+
+    return text
 
 # Data directories - try both raw and processed
 RAW_DATA_DIR = Path(__file__).parent.parent / "data" / "raw"
@@ -122,8 +165,187 @@ app.jinja_env.filters['date_eu'] = format_date_eu
 app.jinja_env.filters['creator_name'] = get_creator_display_name
 
 
-def load_all_posts():
-    """Load all posts from JSON files (raw and processed)"""
+# ============================================================================
+# PostgreSQL Integration (Dual Mode)
+# ============================================================================
+
+def use_postgresql() -> bool:
+    """Check if PostgreSQL mode is enabled via flag file"""
+    flag_path = Path(__file__).parent.parent / "config" / "use_postgresql.flag"
+    return flag_path.exists()
+
+
+def get_database_url() -> str:
+    """Build PostgreSQL connection URL from environment variables"""
+    db_user = os.getenv('DB_USER', 'postgres')
+    db_password = os.getenv('DB_PASSWORD')
+    db_host = os.getenv('DB_HOST', 'localhost')
+    db_port = os.getenv('DB_PORT', '5432')
+    db_name = os.getenv('DB_NAME', 'alejandria')
+
+    if not db_password:
+        raise ValueError("DB_PASSWORD not found in .env file")
+
+    encoded_password = quote_plus(db_password)
+    return f"postgresql://{db_user}:{encoded_password}@{db_host}:{db_port}/{db_name}"
+
+
+def load_posts_from_postgres():
+    """Load all posts from PostgreSQL database with collections"""
+    try:
+        print("🐘 Loading posts from PostgreSQL...")
+        engine = create_engine(get_database_url())
+
+        with engine.connect() as conn:
+            # Get all posts (not deleted)
+            query = text("""
+                SELECT
+                    post_id,
+                    creator_id,
+                    post_url,
+                    title,
+                    full_content,
+                    content_blocks,
+                    post_metadata,
+                    published_at,
+                    created_at,
+                    updated_at,
+                    creator_name,
+                    creator_avatar,
+                    like_count,
+                    comment_count,
+                    images,
+                    videos,
+                    audios,
+                    attachments,
+                    image_local_paths,
+                    video_local_paths,
+                    audio_local_paths,
+                    video_streams,
+                    video_subtitles,
+                    patreon_tags,
+                    status
+                FROM posts
+                WHERE deleted_at IS NULL
+                ORDER BY post_id DESC
+            """)
+
+            result = conn.execute(query)
+            rows = result.fetchall()
+
+            posts = []
+            for row in rows:
+                # Extract video_subtitles_relative from video_subtitles JSONB
+                video_subtitles = row[22] if row[22] else []
+                video_subtitles_relative = []
+                if isinstance(video_subtitles, list):
+                    # If video_subtitles is a list of objects with 'path' or 'relative_path'
+                    for subtitle in video_subtitles:
+                        if isinstance(subtitle, dict):
+                            if 'relative_path' in subtitle:
+                                video_subtitles_relative.append(subtitle['relative_path'])
+                            elif 'path' in subtitle:
+                                # Extract relative path from full path
+                                path = subtitle['path']
+                                if 'media/' in path:
+                                    video_subtitles_relative.append(path.split('media/')[-1])
+
+                # Load post_metadata (row[6])
+                post_metadata = row[6] if row[6] else {}
+
+                # Extract published_date from metadata (the real published date from HTML)
+                published_date = post_metadata.get('published_date') if post_metadata else None
+
+                post = {
+                    'post_id': row[0],
+                    'creator_id': row[1],
+                    'post_url': row[2],
+                    'title': row[3],
+                    'full_content': row[4],
+                    'content_blocks': row[5],
+                    'post_metadata': post_metadata,  # Now loaded from PostgreSQL
+                    'published_date': published_date,  # Real date from HTML (e.g., "27 Feb 2024")
+                    'published_at': row[7].isoformat() if row[7] else None,
+                    'created_at': row[8].isoformat() if row[8] else None,
+                    'updated_at': row[9].isoformat() if row[9] else None,
+                    'creator_name': row[10],
+                    'creator_avatar': row[11],
+                    'like_count': row[12],
+                    'likes_count': row[12],  # Alias for compatibility
+                    'comment_count': row[13],
+                    'comments_count': row[13],  # Alias for compatibility
+                    'images': row[14] if row[14] else [],
+                    'videos': row[15] if row[15] else [],
+                    'audios': row[16] if row[16] else [],
+                    'attachments': row[17] if row[17] else [],
+                    'image_local_paths': row[18] if row[18] else [],
+                    'video_local_paths': row[19] if row[19] else [],
+                    'audio_local_paths': row[20] if row[20] else [],
+                    'video_streams': row[21] if row[21] else [],
+                    'video_subtitles': video_subtitles,
+                    'video_subtitles_relative': video_subtitles_relative,  # Extracted from JSONB
+                    'patreon_tags': row[23] if row[23] else [],
+                    'status': row[24] if row[24] else {},
+                    'collections': []  # Will be populated below
+                }
+                posts.append(post)
+
+            # Now load collections for all posts
+            collections_query = text("""
+                SELECT
+                    pc.post_id,
+                    pc.collection_id,
+                    c.title as collection_name,
+                    c.collection_url,
+                    pc.order_in_collection,
+                    c.collection_image,
+                    c.collection_image_local
+                FROM post_collections pc
+                JOIN collections c ON pc.collection_id = c.collection_id
+                WHERE c.deleted_at IS NULL
+                ORDER BY pc.post_id, pc.order_in_collection
+            """)
+
+            coll_result = conn.execute(collections_query)
+            coll_rows = coll_result.fetchall()
+
+            # Build collections map: post_id -> [collections]
+            collections_by_post = {}
+            for coll_row in coll_rows:
+                post_id = coll_row[0]
+                collection_data = {
+                    'collection_id': coll_row[1],
+                    'collection_name': coll_row[2],
+                    'collection_url': coll_row[3],
+                    'order': coll_row[4],
+                    'collection_image': coll_row[5],
+                    'collection_image_local': coll_row[6]
+                }
+
+                if post_id not in collections_by_post:
+                    collections_by_post[post_id] = []
+                collections_by_post[post_id].append(collection_data)
+
+            # Assign collections to posts
+            for post in posts:
+                post_id = post['post_id']
+                if post_id in collections_by_post:
+                    post['collections'] = collections_by_post[post_id]
+
+            print(f"✅ Loaded {len(posts)} posts from PostgreSQL")
+            print(f"✅ Loaded collections for {len(collections_by_post)} posts")
+            return posts
+
+    except Exception as e:
+        print(f"❌ Error loading from PostgreSQL: {e}")
+        import traceback
+        print(traceback.format_exc())
+        print(f"   Falling back to JSON...")
+        return None
+
+
+def load_posts_from_json():
+    """Load all posts from JSON files (raw and processed) - ORIGINAL METHOD"""
     all_posts = []
 
     # Try raw directory first
@@ -166,6 +388,30 @@ def load_all_posts():
     all_posts.sort(key=lambda x: x.get('post_id', ''), reverse=True)
 
     return all_posts
+
+
+def load_all_posts():
+    """
+    Load all posts using dual mode:
+    - If PostgreSQL flag exists: load from PostgreSQL
+    - Otherwise: load from JSON files (fallback)
+    """
+    # DUAL MODE: Check if PostgreSQL is enabled
+    if use_postgresql():
+        print("🐘 PostgreSQL mode enabled - loading from database...")
+        posts = load_posts_from_postgres()
+
+        # If PostgreSQL fails, fallback to JSON
+        if posts is None:
+            print("⚠️  PostgreSQL failed, falling back to JSON...")
+            posts = load_posts_from_json()
+        else:
+            print(f"✅ Loaded {len(posts)} posts from PostgreSQL")
+
+        return posts
+    else:
+        print("📝 PostgreSQL mode disabled - loading from JSON files...")
+        return load_posts_from_json()
 
 
 @app.route('/')
@@ -289,9 +535,22 @@ def view_post(post_id):
         audio_count = len(post.get('audios') or [])
 
     comments_count = metadata.get('comments_count') or comment_block_count
-    published_raw = (metadata.get('published_date') or '').strip()
-    published_label = published_raw or format_date_eu(post.get('created_at'))
-    if not published_label:
+
+    # Check for published date in multiple locations (PostgreSQL vs JSON structure)
+    published_raw = (
+        post.get('published_date') or  # PostgreSQL direct field
+        metadata.get('published_date') or  # JSON nested field
+        post.get('published_at') or  # PostgreSQL timestamp
+        ''
+    )
+    if isinstance(published_raw, str):
+        published_raw = published_raw.strip()
+    else:
+        published_raw = str(published_raw) if published_raw else ''
+
+    # Format the date for display
+    published_label = format_date_eu(published_raw) if published_raw else format_date_eu(post.get('created_at'))
+    if not published_label or published_label == 'N/A':
         published_label = 'Date unknown'
 
     date_skip_originals = set()
@@ -532,57 +791,103 @@ def settings():
             creators_data = json.load(f)
             creators_list = creators_data.get('creators', [])
 
-    # Try to load Firebase stats if available
-    firebase_stats = {}
-    firebase_enabled = False
-    if FIREBASE_AVAILABLE:
+    # Try to load PostgreSQL stats if available
+    db_stats = {}
+    db_enabled = False
+    print(f"🔍 DEBUG: POSTGRES_AVAILABLE = {POSTGRES_AVAILABLE}")
+    if POSTGRES_AVAILABLE:
         try:
-            database_url, database_secret = load_firebase_config()
-            if database_url and database_secret:
-                tracker = FirebaseTracker(database_url, database_secret)
-                all_stats = tracker.get_all_creator_stats()
-                firebase_stats = all_stats if all_stats else {}
-                firebase_enabled = True
+            print("🔍 DEBUG: Creating PostgresTracker...")
+            tracker = PostgresTracker()
+            print("🔍 DEBUG: Getting all_creator_stats...")
+            all_stats = tracker.get_all_creator_stats()
+            print(f"🔍 DEBUG: Got stats for {len(all_stats)} creators")
+            db_stats = all_stats if all_stats else {}
+            db_enabled = True
+            print(f"🔍 DEBUG: db_enabled = True")
         except Exception as e:
-            print(f"Warning: Could not load Firebase stats: {e}")
-            firebase_enabled = False
+            print(f"❌ Warning: Could not load PostgreSQL stats: {e}")
+            import traceback
+            traceback.print_exc()
+            db_enabled = False
 
     # Get processing status for each creator
     processing_status = []
     for creator in creators_list:
         creator_id = creator['creator_id']
 
-        # Get Firebase stats if available
-        fb_stats = firebase_stats.get(creator_id, {})
-        phase1_total = fb_stats.get('total_posts', 0)
-        phase1_pending = fb_stats.get('pending_posts', 0)
-        phase1_processed = fb_stats.get('processed_posts', 0)
+        # Get database stats if available
+        creator_stats = db_stats.get(creator_id, {})
+        phase1_total = creator_stats.get('total_posts', 0)
+        phase1_pending = creator_stats.get('pending_posts', 0)
+        phase1_processed = creator_stats.get('processed_posts', 0)
 
-        # Check Phase 2: Posts detailed (from JSON files)
-        posts_file = PROCESSED_DATA_DIR / f"{creator_id}_posts_detailed.json"
+        # Check Phase 2: Posts detailed (from PostgreSQL)
         posts_count = 0
         posts_last_updated = None
-        if posts_file.exists():
+        if db_enabled:
             try:
-                with open(posts_file, 'r', encoding='utf-8') as f:
-                    posts_data = json.load(f)
-                    posts_count = len(posts_data)
-                posts_last_updated = datetime.fromtimestamp(posts_file.stat().st_mtime).strftime('%d/%m/%Y %H:%M')
-            except:
-                pass
+                # Query posts table for this creator using tracker's engine
+                with tracker.engine.connect() as conn:
+                    result = conn.execute(text("""
+                        SELECT
+                            COUNT(*) as total,
+                            MAX(updated_at) as last_updated
+                        FROM posts
+                        WHERE creator_id = :creator_id
+                          AND deleted_at IS NULL
+                          AND content_blocks IS NOT NULL
+                    """), {'creator_id': creator_id})
+                    row = result.fetchone()
+                    if row:
+                        posts_count = row[0]
+                        if row[1]:
+                            posts_last_updated = row[1].strftime('%d/%m/%Y %H:%M')
+            except Exception as e:
+                print(f"Warning: Could not load Phase 2 stats for {creator_id}: {e}")
+                # Fallback to JSON
+                posts_file = PROCESSED_DATA_DIR / f"{creator_id}_posts_detailed.json"
+                if posts_file.exists():
+                    try:
+                        with open(posts_file, 'r', encoding='utf-8') as f:
+                            posts_data = json.load(f)
+                            posts_count = len(posts_data)
+                        posts_last_updated = datetime.fromtimestamp(posts_file.stat().st_mtime).strftime('%d/%m/%Y %H:%M')
+                    except:
+                        pass
 
-        # Check Phase 3: Collections
-        collections_file = PROCESSED_DATA_DIR / f"{creator_id}_collections.json"
+        # Check Phase 3: Collections (from PostgreSQL)
         collections_count = 0
         collections_last_updated = None
-        if collections_file.exists():
+        if db_enabled:
             try:
-                with open(collections_file, 'r', encoding='utf-8') as f:
-                    collections_data = json.load(f)
-                    collections_count = len(collections_data.get('collections', []))
-                collections_last_updated = datetime.fromtimestamp(collections_file.stat().st_mtime).strftime('%d/%m/%Y %H:%M')
-            except:
-                pass
+                # Query collections table for this creator using tracker's engine
+                with tracker.engine.connect() as conn:
+                    result = conn.execute(text("""
+                        SELECT
+                            COUNT(*) as total,
+                            MAX(updated_at) as last_updated
+                        FROM collections
+                        WHERE creator_id = :creator_id
+                          AND deleted_at IS NULL
+                    """), {'creator_id': creator_id})
+                    row = result.fetchone()
+                    if row:
+                        collections_count = row[0]
+                        if row[1]:
+                            collections_last_updated = row[1].strftime('%d/%m/%Y %H:%M')
+            except Exception as e:
+                print(f"Warning: Could not load Phase 3 stats for {creator_id}: {e}")
+                # Fallback to JSON
+                collections_file = PROCESSED_DATA_DIR / f"{creator_id}_collections.json"
+                if collections_file.exists():
+                    try:
+                        with open(collections_file, 'r', encoding='utf-8') as f:
+                            collections_data = json.load(f)
+                            collections_count = len(collections_data.get('collections', []))
+                        collections_last_updated = datetime.fromtimestamp(collections_file.stat().st_mtime).strftime('%d/%m/%Y %H:%M')
+                    except:
+                        pass
 
         processing_status.append({
             'creator_id': creator_id,
@@ -602,7 +907,7 @@ def settings():
                           credentials=credentials,
                           creators=creators_list,
                           processing_status=processing_status,
-                          firebase_enabled=firebase_enabled)
+                          db_enabled=db_enabled)
 
 
 @app.route('/api/settings/save', methods=['POST'])
@@ -627,19 +932,12 @@ def save_settings():
 
         # Validate that credentials have ALL required fields
         patreon = credentials.get('patreon', {})
-        firebase = credentials.get('firebase', {})
 
         # Strict validation - ALL fields must be present and non-empty
         if not patreon.get('email') or not patreon.get('password'):
             return jsonify({
                 'success': False,
                 'message': 'ERROR: Patreon email and password are required. Not saving to prevent data loss.'
-            }), 400
-
-        if not firebase.get('database_url') or not firebase.get('database_secret'):
-            return jsonify({
-                'success': False,
-                'message': 'ERROR: Firebase database_url AND database_secret are required. Not saving to prevent data loss.'
             }), 400
 
         # Additional safety: check if credentials.json exists and compare
@@ -677,6 +975,93 @@ def save_settings():
         return jsonify({
             'success': False,
             'message': f'Error saving credentials: {str(e)}'
+        }), 500
+
+
+@app.route('/api/media-settings/get', methods=['GET'])
+def get_media_settings():
+    """Get media download settings from settings.json"""
+    try:
+        config_dir = Path(__file__).parent.parent / "config"
+        settings_file = config_dir / "settings.json"
+
+        if not settings_file.exists():
+            # Return default settings
+            return jsonify({
+                'success': True,
+                'settings': {
+                    "media": {
+                        "images": {
+                            "download_content_images": True,
+                            "skip_avatars": True,
+                            "skip_covers": True,
+                            "skip_thumbnails": True,
+                            "min_size": {"width": 400, "height": 400},
+                            "deduplication": True
+                        },
+                        "patreon": {
+                            "videos": {"download": True, "quality": "best", "format": "mp4"},
+                            "audios": {"download": True, "format": "mp3"}
+                        },
+                        "youtube": {"mode": "embed"},
+                        "deduplication": {"enabled": True, "hash_algorithm": "sha256"}
+                    }
+                }
+            })
+
+        with open(settings_file, 'r', encoding='utf-8') as f:
+            settings = json.load(f)
+
+        return jsonify({
+            'success': True,
+            'settings': settings
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error loading settings: {str(e)}'
+        }), 500
+
+
+@app.route('/api/media-settings/save', methods=['POST'])
+def save_media_settings():
+    """Save media download settings to settings.json"""
+    try:
+        config_dir = Path(__file__).parent.parent / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        settings_file = config_dir / "settings.json"
+
+        data = request.get_json()
+
+        if 'settings' not in data:
+            return jsonify({
+                'success': False,
+                'message': 'No settings data provided'
+            }), 400
+
+        # Create backup if file exists
+        if settings_file.exists():
+            backup_file = settings_file.with_suffix('.json.backup')
+            import shutil
+            shutil.copy2(settings_file, backup_file)
+            print(f"✅ Created backup: {backup_file}")
+
+        # Save new settings
+        with open(settings_file, 'w', encoding='utf-8') as f:
+            json.dump(data['settings'], f, indent=2, ensure_ascii=False)
+
+        print(f"✅ Saved media settings to: {settings_file}")
+
+        return jsonify({
+            'success': True,
+            'message': 'Settings saved successfully'
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error saving settings: {str(e)}'
         }), 500
 
 
@@ -813,11 +1198,138 @@ def upload_avatar():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+@app.route('/api/creator/reset-posts', methods=['POST'])
+def reset_creator_posts():
+    """Reset all posts from a creator to pending status in PostgreSQL"""
+    try:
+        data = request.json
+        creator_id = data.get('creator_id')
+
+        if not creator_id:
+            return jsonify({'success': False, 'message': 'Creator ID is required'}), 400
+
+        # Check if PostgreSQL is enabled
+        if not use_postgresql():
+            return jsonify({'success': False, 'message': 'PostgreSQL mode not enabled'}), 400
+
+        engine = create_engine(get_database_url())
+
+        with engine.connect() as conn:
+            # Count posts to reset (from scraping_status table)
+            count_sql = text("""
+                SELECT COUNT(*)
+                FROM scraping_status ss
+                JOIN creator_sources cs ON cs.id = ss.source_id
+                WHERE cs.platform_id = :creator_id
+            """)
+            result = conn.execute(count_sql, {'creator_id': creator_id})
+            total = result.fetchone()[0]
+
+            if total == 0:
+                return jsonify({'success': False, 'message': f'No posts found for creator "{creator_id}"'}), 404
+
+            # Reset phase2 status to pending so phase2_detail_extractor will reprocess them
+            reset_sql = text("""
+                UPDATE scraping_status
+                SET phase2_status = 'pending',
+                    phase2_completed_at = NULL,
+                    phase2_attempts = 0,
+                    phase2_last_error = NULL,
+                    updated_at = NOW()
+                WHERE source_id IN (
+                    SELECT id FROM creator_sources
+                    WHERE platform_id = :creator_id
+                )
+            """)
+
+            conn.execute(reset_sql, {'creator_id': creator_id})
+            conn.commit()
+
+            return jsonify({
+                'success': True,
+                'reset_count': total,
+                'creator_id': creator_id,
+                'message': f'Successfully reset {total} posts for {creator_id}'
+            })
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @app.route('/api/posts')
 def api_posts():
     """API endpoint to get all posts as JSON"""
     posts = load_all_posts()
     return jsonify(posts)
+
+
+def api_collections_from_postgres(creator_filter=None):
+    """Fast PostgreSQL-based collections API (100x faster than JSON method)"""
+    from sqlalchemy import create_engine, text
+
+    engine = create_engine(get_database_url())
+
+    with engine.connect() as conn:
+        # Build WHERE clause for creator filter
+        where_clause = "WHERE c.deleted_at IS NULL"
+        params = {}
+
+        if creator_filter:
+            creators = [c.strip() for c in creator_filter.split(',')]
+            where_clause += " AND c.creator_id = ANY(:creators)"
+            params['creators'] = creators
+
+        # Optimized SQL query with aggregations
+        query = text(f"""
+            SELECT
+                c.collection_id,
+                c.title as collection_name,
+                c.collection_url,
+                c.collection_image_local,
+                c.creator_id,
+                COUNT(DISTINCT pc.post_id) as post_count,
+                COALESCE(SUM(p.like_count), 0) as total_likes,
+                COALESCE(SUM(p.comment_count), 0) as total_comments,
+                COALESCE(SUM(CASE WHEN array_length(p.video_local_paths, 1) > 0 THEN array_length(p.video_local_paths, 1) ELSE 0 END), 0) as total_videos,
+                COALESCE(SUM(CASE WHEN array_length(p.audio_local_paths, 1) > 0 THEN array_length(p.audio_local_paths, 1) ELSE 0 END), 0) as total_audios,
+                COALESCE(SUM(CASE WHEN array_length(p.image_local_paths, 1) > 0 THEN array_length(p.image_local_paths, 1) ELSE 0 END), 0) as total_images,
+                MAX(p.published_at) as latest_post_date,
+                ARRAY_AGG(pc.post_id ORDER BY pc.order_in_collection) FILTER (WHERE pc.post_id IS NOT NULL) as post_ids,
+                MAX(p.creator_name) as creator_name
+            FROM collections c
+            LEFT JOIN post_collections pc ON c.collection_id = pc.collection_id
+            LEFT JOIN posts p ON pc.post_id = p.post_id AND p.deleted_at IS NULL
+            {where_clause}
+            GROUP BY c.collection_id, c.title, c.collection_url, c.collection_image_local, c.creator_id
+            ORDER BY latest_post_date DESC NULLS LAST
+        """)
+
+        result = conn.execute(query, params)
+        rows = result.fetchall()
+
+        collections_list = []
+        for row in rows:
+            collections_list.append({
+                'collection_id': row[0],
+                'collection_name': row[1],
+                'collection_url': row[2],
+                'collection_image_local': row[3],
+                'creator_id': row[4],
+                'post_count': row[5],
+                'total_likes': row[6],
+                'total_comments': row[7],
+                'total_videos': row[8],
+                'total_audios': row[9],
+                'total_images': row[10],
+                'latest_post_date': row[11].isoformat() if row[11] else None,
+                'post_ids': row[12] if row[12] else [],
+                'creator_name': row[13]
+            })
+
+        return jsonify({
+            'total_collections': len(collections_list),
+            'collections': collections_list
+        })
 
 
 @app.route('/api/collections')
@@ -833,8 +1345,18 @@ def api_collections():
         - post count
         - post_ids array
     """
-    posts = load_all_posts()
     creator_filter = request.args.get('creator')
+
+    # Fast path: Use PostgreSQL if available
+    if use_postgresql():
+        try:
+            return api_collections_from_postgres(creator_filter)
+        except Exception as e:
+            logger.error(f"Error loading collections from PostgreSQL: {e}")
+            # Fallback to JSON method below
+
+    # Slow path: Load all posts and aggregate (for JSON mode)
+    posts = load_all_posts()
 
     # Filter by creator if specified (support multiple creators)
     if creator_filter:
@@ -1011,8 +1533,28 @@ def api_search_stats():
 
 @app.route('/media/<path:filename>')
 def media_file(filename):
-    """Serve downloaded media files"""
+    """Serve downloaded media files with hash-based filename fallback"""
     safe_path = (MEDIA_ROOT / filename).resolve()
+
+    # If file doesn't exist, try to find it with hash prefix
+    if not safe_path.exists():
+        # Extract post_id from filename (e.g., "141079936" from "audio/astrobymax/141079936_00_1.mp3")
+        import re
+        from pathlib import Path
+
+        # Try to extract post_id pattern (numbers followed by underscore)
+        match = re.search(r'/(\d{8,})_', filename)
+        if match:
+            post_id = match.group(1)
+            parent_dir = (MEDIA_ROOT / filename).parent
+
+            if parent_dir.exists():
+                # Look for files containing the post_id
+                matching_files = list(parent_dir.glob(f"*{post_id}*"))
+                if matching_files:
+                    # Use the first match
+                    safe_path = matching_files[0].resolve()
+
     if not safe_path.exists() or MEDIA_ROOT not in safe_path.parents and safe_path != MEDIA_ROOT:
         return "File not found", 404
     relative = safe_path.relative_to(MEDIA_ROOT)

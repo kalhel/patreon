@@ -10,9 +10,10 @@ import os
 import shutil
 import subprocess
 import time
+import hashlib
 from pathlib import Path
 from pathlib import PurePosixPath
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from urllib.parse import urlparse, unquote
 import tempfile
 
@@ -43,19 +44,20 @@ except ImportError:
 class MediaDownloader:
     """Downloads media files from Patreon posts"""
 
-    def __init__(self, output_dir: str = "data/media", cookies_path: Optional[str] = "config/patreon_cookies.json"):
+    def __init__(self, output_dir: str = "data/media", cookies_path: Optional[str] = "config/patreon_cookies.json", settings_path: Optional[str] = "config/settings.json"):
         """
         Initialize downloader
 
         Args:
             output_dir: Base directory for media downloads (data/media)
             cookies_path: Optional path to Patreon cookies captured by Selenium
+            settings_path: Optional path to settings.json for configuration
 
-        Directory structure:
-            data/media/images/{creator_id}/{post_id}_00_image.jpg
-            data/media/videos/{creator_id}/{post_id}_00_video.mp4
-            data/media/videos/{creator_id}/{post_id}_00_subtitle.vtt
-            data/media/audio/{creator_id}/{post_id}_00_audio.mp3
+        Directory structure (NEW):
+            data/media/images/{creator_id}/{hash16}_{postID}_{index}.jpg
+            data/media/videos/{creator_id}/{hash16}_{postID}_{index}.mp4
+            data/media/videos/{creator_id}/{hash16}_{postID}_{index}_subtitle_en.vtt
+            data/media/audio/{creator_id}/{hash16}_{postID}_{index}.mp3
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -64,6 +66,13 @@ class MediaDownloader:
         self.images_dir = self.output_dir / "images"
         self.videos_dir = self.output_dir / "videos"
         self.audio_dir = self.output_dir / "audio"
+
+        # Load settings
+        self.settings = self._load_settings(settings_path)
+
+        # Deduplication index: hash -> file_path
+        self.dedup_index_path = self.output_dir / ".dedup_index.json"
+        self.dedup_index = self._load_dedup_index()
 
         # Session for downloads
         self.session = requests.Session()
@@ -80,9 +89,9 @@ class MediaDownloader:
 
         # Download statistics
         self.stats = {
-            'images': {'total': 0, 'downloaded': 0, 'failed': 0, 'skipped': 0},
-            'videos': {'total': 0, 'downloaded': 0, 'failed': 0, 'skipped': 0},
-            'audios': {'total': 0, 'downloaded': 0, 'failed': 0, 'skipped': 0}
+            'images': {'total': 0, 'downloaded': 0, 'failed': 0, 'skipped': 0, 'deduplicated': 0},
+            'videos': {'total': 0, 'downloaded': 0, 'failed': 0, 'skipped': 0, 'deduplicated': 0},
+            'audios': {'total': 0, 'downloaded': 0, 'failed': 0, 'skipped': 0, 'deduplicated': 0}
         }
         self.min_video_size_bytes = 15 * 1024 * 1024  # 15 MB threshold to detect previews
 
@@ -113,6 +122,92 @@ class MediaDownloader:
             loaded += 1
 
         logger.info(f"🍪 Loaded {loaded} cookies from {path}")
+
+    def _load_settings(self, settings_path: Optional[str]) -> Dict:
+        """Load settings from settings.json"""
+        if not settings_path:
+            logger.warning("⚠️  No settings path provided, using defaults")
+            return self._get_default_settings()
+
+        path = Path(settings_path)
+        if not path.exists():
+            logger.warning(f"⚠️  Settings file not found: {path}, using defaults")
+            return self._get_default_settings()
+
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                settings = json.load(f)
+            logger.info(f"⚙️  Loaded settings from {path}")
+            return settings
+        except Exception as e:
+            logger.error(f"❌ Error loading settings: {e}, using defaults")
+            return self._get_default_settings()
+
+    def _get_default_settings(self) -> Dict:
+        """Get default settings if settings.json not found"""
+        return {
+            "media": {
+                "images": {
+                    "download_content_images": True,
+                    "skip_avatars": True,
+                    "skip_covers": True,
+                    "skip_thumbnails": True,
+                    "min_size": {"width": 400, "height": 400},
+                    "deduplication": True
+                },
+                "patreon": {
+                    "videos": {"download": True, "quality": "best", "format": "mp4"},
+                    "audios": {"download": True, "format": "mp3"}
+                },
+                "youtube": {"mode": "embed"},
+                "deduplication": {"enabled": True, "hash_algorithm": "sha256"}
+            }
+        }
+
+    def _load_dedup_index(self) -> Dict:
+        """Load deduplication index from disk"""
+        if not self.dedup_index_path.exists():
+            return {}
+
+        try:
+            with open(self.dedup_index_path, 'r', encoding='utf-8') as f:
+                index = json.load(f)
+            logger.debug(f"📇 Loaded dedup index: {len(index)} entries")
+            return index
+        except Exception as e:
+            logger.warning(f"⚠️  Error loading dedup index: {e}")
+            return {}
+
+    def _save_dedup_index(self):
+        """Save deduplication index to disk"""
+        try:
+            with open(self.dedup_index_path, 'w', encoding='utf-8') as f:
+                json.dump(self.dedup_index, f, indent=2)
+        except Exception as e:
+            logger.error(f"❌ Error saving dedup index: {e}")
+
+    def calculate_hash(self, file_path: Path, algorithm: str = 'sha256') -> str:
+        """Calculate file hash"""
+        hash_obj = hashlib.new(algorithm)
+        with open(file_path, 'rb') as f:
+            while chunk := f.read(8192):
+                hash_obj.update(chunk)
+        return hash_obj.hexdigest()
+
+    def calculate_content_hash(self, content: bytes, algorithm: str = 'sha256') -> str:
+        """Calculate hash of content bytes"""
+        hash_obj = hashlib.new(algorithm)
+        hash_obj.update(content)
+        return hash_obj.hexdigest()
+
+    def check_duplicate(self, file_hash: str) -> Optional[str]:
+        """Check if file with this hash already exists"""
+        return self.dedup_index.get(file_hash)
+
+    def register_file(self, file_hash: str, file_path: str):
+        """Register a file in the deduplication index"""
+        self.dedup_index[file_hash] = file_path
+        self._save_dedup_index()
 
     def sync_cookies_from_driver(self, driver, clear_existing: bool = False):
         """
@@ -389,27 +484,30 @@ class MediaDownloader:
             logger.debug(f"Could not validate image size: {e}")
             return True  # Accept on error to avoid breaking downloads
 
-    def download_file(self, url: str, output_path: Path, media_type: str = 'image', referer: Optional[str] = None) -> bool:
+    def download_file(self, url: str, output_path: Path, media_type: str = 'image', referer: Optional[str] = None, check_dedup: bool = True, post_id: str = None, index: int = 0) -> Tuple[bool, Optional[str]]:
         """
-        Download a single file
+        Download a single file with deduplication support
 
         Args:
             url: URL to download
             output_path: Path to save file
             media_type: Type of media (for stats)
             referer: Optional HTTP referer header to include
+            check_dedup: Whether to check for duplicates before downloading
+            post_id: Post ID for generating hash-based filename
+            index: File index in post
 
         Returns:
-            bool: True if downloaded successfully
+            Tuple[bool, Optional[str]]: (success, final_file_path)
         """
         try:
-            # Check if already exists
+            # Check if already exists at this exact path
             if output_path.exists():
                 logger.debug(f"Skipped (exists): {output_path.name}")
                 self.stats[f'{media_type}s']['skipped'] += 1
-                return True
+                return True, str(output_path)
 
-            # Download
+            # Download to memory first to calculate hash
             logger.debug(f"Downloading: {url}")
             headers = {}
             if referer:
@@ -417,35 +515,52 @@ class MediaDownloader:
             response = self.session.get(url, stream=True, timeout=30, headers=headers)
             response.raise_for_status()
 
-            # Get total size for progress bar
-            total_size = int(response.headers.get('content-length', 0))
+            # Read content to calculate hash
+            content = response.content
+
+            # Check deduplication if enabled
+            if check_dedup and self.settings.get('media', {}).get('deduplication', {}).get('enabled', True):
+                file_hash = self.calculate_content_hash(content)
+                hash16 = file_hash[:16]
+
+                # Check if this hash already exists
+                existing_path = self.check_duplicate(file_hash)
+                if existing_path and Path(existing_path).exists():
+                    logger.info(f"✓ Deduplicated: {output_path.name} -> existing {Path(existing_path).name}")
+                    self.stats[f'{media_type}s']['deduplicated'] += 1
+                    self.stats[f'{media_type}s']['skipped'] += 1
+                    return True, existing_path
+
+                # Generate new filename with hash if post_id provided
+                if post_id:
+                    ext = output_path.suffix
+                    new_filename = f"{hash16}_{post_id}_{index:02d}{ext}"
+                    output_path = output_path.parent / new_filename
 
             # Create parent directory
             output_path.parent.mkdir(parents=True, exist_ok=True)
 
-            # Download with progress
+            # Write content to file
             with open(output_path, 'wb') as f:
-                if total_size == 0:
-                    f.write(response.content)
-                else:
-                    downloaded = 0
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if chunk:
-                            f.write(chunk)
-                            downloaded += len(chunk)
+                f.write(content)
+
+            # Register in dedup index if enabled
+            if check_dedup and self.settings.get('media', {}).get('deduplication', {}).get('enabled', True):
+                file_hash = self.calculate_hash(output_path)
+                self.register_file(file_hash, str(output_path))
 
             self.stats[f'{media_type}s']['downloaded'] += 1
             logger.info(f"✓ Downloaded: {output_path.name} ({self._format_size(output_path.stat().st_size)})")
-            return True
+            return True, str(output_path)
 
         except requests.exceptions.RequestException as e:
             logger.error(f"✗ Failed to download {url}: {e}")
             self.stats[f'{media_type}s']['failed'] += 1
-            return False
+            return False, None
         except Exception as e:
             logger.error(f"✗ Error downloading {url}: {e}")
             self.stats[f'{media_type}s']['failed'] += 1
-            return False
+            return False, None
 
     def _get_filename_from_url(self, url: str, default_ext: str = '.jpg') -> str:
         """
@@ -480,7 +595,7 @@ class MediaDownloader:
 
     def download_images_from_post(self, post: Dict, creator_id: str, referer: Optional[str]) -> Dict[str, List[str]]:
         """
-        Download all images from a post
+        Download all images from a post with deduplication
 
         Args:
             post: Post dictionary
@@ -492,6 +607,14 @@ class MediaDownloader:
         """
         downloaded = []
         relatives = []
+
+        # Check settings - should we download images?
+        media_settings = self.settings.get('media', {})
+        image_settings = media_settings.get('images', {})
+
+        if not image_settings.get('download_content_images', True):
+            logger.debug("Image download disabled in settings")
+            return {'absolute': [], 'relative': []}
 
         # Get image URLs
         image_urls = self._flatten_urls([
@@ -508,40 +631,52 @@ class MediaDownloader:
         creator_dir.mkdir(parents=True, exist_ok=True)
 
         post_id = post.get('post_id', 'unknown')
+        min_width = image_settings.get('min_size', {}).get('width', 400)
+        min_height = image_settings.get('min_size', {}).get('height', 400)
 
         # Download each image
         for i, url in enumerate(image_urls):
             self.stats['images']['total'] += 1
 
             filename = self._get_filename_from_url(url, '.jpg')
-            filename = f"{post_id}_{i:02d}_{filename}"
+            output_path = creator_dir / filename  # Temporary name, will be renamed with hash
 
-            output_path = creator_dir / filename
+            # Download with deduplication
+            success, final_path = self.download_file(
+                url, output_path, 'image',
+                referer=referer,
+                check_dedup=image_settings.get('deduplication', True),
+                post_id=post_id,
+                index=i
+            )
 
-            if self.download_file(url, output_path, 'image', referer=referer):
+            if success and final_path:
+                final_path_obj = Path(final_path)
+
                 # Validate image size to filter out small avatars/icons
-                if not self._validate_image_size(output_path, min_width=400, min_height=400):
+                if not self._validate_image_size(final_path_obj, min_width=min_width, min_height=min_height):
                     # Remove the small image
                     try:
-                        output_path.unlink()
+                        final_path_obj.unlink()
                         self.stats['images']['downloaded'] -= 1
                         self.stats['images']['skipped'] += 1
+                        logger.debug(f"Removed small image: {final_path_obj.name}")
                     except Exception:
                         pass
                     time.sleep(0.5)
                     continue
 
-                abs_path = str(output_path)
-                if abs_path not in downloaded:
-                    downloaded.append(abs_path)
+                if final_path not in downloaded:
+                    downloaded.append(final_path)
                     try:
-                        relatives.append(output_path.relative_to(self.output_dir).as_posix())
+                        relatives.append(final_path_obj.relative_to(self.output_dir).as_posix())
                     except ValueError:
-                        relatives.append(abs_path)
+                        relatives.append(final_path)
 
             # Small delay between downloads
             time.sleep(0.5)
 
+        logger.info(f"📸 Images: {len(downloaded)} downloaded, {self.stats['images']['deduplicated']} deduplicated")
         return {'absolute': downloaded, 'relative': relatives}
 
     def download_videos_from_post(
@@ -697,6 +832,7 @@ class MediaDownloader:
                     logger.debug(f"Could not remove existing file before retry: {unlink_error}")
 
             download_success = False
+            final_video_path = None
             for idx, candidate in enumerate(candidate_urls):
                 if idx > 0 and output_path.exists() and suffix in video_extensions:
                     try:
@@ -707,8 +843,24 @@ class MediaDownloader:
                     except Exception as unlink_error:
                         logger.debug(f"Could not remove existing file before retry: {unlink_error}")
 
-                if self.download_file(candidate, output_path, 'video', referer=referer):
+                # Enable hash-based deduplication for videos
+                video_settings = self.settings.get('media', {}).get('patreon', {}).get('videos', {})
+                check_dedup = video_settings.get('deduplication', True) if 'deduplication' in video_settings else self.settings.get('media', {}).get('deduplication', {}).get('enabled', True)
+
+                success, final_path = self.download_file(
+                    candidate, output_path, 'video',
+                    referer=referer,
+                    check_dedup=check_dedup,
+                    post_id=post_id,
+                    index=i
+                )
+
+                if success:
                     download_success = True
+                    final_video_path = final_path
+                    # Update output_path to the final hash-based path for subsequent checks
+                    if final_path:
+                        output_path = Path(final_path)
                     break
 
             # Fallback to yt-dlp if direct download failed
@@ -951,21 +1103,31 @@ class MediaDownloader:
             self.stats['audios']['total'] += 1
 
             filename = self._get_filename_from_url(url, '.mp3')
-            filename = f"{post_id}_{i:02d}_{filename}"
+            output_path = creator_dir / filename  # Temporary name, will be renamed with hash
 
-            output_path = creator_dir / filename
+            # Enable hash-based deduplication for audio
+            audio_settings = self.settings.get('media', {}).get('patreon', {}).get('audios', {})
+            check_dedup = audio_settings.get('deduplication', True) if 'deduplication' in audio_settings else self.settings.get('media', {}).get('deduplication', {}).get('enabled', True)
 
-            if self.download_file(url, output_path, 'audio', referer=referer):
-                abs_path = str(output_path)
+            success, final_path = self.download_file(
+                url, output_path, 'audio',
+                referer=referer,
+                check_dedup=check_dedup,
+                post_id=post_id,
+                index=i
+            )
+
+            if success and final_path:
+                abs_path = final_path
                 if abs_path not in downloaded:
                     downloaded.append(abs_path)
                     try:
-                        relatives.append(output_path.relative_to(self.output_dir).as_posix())
+                        relatives.append(Path(final_path).relative_to(self.output_dir).as_posix())
                     except ValueError:
                         relatives.append(abs_path)
 
                     # Generate waveform JSON for this audio file
-                    self.generate_waveform(output_path)
+                    self.generate_waveform(Path(final_path))
 
             time.sleep(0.5)
 
@@ -1023,7 +1185,11 @@ class MediaDownloader:
 
     def download_youtube_videos_from_post(self, post: Dict, creator_id: str) -> Dict[str, List[str]]:
         """
-        Download YouTube videos from youtube_embed blocks
+        Download YouTube videos from youtube_embed blocks (based on settings)
+
+        Modes:
+        - "embed": Keep as embed, don't download (fast, saves bandwidth)
+        - "download": Download with yt-dlp (slow, local playback)
 
         Args:
             post: Post dictionary with content_blocks
@@ -1036,6 +1202,10 @@ class MediaDownloader:
         downloaded_subtitles = []
         relatives_videos = []
         relatives_subtitles = []
+
+        # Check YouTube settings
+        youtube_settings = self.settings.get('media', {}).get('youtube', {})
+        youtube_mode = youtube_settings.get('mode', 'embed')
 
         # Find youtube_embed blocks
         youtube_blocks = []
@@ -1055,7 +1225,17 @@ class MediaDownloader:
                 'subtitles_relative': []
             }
 
-        logger.info(f"  🎬 [YOUTUBE] Found {len(youtube_blocks)} YouTube video(s) to download")
+        # If mode is "embed", just keep the embeds and don't download
+        if youtube_mode == 'embed':
+            logger.info(f"  🎬 [YOUTUBE] Found {len(youtube_blocks)} YouTube video(s) - keeping as embeds (mode: embed)")
+            return {
+                'absolute': [],
+                'relative': [],
+                'subtitles_absolute': [],
+                'subtitles_relative': []
+            }
+
+        logger.info(f"  🎬 [YOUTUBE] Found {len(youtube_blocks)} YouTube video(s) to download (mode: download)")
 
         # Create creator subdirectory
         creator_dir = self.videos_dir / creator_id
@@ -1102,10 +1282,22 @@ class MediaDownloader:
             # Output filename pattern
             filename_base = f"{post_id}_yt{idx:02d}"
 
+            # Get quality and format settings
+            download_settings = youtube_settings.get('download_settings', {})
+            quality = download_settings.get('quality', 'best')
+            output_format = download_settings.get('format', 'mp4')
+
+            # Build format string based on quality setting
+            if quality == 'best':
+                format_str = f'bestvideo[ext={output_format}]+bestaudio[ext=m4a]/best[ext={output_format}]/best'
+            else:
+                # For other quality settings, use the specified quality
+                format_str = quality
+
             # First, download video without subtitles (to avoid subtitle errors blocking video)
             video_command = base_command + [
-                '--format', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-                '--merge-output-format', 'mp4',
+                '--format', format_str,
+                '--merge-output-format', output_format,
                 '--no-mtime',
                 '--no-warnings',
                 '-o', str(creator_dir / f'{filename_base}.%(ext)s'),
@@ -1146,13 +1338,23 @@ class MediaDownloader:
 
                     # Now try to download subtitles separately (each language independently)
                     # This way if one fails (rate limit), the other can still succeed
-                    logger.info(f"  📝 [YOUTUBE] Attempting to download subtitles...")
+                    download_settings = youtube_settings.get('download_settings', {})
+                    subtitle_langs = download_settings.get('subtitles', ['en', 'es'])
+                    auto_subtitles = download_settings.get('auto_subtitles', True)
 
-                    for lang in ['es', 'en']:
+                    logger.info(f"  📝 [YOUTUBE] Attempting to download subtitles ({', '.join(subtitle_langs)})...")
+
+                    for lang in subtitle_langs:
                         subtitle_command = base_command + [
                             '--skip-download',        # Don't re-download the video
                             '--write-subs',           # Manual subtitles
-                            '--write-auto-subs',      # Auto-generated subtitles
+                        ]
+
+                        # Add auto-subs if enabled in settings
+                        if auto_subtitles:
+                            subtitle_command.append('--write-auto-subs')
+
+                        subtitle_command.extend([
                             '--sub-langs', lang,      # One language at a time
                             '--sub-format', 'vtt',
                             '--convert-subs', 'vtt',
@@ -1160,7 +1362,7 @@ class MediaDownloader:
                             '--no-warnings',
                             '-o', str(creator_dir / f'{filename_base}.%(ext)s'),
                             url
-                        ]
+                        ])
 
                         try:
                             sub_result = subprocess.run(
@@ -1294,27 +1496,47 @@ class MediaDownloader:
         result['images'] = images['absolute']
         result['images_relative'] = images['relative']
 
-        # Download videos
-        video_block_count = sum(
-            1
-            for block in post.get('content_blocks') or []
-            if isinstance(block, dict) and block.get('type') == 'video'
-        )
-        expected_videos = video_block_count if video_block_count > 0 else None
+        # Download videos (check settings first)
+        patreon_video_settings = self.settings.get('media', {}).get('patreon', {}).get('videos', {})
+        should_download_videos = patreon_video_settings.get('download', True)
 
-        videos = self.download_videos_from_post(post, creator_id, referer, expected_videos)
-        result['videos'] = videos['absolute']
-        result['videos_relative'] = videos['relative']
+        if should_download_videos:
+            video_block_count = sum(
+                1
+                for block in post.get('content_blocks') or []
+                if isinstance(block, dict) and block.get('type') == 'video'
+            )
+            expected_videos = video_block_count if video_block_count > 0 else None
+
+            videos = self.download_videos_from_post(post, creator_id, referer, expected_videos)
+            result['videos'] = videos['absolute']
+            result['videos_relative'] = videos['relative']
+        else:
+            # Videos disabled - add fallback message to video blocks
+            fallback_message = patreon_video_settings.get('fallback_message', 'Video not downloaded')
+            content_blocks = post.get('content_blocks', [])
+            for block in content_blocks:
+                if isinstance(block, dict) and block.get('type') == 'video':
+                    block['download_disabled'] = True
+                    block['fallback_message'] = fallback_message
+
+            logger.info(f"  ⏭️  [VIDEO] Patreon video download disabled in settings - skipping")
 
         # Download subtitles (.vtt files)
         subtitles = self.download_subtitles_from_post(post, creator_id, referer)
         result['video_subtitles'] = subtitles['absolute']
         result['video_subtitles_relative'] = subtitles['relative']
 
-        # Download audios
-        audios = self.download_audios_from_post(post, creator_id, referer)
-        result['audios'] = audios['absolute']
-        result['audios_relative'] = audios['relative']
+        # Download audios (check settings first)
+        patreon_audio_settings = self.settings.get('media', {}).get('patreon', {}).get('audios', {})
+        should_download_audios = patreon_audio_settings.get('download', True)
+
+        if should_download_audios:
+            audios = self.download_audios_from_post(post, creator_id, referer)
+            result['audios'] = audios['absolute']
+            result['audios_relative'] = audios['relative']
+        else:
+            logger.info(f"  ⏭️  [AUDIO] Patreon audio download disabled in settings - skipping")
 
         # Download YouTube videos (if any youtube_embed blocks exist)
         youtube_result = self.download_youtube_videos_from_post(post, creator_id)

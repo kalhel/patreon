@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Main script for Patreon to Notion project
-Orchestrates scraping, processing, and uploading
+Main script for Patreon scraping project
+Orchestrates scraping and processing
 """
 
 import json
