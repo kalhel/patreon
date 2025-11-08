@@ -164,12 +164,21 @@ def filter_actual_videos(videos_list):
     """
     Filter video URLs to only include actual video file extensions.
     Removes image URLs (.jpg, .png, etc.) that may have been incorrectly stored as videos.
+    Also excludes Mux thumbnail URLs (preview images with 'time=' parameter).
     """
     if not videos_list:
         return []
 
     video_extensions = ('.mp4', '.webm', '.ogg', '.mov', '.avi', '.m4v', '.mkv', '.m3u8', '.ts')
-    return [v for v in videos_list if any(v.lower().split('?')[0].endswith(ext) for ext in video_extensions)]
+    actual_videos = []
+    for v in videos_list:
+        # Check if it has video extension
+        if any(v.lower().split('?')[0].endswith(ext) for ext in video_extensions):
+            # Exclude Mux thumbnails (URLs with 'time=' parameter are preview images)
+            if 'stream.mux.com' in v.lower() and 'time=' in v.lower():
+                continue
+            actual_videos.append(v)
+    return actual_videos
 
 
 # Register Jinja filters
@@ -550,11 +559,19 @@ def view_post(post_id):
     image_count = len(image_local) if image_local else len(post.get('images') or [])
     audio_count = len(audio_local) if audio_local else len(post.get('audios') or [])
 
-    # Filter videos field to only count actual video files (not images)
+    # Filter videos field to only count actual video files (not images or thumbnails)
     # Old data may have image URLs in the videos field
+    # Also filter out Mux thumbnail URLs (have 'time=' and 'width=' parameters)
     video_extensions = ('.mp4', '.webm', '.ogg', '.mov', '.avi', '.m4v', '.mkv', '.m3u8', '.ts')
     videos_raw = post.get('videos') or []
-    actual_videos = [v for v in videos_raw if any(v.lower().split('?')[0].endswith(ext) for ext in video_extensions)]
+    actual_videos = []
+    for v in videos_raw:
+        # Check if it has video extension
+        if any(v.lower().split('?')[0].endswith(ext) for ext in video_extensions):
+            # Exclude Mux thumbnails (URLs with 'time=' parameter are preview images)
+            if 'stream.mux.com' in v.lower() and 'time=' in v.lower():
+                continue
+            actual_videos.append(v)
     video_count = len(video_local) if video_local else len(actual_videos)
 
     attachment_count = len(attachment_local) if attachment_local else len(post.get('attachments') or [])
