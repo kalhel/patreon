@@ -44,7 +44,7 @@ def main():
         SELECT post_id, title, videos
         FROM posts
         WHERE videos IS NOT NULL
-        AND jsonb_array_length(videos) > 0
+        AND array_length(videos, 1) > 0
     """)
 
     posts_to_update = []
@@ -113,7 +113,7 @@ def main():
                 SET videos = %s,
                     updated_at = NOW()
                 WHERE post_id = %s
-            """, (json.dumps(post['clean_videos']), post['post_id']))
+            """, (post['clean_videos'], post['post_id']))
 
             updated_count += 1
 
