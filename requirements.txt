@@ -32,6 +32,8 @@ python-dateutil>=2.8.0
 
 # Web viewer
 flask>=3.0.0
+gunicorn>=21.2.0        # WSGI production server
+flask-compress>=1.14    # Gzip compression
 
 # Advanced Search System
 whoosh>=2.7.4

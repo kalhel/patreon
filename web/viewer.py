@@ -12,6 +12,8 @@ import os
 from pathlib import Path
 from datetime import datetime
 from flask import Flask, render_template, jsonify, request, send_from_directory
+from flask_compress import Compress
+from flask_caching import Cache
 from dotenv import load_dotenv
 from urllib.parse import quote_plus
 from sqlalchemy import create_engine, text
@@ -33,6 +35,27 @@ except ImportError as e:
 app = Flask(__name__,
             template_folder='templates',
             static_folder='static')
+
+# Configure caching
+cache_config = {
+    'CACHE_TYPE': os.getenv('CACHE_TYPE', 'SimpleCache'),  # SimpleCache or RedisCache
+    'CACHE_DEFAULT_TIMEOUT': int(os.getenv('CACHE_TIMEOUT', 300)),  # 5 minutes default
+}
+
+# If using Redis cache
+if cache_config['CACHE_TYPE'] == 'RedisCache':
+    cache_config.update({
+        'CACHE_REDIS_HOST': os.getenv('REDIS_HOST', 'localhost'),
+        'CACHE_REDIS_PORT': int(os.getenv('REDIS_PORT', 6379)),
+        'CACHE_REDIS_DB': int(os.getenv('REDIS_DB', 0)),
+        'CACHE_REDIS_URL': os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+    })
+
+app.config.from_mapping(cache_config)
+cache = Cache(app)
+
+# Enable gzip compression
+Compress(app)
 
 # Custom Jinja2 filter for basic markdown to HTML
 import re
@@ -213,6 +236,7 @@ def get_database_url() -> str:
     return f"postgresql://{db_user}:{encoded_password}@{db_host}:{db_port}/{db_name}"
 
 
+@cache.memoize(timeout=300)  # Cache for 5 minutes
 def load_posts_from_postgres():
     """Load all posts from PostgreSQL database with collections"""
     try:
@@ -369,6 +393,7 @@ def load_posts_from_postgres():
         return None
 
 
+@cache.memoize(timeout=300)  # Cache for 5 minutes
 def load_posts_from_json():
     """Load all posts from JSON files (raw and processed) - ORIGINAL METHOD"""
     all_posts = []
@@ -1728,6 +1753,43 @@ def media_file(filename):
     response.headers['Access-Control-Allow-Origin'] = '*'
 
     return response
+
+
+# ============================================================================
+# API Endpoints for Cache Management
+# ============================================================================
+
+@app.route('/api/cache/clear', methods=['POST', 'GET'])
+def clear_cache():
+    """Clear all cache - useful after processing new posts"""
+    try:
+        cache.clear()
+        return jsonify({
+            'success': True,
+            'message': 'Cache cleared successfully'
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/cache/stats', methods=['GET'])
+def cache_stats():
+    """Get cache statistics"""
+    try:
+        return jsonify({
+            'success': True,
+            'cache_type': app.config['CACHE_TYPE'],
+            'cache_timeout': app.config['CACHE_DEFAULT_TIMEOUT'],
+            'message': 'Cache is active and working'
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 
 if __name__ == '__main__':
