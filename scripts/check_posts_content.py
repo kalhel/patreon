@@ -56,7 +56,6 @@ def main():
             SELECT
                 COUNT(*) as total,
                 COUNT(CASE WHEN title IS NOT NULL AND title != '' THEN 1 END) as with_title,
-                COUNT(CASE WHEN content IS NOT NULL AND content != '' THEN 1 END) as with_content,
                 COUNT(CASE WHEN full_content IS NOT NULL AND full_content != '' THEN 1 END) as with_full_content,
                 COUNT(CASE WHEN content_blocks IS NOT NULL THEN 1 END) as with_content_blocks
             FROM posts
@@ -68,9 +67,8 @@ def main():
         if row:
             print(f"  Total posts:               {row[0]}")
             print(f"  Posts with title:          {row[1]}")
-            print(f"  Posts with content:        {row[2]}")
-            print(f"  Posts with full_content:   {row[3]}")
-            print(f"  Posts with content_blocks: {row[4]}")
+            print(f"  Posts with full_content:   {row[2]}")
+            print(f"  Posts with content_blocks: {row[3]}")
         print()
 
         # Show a sample post to see what data it has
@@ -81,13 +79,10 @@ def main():
                 post_id,
                 title,
                 CASE
-                    WHEN content IS NOT NULL AND content != '' THEN LENGTH(content)
-                    ELSE 0
-                END as content_length,
-                CASE
                     WHEN full_content IS NOT NULL AND full_content != '' THEN LENGTH(full_content)
                     ELSE 0
                 END as full_content_length,
+                content_blocks IS NOT NULL as has_content_blocks,
                 created_at,
                 updated_at
             FROM posts
@@ -101,8 +96,8 @@ def main():
         if row:
             print(f"  Post ID:             {row[0]}")
             print(f"  Title:               {row[1][:50] if row[1] else 'NULL'}...")
-            print(f"  content length:      {row[2]} chars")
-            print(f"  full_content length: {row[3]} chars")
+            print(f"  full_content length: {row[2]} chars")
+            print(f"  Has content_blocks:  {row[3]}")
             print(f"  Created:             {row[4]}")
             print(f"  Updated:             {row[5]}")
         print()
