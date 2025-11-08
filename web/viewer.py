@@ -468,6 +468,36 @@ def index():
         local_video_paths = filter_by_extension(post.get('video_local_paths'), {'.mp4', '.m4v', '.mov', '.webm', '.mkv'})
         local_audio_paths = filter_by_extension(post.get('audio_local_paths'), {'.mp3', '.m4a', '.aac', '.wav', '.flac', '.ogg', '.opus'})
 
+        # Sort videos according to content_blocks order (Vimeo before YouTube, etc.)
+        content_blocks = post.get('content_blocks', [])
+        if content_blocks and local_video_paths:
+            # Get video blocks in order
+            video_blocks = [b for b in content_blocks if b.get('type') in ['video', 'youtube_embed', 'vimeo_embed']]
+
+            if len(video_blocks) > 1 and len(local_video_paths) > 1:
+                # Create a mapping of video URL patterns to local paths
+                sorted_videos = []
+                for block in video_blocks:
+                    block_url = block.get('url', '')
+                    # Match local path to block URL (by video ID or filename pattern)
+                    for local_path in local_video_paths:
+                        if local_path not in sorted_videos:
+                            # Check if this path matches the current block
+                            # Vimeo: contains _vm, YouTube: contains _yt
+                            if 'vimeo' in block_url.lower() and '_vm' in local_path:
+                                sorted_videos.append(local_path)
+                                break
+                            elif 'youtube' in block_url.lower() and '_yt' in local_path:
+                                sorted_videos.append(local_path)
+                                break
+
+                # Add any remaining videos that weren't matched
+                for path in local_video_paths:
+                    if path not in sorted_videos:
+                        sorted_videos.append(path)
+
+                local_video_paths = sorted_videos
+
         post['video_local_paths'] = local_video_paths
         post['audio_local_paths'] = local_audio_paths
 
@@ -555,6 +585,33 @@ def view_post(post_id):
     audio_local = post.get('audio_local_paths') or []
     video_local = post.get('video_local_paths') or []
     attachment_local = post.get('attachment_local_paths') or []
+
+    # Sort videos according to content_blocks order (Vimeo before YouTube, etc.)
+    if content_blocks and video_local and len(video_local) > 1:
+        # Get video blocks in order
+        video_blocks = [b for b in content_blocks if b.get('type') in ['video', 'youtube_embed', 'vimeo_embed']]
+
+        if len(video_blocks) > 1:
+            sorted_videos = []
+            for block in video_blocks:
+                block_url = block.get('url', '')
+                # Match local path to block URL
+                for local_path in video_local:
+                    if local_path not in sorted_videos:
+                        # Vimeo: contains _vm, YouTube: contains _yt
+                        if 'vimeo' in block_url.lower() and '_vm' in local_path:
+                            sorted_videos.append(local_path)
+                            break
+                        elif 'youtube' in block_url.lower() and '_yt' in local_path:
+                            sorted_videos.append(local_path)
+                            break
+
+            # Add any remaining videos
+            for path in video_local:
+                if path not in sorted_videos:
+                    sorted_videos.append(path)
+
+            video_local = sorted_videos
 
     # Count actual downloaded media
     image_count = len(image_local) if image_local else len(post.get('images') or [])
