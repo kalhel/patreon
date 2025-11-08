@@ -65,7 +65,7 @@ def main():
         print("-" * 80)
         result = conn.execute(text("""
             SELECT
-                ss.url,
+                ss.post_id,
                 ss.phase1_status,
                 ss.created_at
             FROM scraping_status ss
@@ -80,7 +80,7 @@ def main():
 
         missing_count = 0
         for row in result:
-            print(f"  URL: {row[0]}")
+            print(f"  Post ID: {row[0]}")
             print(f"    Status: {row[1]}, Created: {row[2]}")
             print()
             missing_count += 1
