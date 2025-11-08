@@ -1149,6 +1149,57 @@ def upload_avatar():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+@app.route('/api/creator/reset-posts', methods=['POST'])
+def reset_creator_posts():
+    """Reset all posts from a creator to pending status in PostgreSQL"""
+    try:
+        data = request.json
+        creator_id = data.get('creator_id')
+
+        if not creator_id:
+            return jsonify({'success': False, 'message': 'Creator ID is required'}), 400
+
+        # Check if PostgreSQL is enabled
+        if not use_postgresql():
+            return jsonify({'success': False, 'message': 'PostgreSQL mode not enabled'}), 400
+
+        engine = create_engine(get_database_url())
+
+        with engine.connect() as conn:
+            # Count posts to reset
+            count_sql = text("""
+                SELECT COUNT(*) FROM posts
+                WHERE creator_id = :creator_id
+            """)
+            result = conn.execute(count_sql, {'creator_id': creator_id})
+            total = result.fetchone()[0]
+
+            if total == 0:
+                return jsonify({'success': False, 'message': f'No posts found for creator "{creator_id}"'}), 404
+
+            # Reset posts to pending
+            reset_sql = text("""
+                UPDATE posts
+                SET status = 'pending',
+                    details_extracted = false,
+                    attempt_count = 0
+                WHERE creator_id = :creator_id
+            """)
+
+            conn.execute(reset_sql, {'creator_id': creator_id})
+            conn.commit()
+
+            return jsonify({
+                'success': True,
+                'reset_count': total,
+                'creator_id': creator_id,
+                'message': f'Successfully reset {total} posts for {creator_id}'
+            })
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @app.route('/api/posts')
 def api_posts():
     """API endpoint to get all posts as JSON"""
