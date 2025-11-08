@@ -221,6 +221,7 @@ def load_posts_from_postgres():
                     image_local_paths,
                     video_local_paths,
                     audio_local_paths,
+                    attachment_local_paths,
                     video_streams,
                     video_subtitles,
                     patreon_tags,
@@ -236,7 +237,7 @@ def load_posts_from_postgres():
             posts = []
             for row in rows:
                 # Extract video_subtitles_relative from video_subtitles JSONB
-                video_subtitles = row[22] if row[22] else []
+                video_subtitles = row[23] if row[23] else []
                 video_subtitles_relative = []
                 if isinstance(video_subtitles, list):
                     # If video_subtitles is a list of objects with 'path' or 'relative_path'
@@ -281,11 +282,12 @@ def load_posts_from_postgres():
                     'image_local_paths': row[18] if row[18] else [],
                     'video_local_paths': row[19] if row[19] else [],
                     'audio_local_paths': row[20] if row[20] else [],
-                    'video_streams': row[21] if row[21] else [],
+                    'attachment_local_paths': row[21] if row[21] else [],
+                    'video_streams': row[22] if row[22] else [],
                     'video_subtitles': video_subtitles,
                     'video_subtitles_relative': video_subtitles_relative,  # Extracted from JSONB
-                    'patreon_tags': row[23] if row[23] else [],
-                    'status': row[24] if row[24] else {},
+                    'patreon_tags': row[24] if row[24] else [],
+                    'status': row[25] if row[25] else {},
                     'collections': []  # Will be populated below
                 }
                 posts.append(post)
