@@ -735,8 +735,10 @@
                             {% set vid_count = (post.content_blocks | selectattr('type', 'equalto', 'video') | list | length) + (post.content_blocks | selectattr('type', 'equalto', 'youtube_embed') | list | length) %}
                         {% endif %}
 
-                        {# Count attachments #}
-                        {% set att_count = post.attachments | length if post.attachments else 0 %}
+                        {# Count attachments - prioritize downloaded files (deduplicated) over URLs #}
+                        {% set att_count_local = post.attachment_local_paths | length if post.attachment_local_paths else 0 %}
+                        {% set att_count_url = post.attachments | length if post.attachments else 0 %}
+                        {% set att_count = att_count_local if att_count_local > 0 else att_count_url %}
 
                         {% set com_count = post.content_blocks | selectattr('type', 'equalto', 'comment') | list | length if post.content_blocks else 0 %}
 
