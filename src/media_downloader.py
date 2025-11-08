@@ -1482,9 +1482,11 @@ class MediaDownloader:
                                 if '429' in sub_result.stderr or 'Too Many Requests' in sub_result.stderr:
                                     logger.warning(f"  ⚠️  [YOUTUBE] Rate limited for {lang} subtitles")
                                 else:
-                                    logger.debug(f"  ℹ️  [YOUTUBE] {lang} subtitles not available or failed")
+                                    logger.warning(f"  ⚠️  [YOUTUBE] {lang} subtitles download failed (return code: {sub_result.returncode})")
+                                    if sub_result.stderr:
+                                        logger.warning(f"      Error: {sub_result.stderr[:200]}")
                         except Exception as e:
-                            logger.debug(f"  ℹ️  [YOUTUBE] Error downloading {lang} subtitles: {e}")
+                            logger.warning(f"  ⚠️  [YOUTUBE] Error downloading {lang} subtitles: {e}")
 
                     # Check for subtitle files with various naming patterns from yt-dlp
                     # Patterns: .es.vtt, .en.vtt, .es-es.vtt, .en-US.vtt, .es-orig.vtt, etc.
