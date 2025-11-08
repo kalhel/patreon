@@ -963,11 +963,12 @@
                         </div>
                         <div class="attachments-list">
                             {% if local_attachments %}
-                                {# Show downloaded local files with file-type-specific icons #}
-                                {% for attachment_path in local_attachments %}
-                                    {% set filename = attachment_path.split('/')[-1] %}
-                                    {% set extension = filename.split('.')[-1].lower() if '.' in filename else '' %}
-                                    <a href="/media/{{ attachment_path }}" class="attachment-item" download>
+                                {# Show downloaded local files with file-type-specific icons and original filenames #}
+                                {% for attachment in attachment_urls %}
+                                    {% set local_path = local_attachments[loop.index0] if loop.index0 < local_attachments|length else None %}
+                                    {% if local_path %}
+                                        {% set extension = attachment.filename.split('.')[-1].lower() if '.' in attachment.filename else '' %}
+                                        <a href="/media/{{ local_path }}" class="attachment-item" download="{{ attachment.filename }}">
                                         {% if extension == 'pdf' %}
                                             {# PDF icon #}
                                             <svg class="doc-icon pdf-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -991,11 +992,12 @@
                                                 <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                             </svg>
                                         {% endif %}
-                                        <span class="filename">{{ filename }}</span>
+                                        <span class="filename">{{ attachment.filename }}</span>
                                         <svg class="download-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                             <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                                         </svg>
                                     </a>
+                                    {% endif %}
                                 {% endfor %}
                             {% else %}
                                 {# Fall back to Patreon URLs if no local files #}
