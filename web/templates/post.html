@@ -774,51 +774,6 @@
                     {% endfor %}
                 {% endif %}
 
-                {# Show attachments (PDFs, documents, etc.) - Prioritize local files over Patreon URLs #}
-                {% set local_attachments = post.attachment_local_paths if post.attachment_local_paths else [] %}
-                {% set attachment_urls = post.attachments if post.attachments else [] %}
-                {% if local_attachments or attachment_urls %}
-                    <div class="attachments-section">
-                        <div class="attachments-header">
-                            <svg class="attachment-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                            </svg>
-                            <h3>Attachments ({{ (local_attachments|length) if local_attachments else (attachment_urls|length) }})</h3>
-                        </div>
-                        <div class="attachments-list">
-                            {% if local_attachments %}
-                                {# Show downloaded local files #}
-                                {% for attachment_path in local_attachments %}
-                                    {% set filename = attachment_path.split('/')[-1] %}
-                                    <a href="/media/{{ attachment_path }}" class="attachment-item" download>
-                                        <svg class="doc-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                        </svg>
-                                        <span class="filename">{{ filename }}</span>
-                                        <svg class="download-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                                        </svg>
-                                        <span class="badge local-badge">Local</span>
-                                    </a>
-                                {% endfor %}
-                            {% else %}
-                                {# Fall back to Patreon URLs if no local files #}
-                                {% for attachment in attachment_urls %}
-                                    <a href="{{ attachment.url }}" class="attachment-item" target="_blank" rel="noopener">
-                                        <svg class="doc-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                        </svg>
-                                        <span class="filename">{{ attachment.filename }}</span>
-                                        <svg class="download-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                                        </svg>
-                                        <span class="badge patreon-badge">Patreon</span>
-                                    </a>
-                                {% endfor %}
-                            {% endif %}
-                        </div>
-                    </div>
-                {% endif %}
 
                 {# Show videos from local files #}
                 {% set local_videos = post.video_local_paths if post.video_local_paths is defined and post.video_local_paths else [] %}
@@ -987,6 +942,92 @@
                     {% endif %}
                 {% endif %}
             </div>
+
+            {# Show attachments at bottom (PDFs, documents, etc.) - Prioritize local files over Patreon URLs #}
+            {% set local_attachments = post.attachment_local_paths if post.attachment_local_paths else [] %}
+            {% set attachment_urls = post.attachments if post.attachments else [] %}
+            {% if local_attachments or attachment_urls %}
+                <div class="attachments-section">
+                    <div class="attachments-header">
+                        <svg class="attachment-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <h3>Attachments ({{ (local_attachments|length) if local_attachments else (attachment_urls|length) }})</h3>
+                    </div>
+                    <div class="attachments-list">
+                        {% if local_attachments %}
+                            {# Show downloaded local files with file-type-specific icons #}
+                            {% for attachment_path in local_attachments %}
+                                {% set filename = attachment_path.split('/')[-1] %}
+                                {% set extension = filename.split('.')[-1].lower() if '.' in filename else '' %}
+                                <a href="/media/{{ attachment_path }}" class="attachment-item" download>
+                                    {% if extension == 'pdf' %}
+                                        {# PDF icon #}
+                                        <svg class="doc-icon pdf-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M7 18h10M7 18v1a2 2 0 002 2h6a2 2 0 002-2v-1M7 18V7a2 2 0 012-2h3.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V18M12 2v5h5"/>
+                                            <text x="7" y="15" font-size="5" font-weight="bold" fill="currentColor">PDF</text>
+                                        </svg>
+                                    {% elif extension in ['doc', 'docx'] %}
+                                        {# Word document icon #}
+                                        <svg class="doc-icon word-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M7 18h10M7 18v1a2 2 0 002 2h6a2 2 0 002-2v-1M7 18V7a2 2 0 012-2h3.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V18M12 2v5h5"/>
+                                            <text x="6.5" y="15" font-size="5" font-weight="bold" fill="currentColor">DOC</text>
+                                        </svg>
+                                    {% elif extension in ['txt', 'text'] %}
+                                        {# Text file icon #}
+                                        <svg class="doc-icon txt-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M7 18h10M7 18v1a2 2 0 002 2h6a2 2 0 002-2v-1M7 18V7a2 2 0 012-2h3.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V18M12 2v5h5M9 10h6M9 13h6"/>
+                                        </svg>
+                                    {% else %}
+                                        {# Generic document icon #}
+                                        <svg class="doc-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                    {% endif %}
+                                    <span class="filename">{{ filename }}</span>
+                                    <svg class="download-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                    </svg>
+                                </a>
+                            {% endfor %}
+                        {% else %}
+                            {# Fall back to Patreon URLs if no local files #}
+                            {% for attachment in attachment_urls %}
+                                {% set extension = attachment.filename.split('.')[-1].lower() if '.' in attachment.filename else '' %}
+                                <a href="{{ attachment.url }}" class="attachment-item" target="_blank" rel="noopener">
+                                    {% if extension == 'pdf' %}
+                                        {# PDF icon #}
+                                        <svg class="doc-icon pdf-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M7 18h10M7 18v1a2 2 0 002 2h6a2 2 0 002-2v-1M7 18V7a2 2 0 012-2h3.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V18M12 2v5h5"/>
+                                            <text x="7" y="15" font-size="5" font-weight="bold" fill="currentColor">PDF</text>
+                                        </svg>
+                                    {% elif extension in ['doc', 'docx'] %}
+                                        {# Word document icon #}
+                                        <svg class="doc-icon word-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M7 18h10M7 18v1a2 2 0 002 2h6a2 2 0 002-2v-1M7 18V7a2 2 0 012-2h3.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V18M12 2v5h5"/>
+                                            <text x="6.5" y="15" font-size="5" font-weight="bold" fill="currentColor">DOC</text>
+                                        </svg>
+                                    {% elif extension in ['txt', 'text'] %}
+                                        {# Text file icon #}
+                                        <svg class="doc-icon txt-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M7 18h10M7 18v1a2 2 0 002 2h6a2 2 0 002-2v-1M7 18V7a2 2 0 012-2h3.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V18M12 2v5h5M9 10h6M9 13h6"/>
+                                        </svg>
+                                    {% else %}
+                                        {# Generic document icon #}
+                                        <svg class="doc-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                    {% endif %}
+                                    <span class="filename">{{ attachment.filename }}</span>
+                                    <svg class="download-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                    </svg>
+                                </a>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
 
             <!-- Comments section - second pass -->
             {% if post.content_blocks %}
