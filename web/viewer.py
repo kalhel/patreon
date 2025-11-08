@@ -598,11 +598,15 @@ def view_post(post_id):
     if not creator_display_name:
         creator_display_name = creator_id or "Unknown Creator"
 
+    # Get creator avatar ONLY from CREATOR_AVATARS (single source of truth)
+    # Same as index page - no fallback to metadata['creator_avatar'] (inconsistent)
     creator_avatar = None
+    if not CREATOR_AVATARS:
+        load_creators_config()
+
     if creator_id in CREATOR_AVATARS:
         creator_avatar = f"/static/{CREATOR_AVATARS[creator_id]}"
-    elif metadata.get('creator_avatar'):
-        creator_avatar = metadata['creator_avatar']
+    # NOTE: Removed fallback to metadata['creator_avatar'] - too inconsistent
 
     likes_count = metadata.get('likes_count') or post.get('like_count') or 0
 
@@ -789,25 +793,15 @@ def view_creator(creator_id):
     creator_avatar = None
     if creator_id in CREATOR_AVATARS:
         creator_avatar = f"/static/{CREATOR_AVATARS[creator_id]}"
-    else:
-        for post in creator_posts:
-            candidate = post.get('creator_avatar')
-            if not candidate:
-                metadata = post.get('post_metadata') or {}
-                candidate = metadata.get('creator_avatar')
-            if candidate:
-                creator_avatar = candidate
-                break
+    # NOTE: Removed fallback to post['creator_avatar'] - inconsistent across posts
 
-    # Build avatar paths with /static/ prefix (same as index and tag)
+    # Build avatar paths ONLY from CREATOR_AVATARS (single source of truth)
     creator_avatars = {}
     for post in creator_posts:
         cid = post.get('creator_id', 'unknown')
-        if cid not in creator_avatars:
-            if cid in CREATOR_AVATARS:
-                creator_avatars[cid] = f"/static/{CREATOR_AVATARS[cid]}"
-            elif post.get('creator_avatar'):
-                creator_avatars[cid] = post['creator_avatar']
+        if cid not in creator_avatars and cid in CREATOR_AVATARS:
+            creator_avatars[cid] = f"/static/{CREATOR_AVATARS[cid]}"
+        # NOTE: Removed fallback to post['creator_avatar'] - too inconsistent
 
     return render_template('creator.html',
                           creator_id=creator_id,
@@ -844,12 +838,11 @@ def view_tag(tag_name):
                 creators_with_tag[creator_id] = []
             creators_with_tag[creator_id].append(post)
 
-            # Build avatar paths with /static/ prefix (same as index)
+            # Build avatar paths ONLY from CREATOR_AVATARS (single source of truth)
             if creator_id not in creator_avatars:
                 if creator_id in CREATOR_AVATARS:
                     creator_avatars[creator_id] = f"/static/{CREATOR_AVATARS[creator_id]}"
-                elif post.get('creator_avatar'):
-                    creator_avatars[creator_id] = post['creator_avatar']
+                # NOTE: Removed fallback to post['creator_avatar'] - too inconsistent
 
     # Load creator colors from config
     creators_config = load_creators_config()
@@ -911,8 +904,7 @@ def view_collection(creator_id, collection_id):
         if cid not in creator_avatars:
             if cid in CREATOR_AVATARS:
                 creator_avatars[cid] = f"/static/{CREATOR_AVATARS[cid]}"
-            elif post.get('creator_avatar'):
-                creator_avatars[cid] = post['creator_avatar']
+            # NOTE: Removed fallback to post['creator_avatar'] - too inconsistent
 
     return render_template('collection.html',
                           creator_id=creator_id,
