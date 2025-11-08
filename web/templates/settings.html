@@ -594,9 +594,9 @@
                                 {% if db_enabled and status.phase1_processed > 0 %}
                                 <button class="btn-small"
                                         onclick="resetCreatorPosts('{{ status.creator_id }}', {{ status.phase1_processed }})"
-                                        style="background: #dc3545; border: none; cursor: pointer; padding: 0.5rem 1rem; border-radius: 6px; color: white; font-size: 0.85rem; font-weight: 500; transition: all 0.2s;"
-                                        onmouseover="this.style.background='#c82333'"
-                                        onmouseout="this.style.background='#dc3545'">
+                                        style="background: #e67e22; border: none; cursor: pointer; padding: 0.5rem 1rem; border-radius: 6px; color: white; font-size: 0.85rem; font-weight: 500; transition: all 0.2s;"
+                                        onmouseover="this.style.background='#d35400'"
+                                        onmouseout="this.style.background='#e67e22'">
                                     🔄 Reset
                                 </button>
                                 {% else %}
@@ -901,15 +901,19 @@
 
         async function resetCreatorPosts(creatorId, processedCount) {
             // Confirm with user
-            const confirmMsg = `¿Resetear todos los posts de "${creatorId}"?\n\n` +
-                              `Esto marcará ${processedCount} posts como pendientes en PostgreSQL.\n\n` +
-                              `SQL que se ejecutará:\n` +
-                              `UPDATE posts\n` +
-                              `SET status = 'pending',\n` +
-                              `    details_extracted = false,\n` +
-                              `    attempt_count = 0\n` +
-                              `WHERE creator_id = '${creatorId}';\n\n` +
-                              `Después deberás ejecutar:\n` +
+            const confirmMsg = `¿Resetear ${processedCount} posts de "${creatorId}"?\n\n` +
+                              `Esto cambiará phase2_status de 'completed' a 'pending'\n` +
+                              `para que Phase2 los reprocese con los últimos fixes.\n\n` +
+                              `SQL:\n` +
+                              `UPDATE scraping_status\n` +
+                              `SET phase2_status = 'pending',\n` +
+                              `    phase2_completed_at = NULL,\n` +
+                              `    phase2_attempts = 0\n` +
+                              `WHERE source_id IN (\n` +
+                              `  SELECT id FROM creator_sources\n` +
+                              `  WHERE platform_id = '${creatorId}'\n` +
+                              `);\n\n` +
+                              `Después ejecuta:\n` +
                               `python3 src/phase2_detail_extractor.py --creator ${creatorId}`;
 
             if (!confirm(confirmMsg)) {

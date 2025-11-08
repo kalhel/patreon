@@ -1166,11 +1166,12 @@ def reset_creator_posts():
         engine = create_engine(get_database_url())
 
         with engine.connect() as conn:
-            # Count posts to reset
+            # Count posts to reset (from scraping_status table)
             count_sql = text("""
-                SELECT COUNT(*) FROM scraping_status ss
-                JOIN creators c ON ss.creator_id = c.id
-                WHERE c.creator_id = :creator_id
+                SELECT COUNT(*)
+                FROM scraping_status ss
+                JOIN creator_sources cs ON cs.id = ss.source_id
+                WHERE cs.platform_id = :creator_id
             """)
             result = conn.execute(count_sql, {'creator_id': creator_id})
             total = result.fetchone()[0]
@@ -1178,7 +1179,7 @@ def reset_creator_posts():
             if total == 0:
                 return jsonify({'success': False, 'message': f'No posts found for creator "{creator_id}"'}), 404
 
-            # Reset posts to pending in scraping_status table
+            # Reset phase2 status to pending so phase2_detail_extractor will reprocess them
             reset_sql = text("""
                 UPDATE scraping_status
                 SET phase2_status = 'pending',
@@ -1186,7 +1187,10 @@ def reset_creator_posts():
                     phase2_attempts = 0,
                     phase2_last_error = NULL,
                     updated_at = NOW()
-                WHERE creator_id = (SELECT id FROM creators WHERE creator_id = :creator_id)
+                WHERE source_id IN (
+                    SELECT id FROM creator_sources
+                    WHERE platform_id = :creator_id
+                )
             """)
 
             conn.execute(reset_sql, {'creator_id': creator_id})
