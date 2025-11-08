@@ -813,12 +813,8 @@ class PatreonScraperV2:
         except:
             post_detail['creator_avatar'] = None
 
-        try:
-            # Extract attachments
-            attachments = self.driver.find_elements(By.CSS_SELECTOR, 'a[download], [data-tag="attachment"]')
-            post_detail['attachments'] = [a.get_attribute('href') for a in attachments if a.get_attribute('href')]
-        except:
-            post_detail['attachments'] = []
+        # NOTE: Attachments are already extracted by content_parser.py (line 575)
+        # Don't extract them again here to avoid overwriting with incorrect selectors
 
         logger.info(f"  ✓ Title: {post_detail.get('title', 'N/A')}")
         logger.info(f"  ✓ Published: {post_detail.get('published_at', 'N/A')}")
