@@ -116,7 +116,7 @@ def check_postgresql_data(engine):
             phase1_query = text("""
                 SELECT
                     COUNT(*) as total,
-                    SUM(CASE WHEN url_collected = true THEN 1 ELSE 0 END) as collected
+                    SUM(CASE WHEN phase1_status = 'completed' THEN 1 ELSE 0 END) as collected
                 FROM scraping_status ss
                 JOIN creator_sources cs ON cs.id = ss.source_id
                 WHERE cs.platform_id = :creator_id
