@@ -689,8 +689,17 @@ class PatreonScraperV2:
                         else:
                             logger.debug(f"  ⏭️ Skipping non-video URL in <source> tag: {src[:80]}...")
 
+            # Also extract video URLs from content_blocks (YouTube/Vimeo embeds)
+            content_blocks = post_detail.get('content_blocks', [])
+            for block in content_blocks:
+                if block.get('type') in ['youtube_embed', 'vimeo_embed']:
+                    url = block.get('url')
+                    if url:
+                        video_urls.append(url)
+                        logger.info(f"  🎬 Added {block.get('type')} URL: {url[:80]}...")
+
             post_detail['videos'] = list(set(video_urls))
-            logger.info(f"  🎬 Extracted {len(video_urls)} videos")
+            logger.info(f"  🎬 Extracted {len(video_urls)} videos (including embeds)")
         except:
             post_detail['videos'] = []
 

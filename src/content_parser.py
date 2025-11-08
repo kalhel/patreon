@@ -500,7 +500,7 @@ class ContentBlockParser:
         return None
 
     def _extract_json_ld_embeds(self, driver: WebDriver):
-        """Extract YouTube embeds from JSON-LD schema in page head"""
+        """Extract YouTube and Vimeo embeds from JSON-LD schema in page head"""
         try:
             # Get page source
             page_source = driver.page_source
@@ -516,6 +516,8 @@ class ContentBlockParser:
                     # Check if it's a VideoObject with embedUrl
                     if isinstance(data, dict) and data.get('@type') == 'VideoObject':
                         embed_url = data.get('embedUrl')
+
+                        # Handle YouTube embeds
                         if embed_url and 'youtube.com' in embed_url:
                             # Check if this YouTube URL was already added
                             if embed_url not in self.youtube_urls:
@@ -545,6 +547,19 @@ class ContentBlockParser:
 
                                 self.blocks.append(block_data)
                                 logger.info(f"Found YouTube embed: {embed_url} (thumbnail: {best_thumbnail})")
+
+                        # Handle Vimeo embeds
+                        elif embed_url and 'vimeo.com' in embed_url:
+                            self.order += 1
+                            block_data = {
+                                'type': 'vimeo_embed',
+                                'order': self.order,
+                                'url': embed_url,
+                                'thumbnail': data.get('thumbnailUrl', ''),
+                                'description': data.get('description', '')
+                            }
+                            self.blocks.append(block_data)
+                            logger.info(f"Found Vimeo embed: {embed_url}")
 
                 except json.JSONDecodeError as e:
                     logger.debug(f"Error parsing JSON-LD: {e}")

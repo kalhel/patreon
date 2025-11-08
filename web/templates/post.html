@@ -1004,6 +1004,17 @@
                                 </iframe>
                             </div>
 
+                        {% elif block.type == 'vimeo_embed' %}
+                            <div class="content-block youtube-embed">
+                                {% set video_id = block.url.split('/')[-1].split('?')[0] %}
+                                <iframe
+                                    src="https://player.vimeo.com/video/{{ video_id }}"
+                                    frameborder="0"
+                                    allow="autoplay; fullscreen; picture-in-picture"
+                                    allowfullscreen>
+                                </iframe>
+                            </div>
+
                         {% elif block.type == 'iframe' %}
                             <div class="content-block iframe-embed">
                                 <iframe src="{{ block.url }}" frameborder="0" allowfullscreen></iframe>
