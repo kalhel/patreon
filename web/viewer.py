@@ -827,10 +827,8 @@ def settings():
         posts_last_updated = None
         if db_enabled:
             try:
-                # Query posts table for this creator
-                db_url = tracker.engine.url  # Reuse tracker's engine
-                engine = create_engine(str(db_url), pool_pre_ping=True)
-                with engine.connect() as conn:
+                # Query posts table for this creator using tracker's engine
+                with tracker.engine.connect() as conn:
                     result = conn.execute(text("""
                         SELECT
                             COUNT(*) as total,
@@ -863,8 +861,8 @@ def settings():
         collections_last_updated = None
         if db_enabled:
             try:
-                # Query collections table for this creator
-                with engine.connect() as conn:
+                # Query collections table for this creator using tracker's engine
+                with tracker.engine.connect() as conn:
                     result = conn.execute(text("""
                         SELECT
                             COUNT(*) as total,
