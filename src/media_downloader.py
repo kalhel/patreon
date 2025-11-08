@@ -1469,6 +1469,7 @@ class MediaDownloader:
                         ])
 
                         try:
+                            logger.info(f"  🔄 [YOUTUBE] Downloading {lang} subtitles...")
                             sub_result = subprocess.run(
                                 subtitle_command,
                                 stdout=subprocess.PIPE,
@@ -1485,6 +1486,10 @@ class MediaDownloader:
                                     logger.warning(f"  ⚠️  [YOUTUBE] {lang} subtitles download failed (return code: {sub_result.returncode})")
                                     if sub_result.stderr:
                                         logger.warning(f"      Error: {sub_result.stderr[:200]}")
+                            else:
+                                # Log success for debugging
+                                if sub_result.stdout:
+                                    logger.info(f"  ✓ [YOUTUBE] {lang} subtitle command output: {sub_result.stdout[:150]}")
                         except Exception as e:
                             logger.warning(f"  ⚠️  [YOUTUBE] Error downloading {lang} subtitles: {e}")
 
