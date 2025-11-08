@@ -932,7 +932,7 @@ class ContentBlockParser:
         logger.info(f"  ✓ Content image (media_id={media_id or 'extracted'}): {src[:80]}...")
 
     def _add_video_block(self, element):
-        """Add video block"""
+        """Add video block - only for downloadable Patreon-hosted videos"""
         src = element.get('src', '')
 
         # Check for source tags
@@ -941,14 +941,23 @@ class ContentBlockParser:
             if source:
                 src = source.get('src', '')
 
-        if src:
-            self.order += 1
-            self.blocks.append({
-                'type': 'video',
-                'order': self.order,
-                'url': src,
-                'poster': element.get('poster', '')
-            })
+        if not src:
+            return
+
+        # ONLY accept Patreon-hosted videos (patreonusercontent.com)
+        # Reject everything else:
+        # - blob: URLs (Vimeo/YouTube embedded players)
+        # - External URLs (should be iframes/embeds instead)
+        if 'patreonusercontent.com' not in src:
+            return
+
+        self.order += 1
+        self.blocks.append({
+            'type': 'video',
+            'order': self.order,
+            'url': src,
+            'poster': element.get('poster', '')
+        })
 
     def _add_audio_block(self, element):
         """Add audio block with thumbnail if available"""
