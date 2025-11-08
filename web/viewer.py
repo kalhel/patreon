@@ -164,7 +164,7 @@ def filter_actual_videos(videos_list):
     """
     Filter video URLs to only include actual video file extensions.
     Removes image URLs (.jpg, .png, etc.) that may have been incorrectly stored as videos.
-    Also excludes Mux thumbnail URLs (preview images with 'time=' parameter).
+    Also excludes Mux thumbnail URLs (use /medium.mp4, /low.mp4, /high.mp4).
     """
     if not videos_list:
         return []
@@ -174,8 +174,9 @@ def filter_actual_videos(videos_list):
     for v in videos_list:
         # Check if it has video extension
         if any(v.lower().split('?')[0].endswith(ext) for ext in video_extensions):
-            # Exclude Mux thumbnails (URLs with 'time=' parameter are preview images)
-            if 'stream.mux.com' in v.lower() and 'time=' in v.lower():
+            # Exclude Mux thumbnails (paths like /medium.mp4, /low.mp4, /high.mp4)
+            # Real Mux videos use .m3u8 or /video.mp4
+            if 'stream.mux.com' in v.lower() and ('/medium.mp4' in v.lower() or '/low.mp4' in v.lower() or '/high.mp4' in v.lower()):
                 continue
             actual_videos.append(v)
     return actual_videos
@@ -561,15 +562,16 @@ def view_post(post_id):
 
     # Filter videos field to only count actual video files (not images or thumbnails)
     # Old data may have image URLs in the videos field
-    # Also filter out Mux thumbnail URLs (have 'time=' and 'width=' parameters)
+    # Also filter out Mux thumbnail URLs (use /medium.mp4, /low.mp4, /high.mp4)
     video_extensions = ('.mp4', '.webm', '.ogg', '.mov', '.avi', '.m4v', '.mkv', '.m3u8', '.ts')
     videos_raw = post.get('videos') or []
     actual_videos = []
     for v in videos_raw:
         # Check if it has video extension
         if any(v.lower().split('?')[0].endswith(ext) for ext in video_extensions):
-            # Exclude Mux thumbnails (URLs with 'time=' parameter are preview images)
-            if 'stream.mux.com' in v.lower() and 'time=' in v.lower():
+            # Exclude Mux thumbnails (paths like /medium.mp4, /low.mp4, /high.mp4)
+            # Real Mux videos use .m3u8 or /video.mp4
+            if 'stream.mux.com' in v.lower() and ('/medium.mp4' in v.lower() or '/low.mp4' in v.lower() or '/high.mp4' in v.lower()):
                 continue
             actual_videos.append(v)
     video_count = len(video_local) if video_local else len(actual_videos)

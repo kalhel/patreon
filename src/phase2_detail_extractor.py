@@ -265,8 +265,9 @@ def extract_post_details(
             for v in post_detail['videos']:
                 # Check if it has video extension
                 if any(v.lower().split('?')[0].endswith(ext) for ext in video_extensions):
-                    # Exclude Mux thumbnails (URLs with 'time=' parameter are preview images)
-                    if 'stream.mux.com' in v.lower() and 'time=' in v.lower():
+                    # Exclude Mux thumbnails (paths like /medium.mp4, /low.mp4, /high.mp4)
+                    # Real Mux videos use .m3u8 or /video.mp4
+                    if 'stream.mux.com' in v.lower() and ('/medium.mp4' in v.lower() or '/low.mp4' in v.lower() or '/high.mp4' in v.lower()):
                         continue
                     filtered_videos.append(v)
 

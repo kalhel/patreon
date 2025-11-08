@@ -17,8 +17,8 @@ import os
 from dotenv import load_dotenv
 
 def is_mux_thumbnail(url):
-    """Check if URL is a Mux thumbnail (has 'time=' parameter)"""
-    return 'stream.mux.com' in url.lower() and 'time=' in url.lower()
+    """Check if URL is a Mux thumbnail (uses /medium.mp4, /low.mp4, /high.mp4)"""
+    return 'stream.mux.com' in url.lower() and ('/medium.mp4' in url.lower() or '/low.mp4' in url.lower() or '/high.mp4' in url.lower())
 
 def main():
     load_dotenv()
