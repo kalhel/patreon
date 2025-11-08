@@ -268,27 +268,6 @@ def main():
 
     print()
 
-    # 5. Check viewer.py filter logic
-    print("🔍 [5/6] Checking how viewer.py filters posts...")
-
-    # Check what the "with audio" filter expects
-    with engine.connect() as conn:
-        # Test the audio filter query
-        result = conn.execute(text("""
-            SELECT COUNT(*)
-            FROM posts
-            WHERE creator_id = :creator_id
-              AND (
-                audios IS NOT NULL AND audios != '[]' AND audios != '{}'
-                OR audio_local_paths IS NOT NULL AND audio_local_paths != '[]' AND audio_local_paths != '{}'
-              )
-        """), {'creator_id': creator_id})
-
-        audio_filter_count = result.scalar()
-
-        print(f"   📊 Audio filter query result: {audio_filter_count} posts")
-        print(f"      (This is what 'with audio' filter would show)")
-
     print()
 
     # 6. Check how viewer.py reads data
