@@ -814,31 +814,75 @@ def settings():
         phase1_pending = creator_stats.get('pending_posts', 0)
         phase1_processed = creator_stats.get('processed_posts', 0)
 
-        # Check Phase 2: Posts detailed (from JSON files)
-        posts_file = PROCESSED_DATA_DIR / f"{creator_id}_posts_detailed.json"
+        # Check Phase 2: Posts detailed (from PostgreSQL)
         posts_count = 0
         posts_last_updated = None
-        if posts_file.exists():
+        if db_enabled:
             try:
-                with open(posts_file, 'r', encoding='utf-8') as f:
-                    posts_data = json.load(f)
-                    posts_count = len(posts_data)
-                posts_last_updated = datetime.fromtimestamp(posts_file.stat().st_mtime).strftime('%d/%m/%Y %H:%M')
-            except:
-                pass
+                # Query posts table for this creator
+                db_url = tracker.engine.url  # Reuse tracker's engine
+                engine = create_engine(str(db_url), pool_pre_ping=True)
+                with engine.connect() as conn:
+                    result = conn.execute(text("""
+                        SELECT
+                            COUNT(*) as total,
+                            MAX(updated_at) as last_updated
+                        FROM posts
+                        WHERE creator_id = :creator_id
+                          AND deleted_at IS NULL
+                          AND full_content IS NOT NULL
+                          AND full_content != ''
+                    """), {'creator_id': creator_id})
+                    row = result.fetchone()
+                    if row:
+                        posts_count = row[0]
+                        if row[1]:
+                            posts_last_updated = row[1].strftime('%d/%m/%Y %H:%M')
+            except Exception as e:
+                print(f"Warning: Could not load Phase 2 stats for {creator_id}: {e}")
+                # Fallback to JSON
+                posts_file = PROCESSED_DATA_DIR / f"{creator_id}_posts_detailed.json"
+                if posts_file.exists():
+                    try:
+                        with open(posts_file, 'r', encoding='utf-8') as f:
+                            posts_data = json.load(f)
+                            posts_count = len(posts_data)
+                        posts_last_updated = datetime.fromtimestamp(posts_file.stat().st_mtime).strftime('%d/%m/%Y %H:%M')
+                    except:
+                        pass
 
-        # Check Phase 3: Collections
-        collections_file = PROCESSED_DATA_DIR / f"{creator_id}_collections.json"
+        # Check Phase 3: Collections (from PostgreSQL)
         collections_count = 0
         collections_last_updated = None
-        if collections_file.exists():
+        if db_enabled:
             try:
-                with open(collections_file, 'r', encoding='utf-8') as f:
-                    collections_data = json.load(f)
-                    collections_count = len(collections_data.get('collections', []))
-                collections_last_updated = datetime.fromtimestamp(collections_file.stat().st_mtime).strftime('%d/%m/%Y %H:%M')
-            except:
-                pass
+                # Query collections table for this creator
+                with engine.connect() as conn:
+                    result = conn.execute(text("""
+                        SELECT
+                            COUNT(*) as total,
+                            MAX(updated_at) as last_updated
+                        FROM collections
+                        WHERE creator_id = :creator_id
+                          AND deleted_at IS NULL
+                    """), {'creator_id': creator_id})
+                    row = result.fetchone()
+                    if row:
+                        collections_count = row[0]
+                        if row[1]:
+                            collections_last_updated = row[1].strftime('%d/%m/%Y %H:%M')
+            except Exception as e:
+                print(f"Warning: Could not load Phase 3 stats for {creator_id}: {e}")
+                # Fallback to JSON
+                collections_file = PROCESSED_DATA_DIR / f"{creator_id}_collections.json"
+                if collections_file.exists():
+                    try:
+                        with open(collections_file, 'r', encoding='utf-8') as f:
+                            collections_data = json.load(f)
+                            collections_count = len(collections_data.get('collections', []))
+                        collections_last_updated = datetime.fromtimestamp(collections_file.stat().st_mtime).strftime('%d/%m/%Y %H:%M')
+                    except:
+                        pass
 
         processing_status.append({
             'creator_id': creator_id,
