@@ -800,9 +800,8 @@
                 {% set first_video_order = namespace(value=999) %}
                 {% if post.content_blocks %}
                     {% for block in post.content_blocks %}
-                        {% if block.type == 'video' %}
+                        {% if block.type == 'video' and first_video_order.value == 999 %}
                             {% set first_video_order.value = block.order %}
-                            {% break %}
                         {% endif %}
                     {% endfor %}
                 {% endif %}
