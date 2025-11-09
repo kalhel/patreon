@@ -2136,6 +2136,7 @@
 
         // Advanced search state
         let searchResults = new Map(); // postId -> {matched_in: [], rank: number}
+        let totalSearchResults = 0; // Total number of matching posts (from API)
         let lastSearchQuery = '';
         let searchDebounceTimer = null;
         let useAdvancedSearch = true; // Try to use API, fallback to client-side
@@ -2155,6 +2156,7 @@
         async function performAdvancedSearch(query) {
             if (!query || query.length < 2) {
                 searchResults.clear();
+                totalSearchResults = 0;
                 return;
             }
 
@@ -2168,6 +2170,9 @@
 
                 const data = await response.json();
                 searchResults.clear();
+
+                // Store total results from API
+                totalSearchResults = data.total_results || 0;
 
                 // Build map of post_id -> {matched_in, rank}
                 data.results.forEach(result => {
@@ -2414,7 +2419,11 @@
                 const filterText = selectedCreators.size > 0
                     ? ` (${selectedCreators.size} creator${selectedCreators.size !== 1 ? 's' : ''} selected)`
                     : '';
-                resultsCount.textContent = `${visibleCount} post${visibleCount !== 1 ? 's' : ''} found${filterText}`;
+                // Use totalSearchResults from API if available, otherwise use visibleCount
+                const count = (searchTerm && useAdvancedSearch && totalSearchResults > 0)
+                    ? totalSearchResults
+                    : visibleCount;
+                resultsCount.textContent = `${count} post${count !== 1 ? 's' : ''} found${filterText}`;
             } else {
                 resultsCount.textContent = '';
             }

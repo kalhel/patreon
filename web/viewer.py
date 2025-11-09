@@ -246,7 +246,7 @@ def search_posts_postgresql(query, limit=50, creator_filter=None):
         creator_filter: Optional creator_id to filter by
 
     Returns:
-        List of search results with scores, matching SQLite FTS5 format
+        Tuple of (results list, total_count int)
     """
     try:
         engine = create_engine(get_database_url())
@@ -265,6 +265,23 @@ def search_posts_postgresql(query, limit=50, creator_filter=None):
             # Build SQL with optional creator filter
             creator_condition = "AND p.creator_id = :creator_id" if creator_filter else ""
 
+            # First, get total count of matching posts (without LIMIT)
+            count_sql = text(f"""
+                SELECT COUNT(*) as total
+                FROM posts p
+                WHERE p.search_vector @@ to_tsquery('english', :tsquery)
+                    AND p.deleted_at IS NULL
+                    {creator_condition}
+            """)
+
+            count_params = {'tsquery': tsquery}
+            if creator_filter:
+                count_params['creator_id'] = creator_filter
+
+            count_result = conn.execute(count_sql, count_params)
+            total_count = count_result.scalar()
+
+            # Then, get the actual results with LIMIT
             sql = text(f"""
                 SELECT
                     p.post_id,
@@ -328,10 +345,10 @@ def search_posts_postgresql(query, limit=50, creator_filter=None):
                 if '<mark>' in subtitles_snippet:
                     matched_in.append('subtitles')
 
-                # Check tags (simple string matching for now)
+                # Check tags (AND matching - all terms must be present)
                 tags_list = row.patreon_tags or []
                 tags_text = ' '.join(tags_list).lower()
-                if any(term.lower() in tags_text for term in search_terms):
+                if all(term.lower() in tags_text for term in search_terms):
                     matched_in.append('tags')
 
                 # Format result to match SQLite FTS5 structure
@@ -364,7 +381,8 @@ def search_posts_postgresql(query, limit=50, creator_filter=None):
 
                 results.append(result_item)
 
-            return results
+            # Return results and total count
+            return results, total_count
 
     except Exception as e:
         print(f"⚠️  PostgreSQL search failed: {e}")
@@ -1755,12 +1773,12 @@ def api_search():
 
     # Try PostgreSQL first (modern, automatic)
     try:
-        results = search_posts_postgresql(query, limit=limit, creator_filter=creator_filter)
+        results, total_count = search_posts_postgresql(query, limit=limit, creator_filter=creator_filter)
 
         return jsonify({
             'query': query,
-            'total_results': len(results),
-            'results': results,
+            'total_results': total_count,  # Total matching posts (not limited)
+            'results': results,  # Limited results
             'source': 'postgresql'  # Debug: show which backend was used
         })
 
