@@ -1573,7 +1573,7 @@
             <div class="search-container">
                 <div class="search-box">
                     <input type="text" class="search-input" id="searchInput" placeholder="Search posts by title, creator, or tags...">
-                    <button class="search-advanced-btn" id="advancedSearchBtn">Avanzada →</button>
+                    <button class="search-advanced-btn" id="advancedSearchBtn">Advanced →</button>
                 </div>
                 <div class="search-results-count" id="resultsCount"></div>
 
@@ -1690,7 +1690,7 @@
             <!-- Advanced Search Results View (hidden by default) -->
             <div class="advanced-search-view" id="advancedSearchView" style="display: none;">
                 <div class="advanced-search-header">
-                    <button class="back-to-cards-btn" id="backToCardsBtn">← Volver a tarjetas</button>
+                    <button class="back-to-cards-btn" id="backToCardsBtn">← Back to cards</button>
                     <div class="advanced-results-count" id="advancedResultsCount"></div>
                 </div>
                 <div class="advanced-search-results" id="advancedSearchResults">
@@ -1698,7 +1698,7 @@
                 </div>
                 <div class="advanced-search-loader hidden" id="advancedLoader">
                     <div class="loader-spinner"></div>
-                    <p>Cargando más resultados...</p>
+                    <p>Loading more results...</p>
                 </div>
             </div>
 
@@ -2812,7 +2812,7 @@
 
                 // Update results count
                 document.getElementById('advancedResultsCount').textContent =
-                    `${data.total_results.toLocaleString()} resultado${data.total_results !== 1 ? 's' : ''}`;
+                    `${data.total_results.toLocaleString()} result${data.total_results !== 1 ? 's' : ''}`;
 
                 // Render results
                 const resultsContainer = document.getElementById('advancedSearchResults');
@@ -2845,8 +2845,8 @@
             const meta = document.createElement('div');
             meta.className = 'advanced-result-meta';
 
-            const creatorName = result.creator_name || 'Creator desconocido';
-            const publishDate = result.published_date || 'Fecha desconocida';
+            const creatorName = result.creator_name || 'Unknown creator';
+            const publishDate = result.published_date || 'Unknown date';
 
             meta.innerHTML = `
                 <span>${creatorName}</span>
@@ -2866,7 +2866,7 @@
 
             const snippetDiv = document.createElement('div');
             snippetDiv.className = 'advanced-result-snippet';
-            snippetDiv.innerHTML = snippet || '<em>No hay extracto disponible</em>';
+            snippetDiv.innerHTML = snippet || '<em>No snippet available</em>';
 
             // Badges (content type indicators)
             const badges = document.createElement('div');
@@ -2911,7 +2911,7 @@
                         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
                         </svg>
-                        ${result.counts.attachments} Archivo${result.counts.attachments !== 1 ? 's' : ''}
+                        ${result.counts.attachments} Attachment${result.counts.attachments !== 1 ? 's' : ''}
                     </span>
                 `;
             }
@@ -2921,14 +2921,14 @@
             matched.className = 'advanced-result-matched';
             if (result.matched_in && result.matched_in.length > 0) {
                 const matchLabels = {
-                    'title': 'Título',
-                    'content': 'Contenido',
+                    'title': 'Title',
+                    'content': 'Content',
                     'tags': 'Tags',
-                    'comments': 'Comentarios',
-                    'subtitles': 'Subtítulos'
+                    'comments': 'Comments',
+                    'subtitles': 'Subtitles'
                 };
                 const matchedText = result.matched_in.map(m => matchLabels[m] || m).join(', ');
-                matched.textContent = `Coincide en: ${matchedText}`;
+                matched.textContent = `Matched in: ${matchedText}`;
             }
 
             // Assemble item
