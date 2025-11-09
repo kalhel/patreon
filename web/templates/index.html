@@ -2844,10 +2844,14 @@
             // Meta (creator + date)
             const meta = document.createElement('div');
             meta.className = 'advanced-result-meta';
+
+            const creatorName = result.creator_name || 'Creator desconocido';
+            const publishDate = result.published_date || 'Fecha desconocida';
+
             meta.innerHTML = `
-                <span>${result.creator_name}</span>
+                <span>${creatorName}</span>
                 <span class="separator">•</span>
-                <span>${result.published_date}</span>
+                <span>${publishDate}</span>
             `;
 
             // Snippet - show best available snippet
