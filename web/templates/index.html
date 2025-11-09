@@ -841,7 +841,7 @@
 
         /* Search bar */
         .search-container {
-            margin: 3rem 0;
+            margin: 3rem 0 1.75rem 0;
             max-width: 1600px;
             margin-left: auto;
             margin-right: auto;
@@ -988,7 +988,7 @@
         .content-filters {
             display: flex;
             gap: 0.75rem;
-            margin: 0.25rem auto 2.5rem auto;
+            margin: 0 auto 3rem auto;
             flex-wrap: wrap;
             justify-content: center;
             max-width: 1000px;
@@ -2331,18 +2331,13 @@
                 // Creator filter match
                 const creatorMatch = selectedCreators.size === 0 || selectedCreators.has(creatorId);
 
-                // Update statistics ONLY for posts that match creator filter
+                // Update badge statistics ONLY for posts with matchedIn data
                 if (searchTerms.length > 0 && searchMatch && matchedIn.length > 0 && creatorMatch) {
                     if (matchedIn.includes('title')) searchStats.title++;
                     if (matchedIn.includes('content')) searchStats.text++;
                     if (matchedIn.includes('tags')) searchStats.tags++;
                     if (matchedIn.includes('comments')) searchStats.comments++;
                     if (matchedIn.includes('subtitles')) searchStats.video++;
-
-                    // Track creator counts
-                    if (creatorId) {
-                        searchStats.creators[creatorId] = (searchStats.creators[creatorId] || 0) + 1;
-                    }
                 }
 
                 // Content type filters
@@ -2365,6 +2360,11 @@
                 if (searchMatch && matchTypeMatch && creatorMatch && contentMatch && tagMatch) {
                     card.classList.remove('hidden');
                     visibleCount++;
+
+                    // Track creator counts for ALL visible posts (must match visibleCount)
+                    if (creatorId && searchTerms.length > 0) {
+                        searchStats.creators[creatorId] = (searchStats.creators[creatorId] || 0) + 1;
+                    }
 
                     // Store card with relevance for sorting
                     cardsWithRelevance.push({

@@ -290,6 +290,8 @@ def search_posts_postgresql(query, creator_filter=None):
             total_count = count_result.scalar()
 
             # Then, get ALL results (no LIMIT - we need all for accurate statistics)
+            # NOTE: ts_headline removed for performance (not used in current card view)
+            # TODO: Add back ts_headline for dedicated search results page with snippets
             sql = text(f"""
                 SELECT
                     p.post_id,
@@ -307,15 +309,7 @@ def search_posts_postgresql(query, creator_filter=None):
                     p.content_text,
                     p.comments_text,
                     p.subtitles_text,
-                    ts_rank(p.search_vector, to_tsquery('english', :tsquery)) as rank,
-                    ts_headline('english', COALESCE(p.title, ''), to_tsquery('english', :tsquery),
-                               'StartSel=<mark>, StopSel=</mark>, MaxWords=20') as title_snippet,
-                    ts_headline('english', COALESCE(p.content_text, ''), to_tsquery('english', :tsquery),
-                               'StartSel=<mark>, StopSel=</mark>, MaxWords=30') as content_snippet,
-                    ts_headline('english', COALESCE(p.comments_text, ''), to_tsquery('english', :tsquery),
-                               'StartSel=<mark>, StopSel=</mark>, MaxWords=30') as comments_snippet,
-                    ts_headline('english', COALESCE(p.subtitles_text, ''), to_tsquery('english', :tsquery),
-                               'StartSel=<mark>, StopSel=</mark>, MaxWords=30') as subtitles_snippet
+                    ts_rank(p.search_vector, to_tsquery('english', :tsquery)) as rank
                 FROM posts p
                 WHERE p.search_vector @@ to_tsquery('english', :tsquery)
                     AND p.deleted_at IS NULL
@@ -334,27 +328,27 @@ def search_posts_postgresql(query, creator_filter=None):
 
             results = []
             for row in result:
-                # Determine which fields matched
+                # Determine which fields matched (without ts_headline for performance)
+                # Check directly in text fields instead
                 matched_in = []
-
-                # Check snippets for highlights
-                title_snippet = row.title_snippet or ''
-                content_snippet = row.content_snippet or ''
-                comments_snippet = row.comments_snippet or ''
-                subtitles_snippet = row.subtitles_snippet or ''
-
                 # Check matched fields based on AND/OR operator
                 # AND logic: ALL terms must be present in the field
                 # OR logic: AT LEAST ONE term must be present in the field
                 match_function = any if use_or_operator else all
 
-                if '<mark>' in title_snippet and match_function(term.lower() in title_snippet.lower() for term in search_terms):
+                # Check each field for matches
+                title_text = (row.title or '').lower()
+                content_text = (row.content_text or '').lower()
+                comments_text = (row.comments_text or '').lower()
+                subtitles_text = (row.subtitles_text or '').lower()
+
+                if title_text and match_function(term.lower() in title_text for term in search_terms):
                     matched_in.append('title')
-                if '<mark>' in content_snippet and match_function(term.lower() in content_snippet.lower() for term in search_terms):
+                if content_text and match_function(term.lower() in content_text for term in search_terms):
                     matched_in.append('content')
-                if '<mark>' in comments_snippet and match_function(term.lower() in comments_snippet.lower() for term in search_terms):
+                if comments_text and match_function(term.lower() in comments_text for term in search_terms):
                     matched_in.append('comments')
-                if '<mark>' in subtitles_snippet and match_function(term.lower() in subtitles_snippet.lower() for term in search_terms):
+                if subtitles_text and match_function(term.lower() in subtitles_text for term in search_terms):
                     matched_in.append('subtitles')
 
                 # Check tags with same logic
@@ -372,11 +366,13 @@ def search_posts_postgresql(query, creator_filter=None):
                     'rank': float(row.rank),  # PostgreSQL ts_rank (higher = better)
                     'matched_in': matched_in,
                     'snippets': {
-                        'title': title_snippet,
-                        'content': content_snippet,
-                        'tags': None,  # TODO: Generate tag snippet
-                        'comments': comments_snippet if comments_snippet else None,
-                        'subtitles': subtitles_snippet if subtitles_snippet else None
+                        # Snippets disabled for performance (card view doesn't use them)
+                        # TODO: Re-enable ts_headline when building search results page
+                        'title': None,
+                        'content': None,
+                        'tags': None,
+                        'comments': None,
+                        'subtitles': None
                     },
                     'published_date': row.published_at.strftime('%d %b %Y') if row.published_at else None,
                     'has_images': bool(row.images and len(row.images) > 0),
