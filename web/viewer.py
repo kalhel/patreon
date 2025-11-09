@@ -304,12 +304,13 @@ def search_posts_postgresql(query, limit=50, creator_filter=None):
                     p.audios,
                     p.patreon_tags,
                     p.full_content,
+                    p.content_text,
                     p.comments_text,
                     p.subtitles_text,
                     ts_rank(p.search_vector, to_tsquery('english', :tsquery)) as rank,
                     ts_headline('english', COALESCE(p.title, ''), to_tsquery('english', :tsquery),
                                'StartSel=<mark>, StopSel=</mark>, MaxWords=20') as title_snippet,
-                    ts_headline('english', COALESCE(p.full_content, ''), to_tsquery('english', :tsquery),
+                    ts_headline('english', COALESCE(p.content_text, ''), to_tsquery('english', :tsquery),
                                'StartSel=<mark>, StopSel=</mark>, MaxWords=30') as content_snippet,
                     ts_headline('english', COALESCE(p.comments_text, ''), to_tsquery('english', :tsquery),
                                'StartSel=<mark>, StopSel=</mark>, MaxWords=30') as comments_snippet,
@@ -1790,60 +1791,60 @@ def api_search():
 
         return jsonify({
             'query': query,
-            'total_results': total_count,  # Total matching posts (not limited)
-            'results': results,  # Limited results
-            'source': 'postgresql'  # Debug: show which backend was used
+            'total_results': total_count,
+            'results': results,
+            'source': 'postgresql'
         })
 
     except Exception as pg_error:
         print(f"⚠️  PostgreSQL search failed: {pg_error}")
         print("   Falling back to SQLite FTS5...")
 
-        # Fallback to SQLite FTS5 (legacy)
-        from pathlib import Path
-        import sys
+    # Fallback to SQLite FTS5 (legacy)
+    from pathlib import Path
+    import sys
 
-        search_module_path = Path(__file__).parent
-        if str(search_module_path) not in sys.path:
-            sys.path.insert(0, str(search_module_path))
+    search_module_path = Path(__file__).parent
+    if str(search_module_path) not in sys.path:
+        sys.path.insert(0, str(search_module_path))
 
-        try:
-            from search_indexer import SearchIndexer
-        except ImportError:
-            return jsonify({
-                'error': 'Both PostgreSQL and SQLite search failed',
-                'postgresql_error': str(pg_error),
-                'sqlite_error': 'Search indexer not available'
-            }), 503
+    try:
+        from search_indexer import SearchIndexer
+    except ImportError:
+        return jsonify({
+            'error': 'Both PostgreSQL and SQLite search failed',
+            'postgresql_error': str(pg_error),
+            'sqlite_error': 'Search indexer not available'
+        }), 503
 
-        # Check if SQLite index exists
-        index_path = Path(__file__).parent / "search_index.db"
-        if not index_path.exists():
-            return jsonify({
-                'error': 'Both PostgreSQL and SQLite search failed',
-                'postgresql_error': str(pg_error),
-                'sqlite_error': 'Search index not built. Run: python web/search_indexer.py'
-            }), 503
+    # Check if SQLite index exists
+    index_path = Path(__file__).parent / "search_index.db"
+    if not index_path.exists():
+        return jsonify({
+            'error': 'Both PostgreSQL and SQLite search failed',
+            'postgresql_error': str(pg_error),
+            'sqlite_error': 'Search index not built. Run: python web/search_indexer.py'
+        }), 503
 
-        # Perform SQLite search
-        try:
-            indexer = SearchIndexer(db_path=index_path)
-            results = indexer.search(query, limit=limit, creator_filter=creator_filter)
-            indexer.close()
+    # Perform SQLite search
+    try:
+        indexer = SearchIndexer(db_path=index_path)
+        results = indexer.search(query, limit=limit, creator_filter=creator_filter)
+        indexer.close()
 
-            return jsonify({
-                'query': query,
-                'total_results': len(results),
-                'results': results,
-                'source': 'sqlite'  # Debug: show fallback was used
-            })
+        return jsonify({
+            'query': query,
+            'total_results': len(results),
+            'results': results,
+            'source': 'sqlite'  # Debug: show fallback was used
+        })
 
-        except Exception as sqlite_error:
-            return jsonify({
-                'error': 'Both PostgreSQL and SQLite search failed',
-                'postgresql_error': str(pg_error),
-                'sqlite_error': str(sqlite_error)
-            }), 500
+    except Exception as sqlite_error:
+        return jsonify({
+            'error': 'Both PostgreSQL and SQLite search failed',
+            'postgresql_error': str(pg_error),
+            'sqlite_error': str(sqlite_error)
+        }), 500
 
 
 @app.route('/api/search/stats')
