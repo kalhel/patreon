@@ -1035,9 +1035,9 @@
 
         /* Advanced Search Results View */
         .advanced-search-view {
-            max-width: 800px;
+            max-width: 1400px;
             margin: 0 auto 4rem auto;
-            padding: 0 1rem;
+            padding: 0 2rem;
         }
 
         .advanced-search-header {
@@ -1129,6 +1129,142 @@
             background: #ffeb3b;
             font-weight: 600;
             padding: 0 2px;
+        }
+
+        .snippet-section {
+            margin-bottom: 0.75rem;
+        }
+
+        .snippet-section strong {
+            color: #1a1a1a;
+            font-weight: 600;
+            margin-right: 0.5rem;
+        }
+
+        .fragment-separator {
+            color: #666666;
+            font-weight: 700;
+            font-size: 1rem;
+            margin: 0 0.75rem;
+            display: inline-block;
+            background: #f0f0f0;
+            padding: 0.125rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .video-timestamp-link {
+            display: inline-block;
+            margin-left: 0.375rem;
+            color: #1a73e8;
+            font-size: 0.875rem;
+            text-decoration: none;
+            padding: 0.125rem 0.375rem;
+            border-radius: 3px;
+            transition: background 0.15s;
+        }
+
+        .video-timestamp-link:hover {
+            background: #e8f0fe;
+            color: #174ea6;
+        }
+
+        /* Video Modal */
+        .video-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .video-modal-content {
+            position: relative;
+            background: white;
+            border-radius: 8px;
+            max-width: 900px;
+            width: 90%;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .video-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .video-modal-header h3 {
+            margin: 0;
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .video-modal-close {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            line-height: 1;
+            cursor: pointer;
+            color: #666;
+            padding: 0;
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-modal-close:hover {
+            color: #000;
+        }
+
+        .video-modal-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .video-modal-body video {
+            width: 100%;
+            max-height: 60vh;
+            border-radius: 4px;
+        }
+
+        .video-modal-actions {
+            margin-top: 1rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .btn-view-post {
+            display: inline-block;
+            padding: 0.625rem 1.25rem;
+            background: #1a66cc;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            transition: background 0.15s;
+        }
+
+        .btn-view-post:hover {
+            background: #1557b0;
         }
 
         .advanced-result-badges {
@@ -1706,6 +1842,23 @@
                 <div class="advanced-search-loader hidden" id="advancedLoader">
                     <div class="loader-spinner"></div>
                     <p>Loading more results...</p>
+                </div>
+            </div>
+
+            <!-- Video Modal for subtitle timestamps -->
+            <div class="video-modal" id="videoModal" style="display: none;">
+                <div class="video-modal-overlay" id="videoModalOverlay"></div>
+                <div class="video-modal-content">
+                    <div class="video-modal-header">
+                        <h3 id="videoModalTitle">Video</h3>
+                        <button class="video-modal-close" id="videoModalClose">&times;</button>
+                    </div>
+                    <div class="video-modal-body">
+                        <video id="modalVideo" controls></video>
+                        <div class="video-modal-actions">
+                            <a href="#" id="videoModalViewPost" class="btn-view-post">View Full Post</a>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -2703,6 +2856,16 @@
             } else {
                 advancedSearchBtn.classList.remove('visible');
             }
+
+            // If currently in advanced view, reload results with new query
+            const advancedView = document.getElementById('advancedSearchView');
+            if (advancedView.style.display === 'block' && hasText) {
+                // Debounce: wait 500ms after user stops typing
+                clearTimeout(window.advancedSearchDebounce);
+                window.advancedSearchDebounce = setTimeout(() => {
+                    showAdvancedSearchView();
+                }, 500);
+            }
         });
 
         // Advanced search button click - switch to advanced view
@@ -2876,19 +3039,71 @@
                 <span>${publishDate}</span>
             `;
 
-            // Snippet - show best available snippet
-            let snippet = '';
-            if (result.snippets.content) {
-                snippet = result.snippets.content;
-            } else if (result.snippets.comments) {
-                snippet = result.snippets.comments;
-            } else if (result.snippets.subtitles) {
-                snippet = result.snippets.subtitles;
-            }
-
+            // Snippets - show ALL snippets with multiple fragments
             const snippetDiv = document.createElement('div');
             snippetDiv.className = 'advanced-result-snippet';
-            snippetDiv.innerHTML = snippet || '<em>No snippet available</em>';
+
+            let hasAnySnippet = false;
+
+            // Content snippets
+            if (result.snippets.content) {
+                const fragments = result.snippets.content.split('|FRAGMENT|');
+                // Only show fragments that contain highlighted terms
+                const validFragments = fragments.filter(f => f.trim() && f.includes('<mark>'));
+                if (validFragments.length > 0) {
+                    const contentSnippet = validFragments.join(' <span class="fragment-separator">[...]</span> ');
+                    snippetDiv.innerHTML += `<div class="snippet-section"><strong>Content:</strong> ${contentSnippet}</div>`;
+                    hasAnySnippet = true;
+                }
+            }
+
+            // Comments snippets
+            if (result.snippets.comments) {
+                const fragments = result.snippets.comments.split('|FRAGMENT|');
+                // Only show fragments that contain highlighted terms
+                const validFragments = fragments.filter(f => f.trim() && f.includes('<mark>'));
+                if (validFragments.length > 0) {
+                    const commentsSnippet = validFragments.join(' <span class="fragment-separator">[...]</span> ');
+                    snippetDiv.innerHTML += `<div class="snippet-section"><strong>Comments:</strong> ${commentsSnippet}</div>`;
+                    hasAnySnippet = true;
+                }
+            }
+
+            // Subtitles snippets
+            if (result.snippets.subtitles) {
+                const fragments = result.snippets.subtitles.split('|FRAGMENT|');
+                // Only show fragments that contain highlighted terms
+                const validFragments = fragments.filter(f => f.trim() && f.includes('<mark>'));
+                if (validFragments.length > 0) {
+                    let subtitlesHTML = '<div class="snippet-section"><strong>Video/Subtitles:</strong> ';
+
+                    // Add each fragment with its own "watch" button
+                    validFragments.forEach((fragment, idx) => {
+                        const cleanFragment = fragment.replace(/<mark>/g, '').replace(/<\/mark>/g, '').trim();
+
+                        if (idx > 0) {
+                            subtitlesHTML += ' <span class="fragment-separator">[...]</span> ';
+                        }
+
+                        subtitlesHTML += fragment;
+                        subtitlesHTML += ` <a href="#" class="video-timestamp-link" title="Jump to this moment in the video" data-post-id="${result.post_id}" data-search-text="${cleanFragment.substring(0, 100).replace(/"/g, '&quot;')}">▶</a>`;
+                    });
+
+                    subtitlesHTML += '</div>';
+                    snippetDiv.innerHTML += subtitlesHTML;
+                    hasAnySnippet = true;
+                }
+            }
+
+            // Tags snippets
+            if (result.snippets.tags) {
+                snippetDiv.innerHTML += `<div class="snippet-section"><strong>Tags:</strong> ${result.snippets.tags}</div>`;
+                hasAnySnippet = true;
+            }
+
+            if (!hasAnySnippet) {
+                snippetDiv.innerHTML = '<em>No snippet available</em>';
+            }
 
             // Badges (content type indicators)
             const badges = document.createElement('div');
@@ -3002,6 +3217,117 @@
                 const query = searchInput.value.trim();
                 if (query) {
                     loadAdvancedSearchResults(query, advancedSearchOffset);
+                }
+            }
+        });
+
+        // Video Modal for Subtitles Timestamps
+        const videoModal = document.getElementById('videoModal');
+        const videoModalOverlay = document.getElementById('videoModalOverlay');
+        const videoModalClose = document.getElementById('videoModalClose');
+        const modalVideo = document.getElementById('modalVideo');
+        const videoModalTitle = document.getElementById('videoModalTitle');
+        const videoModalViewPost = document.getElementById('videoModalViewPost');
+
+        // Close modal function
+        function closeVideoModal() {
+            videoModal.style.display = 'none';
+            modalVideo.pause();
+            modalVideo.src = '';
+        }
+
+        videoModalClose.addEventListener('click', closeVideoModal);
+        videoModalOverlay.addEventListener('click', closeVideoModal);
+
+        // Handle video timestamp links
+        document.addEventListener('click', async function(e) {
+            if (e.target.classList.contains('video-timestamp-link')) {
+                e.preventDefault();
+
+                const postId = e.target.getAttribute('data-post-id');
+                const searchText = e.target.getAttribute('data-search-text');
+
+                console.log('🔍 Opening video modal for post:', postId, 'searching:', searchText);
+
+                // Fetch post data to get videos
+                try {
+                    const response = await fetch(`/api/post/${postId}`);
+                    const postData = await response.json();
+
+                    if (!postData || !postData.video_local_paths || postData.video_local_paths.length === 0) {
+                        alert('No videos found for this post');
+                        return;
+                    }
+
+                    // Set title
+                    videoModalTitle.textContent = postData.title || 'Video';
+
+                    // Set "View Full Post" link
+                    videoModalViewPost.href = `/post/${postId}`;
+
+                    // Open modal
+                    videoModal.style.display = 'flex';
+
+                    // Try to find the video with matching subtitle
+                    let foundVideo = null;
+                    let foundTimestamp = null;
+
+                    for (const videoPath of postData.video_local_paths) {
+                        const vttPath = `/media/${videoPath.replace('.mp4', '.vtt')}`;
+
+                        try {
+                            const vttResponse = await fetch(vttPath);
+                            if (!vttResponse.ok) continue;
+
+                            const vttText = await vttResponse.text();
+                            const lines = vttText.split('\n');
+                            const searchWords = searchText.toLowerCase().trim().split(/\s+/).slice(0, 5).join(' ');
+
+                            for (let i = 0; i < lines.length; i++) {
+                                const line = lines[i].toLowerCase();
+
+                                if (line.includes(searchWords)) {
+                                    // Found it! Look for timestamp
+                                    for (let j = i - 1; j >= 0; j--) {
+                                        const timeLine = lines[j];
+                                        const timestampMatch = timeLine.match(/(\d{2}):(\d{2}):(\d{2})\.(\d{3})\s*-->/);
+                                        if (timestampMatch) {
+                                            const hours = parseInt(timestampMatch[1]);
+                                            const minutes = parseInt(timestampMatch[2]);
+                                            const seconds = parseInt(timestampMatch[3]);
+                                            foundTimestamp = hours * 3600 + minutes * 60 + seconds;
+                                            foundVideo = videoPath;
+                                            break;
+                                        }
+                                    }
+                                    break;
+                                }
+                            }
+
+                            if (foundVideo) break;
+                        } catch (error) {
+                            console.log('Could not load VTT:', vttPath);
+                        }
+                    }
+
+                    // Load video
+                    const videoToLoad = foundVideo || postData.video_local_paths[0];
+                    modalVideo.src = `/media/${videoToLoad}`;
+
+                    // Wait for video to load, then set timestamp and play
+                    modalVideo.addEventListener('loadeddata', function onLoaded() {
+                        if (foundTimestamp !== null) {
+                            modalVideo.currentTime = foundTimestamp;
+                            console.log('✅ Jumped to timestamp:', foundTimestamp, 'seconds');
+                        }
+                        modalVideo.play().catch(() => {});
+                        modalVideo.removeEventListener('loadeddata', onLoaded);
+                    });
+
+                } catch (error) {
+                    console.error('Error loading video:', error);
+                    alert('Error loading video');
+                    closeVideoModal();
                 }
             }
         });

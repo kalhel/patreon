@@ -9,6 +9,7 @@ DUAL MODE: Reads from PostgreSQL (if flag enabled) or JSON (fallback)
 import json
 import sys
 import os
+import re
 from pathlib import Path
 from datetime import datetime
 from flask import Flask, render_template, jsonify, request, send_from_directory
@@ -471,13 +472,13 @@ def search_posts_postgresql_advanced(query, limit=50, offset=0, creator_filter=N
                     p.subtitles_text,
                     ts_rank(p.search_vector, to_tsquery('english', :tsquery)) as rank,
                     ts_headline('english', COALESCE(p.title, ''), to_tsquery('english', :tsquery),
-                               'StartSel=<mark>, StopSel=</mark>, MaxWords=15, MinWords=5, MaxFragments=1') as title_snippet,
+                               'StartSel=<mark>, StopSel=</mark>, MaxWords=15, MinWords=5, MaxFragments=1, HighlightAll=TRUE') as title_snippet,
                     ts_headline('english', COALESCE(p.content_text, ''), to_tsquery('english', :tsquery),
-                               'StartSel=<mark>, StopSel=</mark>, MaxWords=30, MinWords=15, MaxFragments=1') as content_snippet,
+                               'StartSel=<mark>, StopSel=</mark>, MaxWords=40, MinWords=15, MaxFragments=10, FragmentDelimiter=|FRAGMENT|, HighlightAll=TRUE') as content_snippet,
                     ts_headline('english', COALESCE(p.comments_text, ''), to_tsquery('english', :tsquery),
-                               'StartSel=<mark>, StopSel=</mark>, MaxWords=25, MinWords=10, MaxFragments=1') as comments_snippet,
+                               'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=10, MaxFragments=10, FragmentDelimiter=|FRAGMENT|, HighlightAll=TRUE') as comments_snippet,
                     ts_headline('english', COALESCE(p.subtitles_text, ''), to_tsquery('english', :tsquery),
-                               'StartSel=<mark>, StopSel=</mark>, MaxWords=25, MinWords=10, MaxFragments=1') as subtitles_snippet
+                               'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=10, MaxFragments=10, FragmentDelimiter=|FRAGMENT|, HighlightAll=TRUE') as subtitles_snippet
                 FROM posts p
                 WHERE p.search_vector @@ to_tsquery('english', :tsquery)
                     AND p.deleted_at IS NULL
@@ -518,11 +519,28 @@ def search_posts_postgresql_advanced(query, limit=50, offset=0, creator_filter=N
                 if '<mark>' in subtitles_snippet:
                     matched_in.append('subtitles')
 
-                # Check tags
+                # Check tags and generate highlighted snippet
                 tags_list = row.patreon_tags or []
                 tags_text = ' '.join(tags_list).lower()
+                tags_snippet = None
+
                 if match_function(term.lower() in tags_text for term in search_terms):
                     matched_in.append('tags')
+                    # Find tags that contain any search term and highlight them
+                    matching_tags = []
+                    for tag in tags_list:
+                        tag_lower = tag.lower()
+                        highlighted_tag = tag
+                        for term in search_terms:
+                            if term.lower() in tag_lower:
+                                # Case-insensitive replace with <mark>
+                                pattern = re.compile(re.escape(term), re.IGNORECASE)
+                                highlighted_tag = pattern.sub(f'<mark>{term}</mark>', highlighted_tag)
+                        if '<mark>' in highlighted_tag:
+                            matching_tags.append(highlighted_tag)
+
+                    if matching_tags:
+                        tags_snippet = ', '.join(matching_tags)
 
                 # Use fallback for creator_name (same logic as normal view)
                 creator_display_name = row.creator_name or get_creator_display_name(row.creator_id)
@@ -538,7 +556,7 @@ def search_posts_postgresql_advanced(query, limit=50, offset=0, creator_filter=N
                     'snippets': {
                         'title': title_snippet if title_snippet else row.title,
                         'content': content_snippet,
-                        'tags': None,
+                        'tags': tags_snippet,
                         'comments': comments_snippet if comments_snippet else None,
                         'subtitles': subtitles_snippet if subtitles_snippet else None
                     },
@@ -922,6 +940,9 @@ def view_post(post_id):
     from_collection_id = request.args.get('from_collection')
     from_creator_id = post.get('creator_id')
 
+    # Get search_subtitle parameter for timestamp jumping
+    search_subtitle = request.args.get('search_subtitle')
+
     metadata = post.get('post_metadata') or {}
     creator_id = post.get('creator_id', 'unknown')
     creator_display_name = metadata.get('creator_name') or get_creator_display_name(creator_id)
@@ -1108,6 +1129,7 @@ def view_post(post_id):
         from_collection_id=from_collection_id,
         from_creator_id=from_creator_id,
         collection_info=collection_info,
+        search_subtitle=search_subtitle,
     )
 
 

@@ -1324,6 +1324,108 @@
                 commentsToggle.classList.toggle('active');
             });
         }
+
+        // Search in subtitles and jump to timestamp
+        const searchSubtitle = {{ search_subtitle|tojson|safe }};
+
+        if (searchSubtitle) {
+            async function jumpToSubtitleTimestamp() {
+                console.log('🔍 Searching for subtitle:', searchSubtitle);
+
+                // Find all video elements with subtitle tracks
+                const videoElements = document.querySelectorAll('video');
+                console.log('📹 Found', videoElements.length, 'videos on page');
+
+                for (let videoIdx = 0; videoIdx < videoElements.length; videoIdx++) {
+                    const videoEl = videoElements[videoIdx];
+
+                    // Find track element (subtitle)
+                    const trackEl = videoEl.querySelector('track[kind="subtitles"]');
+                    if (!trackEl) {
+                        console.log('⚠️  Video', videoIdx, 'has no subtitles');
+                        continue;
+                    }
+
+                    const vttPath = trackEl.getAttribute('src');
+                    if (!vttPath) continue;
+
+                    console.log('📄 Checking VTT:', vttPath);
+
+                    try {
+                        // Fetch VTT file
+                        const response = await fetch(vttPath);
+                        if (!response.ok) continue; // Try next video if VTT not found
+
+                        const vttText = await response.text();
+
+                        // Parse VTT and search for text
+                        const lines = vttText.split('\n');
+                        let foundTimestamp = null;
+
+                        // Clean search text: remove extra spaces and take first meaningful words
+                        const searchWords = searchSubtitle.toLowerCase().trim().split(/\s+/).slice(0, 5).join(' ');
+
+                        for (let i = 0; i < lines.length; i++) {
+                            const line = lines[i].toLowerCase();
+
+                            // Check if this line contains the search text (at least first 5 words)
+                            if (line.includes(searchWords)) {
+                                // Look backwards for the timestamp
+                                for (let j = i - 1; j >= 0; j--) {
+                                    const timeLine = lines[j];
+                                    // VTT timestamp format: "00:01:22.019 --> 00:01:30.808"
+                                    const timestampMatch = timeLine.match(/(\d{2}):(\d{2}):(\d{2})\.(\d{3})\s*-->/);
+                                    if (timestampMatch) {
+                                        const hours = parseInt(timestampMatch[1]);
+                                        const minutes = parseInt(timestampMatch[2]);
+                                        const seconds = parseInt(timestampMatch[3]);
+                                        foundTimestamp = hours * 3600 + minutes * 60 + seconds;
+                                        break;
+                                    }
+                                }
+                                break;
+                            }
+                        }
+
+                        if (foundTimestamp !== null) {
+                            // Found it! Jump to this video and timestamp
+                            console.log('✅ Found! Jumping to timestamp:', foundTimestamp, 'seconds');
+                            videoEl.currentTime = foundTimestamp;
+                            videoEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                            // Highlight the video container
+                            const container = videoEl.closest('.content-block');
+                            if (container) {
+                                container.style.border = '3px solid #2563eb';
+                                container.style.borderRadius = '8px';
+                                setTimeout(() => {
+                                    container.style.border = '';
+                                    container.style.borderRadius = '';
+                                }, 3000);
+                            }
+
+                            // Play the video
+                            await videoEl.play().catch(() => {});
+
+                            break; // Stop searching other videos
+                        } else {
+                            console.log('❌ Text not found in this VTT');
+                        }
+                    } catch (error) {
+                        console.log(`❌ Could not load VTT for video ${videoIdx}:`, error);
+                    }
+                }
+
+                console.log('🏁 Search complete');
+            }
+
+            // Run when page is fully loaded
+            if (document.readyState === 'complete') {
+                jumpToSubtitleTimestamp();
+            } else {
+                window.addEventListener('load', jumpToSubtitleTimestamp);
+            }
+        }
     </script>
 </body>
 </html>
