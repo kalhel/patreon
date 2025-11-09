@@ -236,17 +236,17 @@ def get_database_url() -> str:
     return f"postgresql://{db_user}:{encoded_password}@{db_host}:{db_port}/{db_name}"
 
 
-def search_posts_postgresql(query, limit=50, creator_filter=None):
+def search_posts_postgresql(query, creator_filter=None):
     """
     Search posts using PostgreSQL Full-Text Search (FTS)
 
     Args:
         query: Search query string
-        limit: Maximum number of results
         creator_filter: Optional creator_id to filter by
 
     Returns:
         Tuple of (results list, total_count int)
+        Returns ALL matching results (no limit) for accurate statistics
     """
     try:
         engine = create_engine(get_database_url())
@@ -289,7 +289,7 @@ def search_posts_postgresql(query, limit=50, creator_filter=None):
             count_result = conn.execute(count_sql, count_params)
             total_count = count_result.scalar()
 
-            # Then, get the actual results with LIMIT
+            # Then, get ALL results (no LIMIT - we need all for accurate statistics)
             sql = text(f"""
                 SELECT
                     p.post_id,
@@ -321,12 +321,10 @@ def search_posts_postgresql(query, limit=50, creator_filter=None):
                     AND p.deleted_at IS NULL
                     {creator_condition}
                 ORDER BY rank DESC
-                LIMIT :limit
             """)
 
             params = {
-                'tsquery': tsquery,
-                'limit': limit
+                'tsquery': tsquery
             }
 
             if creator_filter:
@@ -1775,19 +1773,19 @@ def api_search():
     Query params:
         q: search query (required)
         creator: filter by creator_id (optional)
-        limit: max results (default 50)
+
+    Returns ALL matching results (no limit) for accurate statistics
     """
     # Get query parameters
     query = request.args.get('q', '').strip()
     creator_filter = request.args.get('creator')
-    limit = int(request.args.get('limit', 50))
 
     if not query:
         return jsonify({'error': 'Query parameter "q" is required'}), 400
 
     # Try PostgreSQL first (modern, automatic)
     try:
-        results, total_count = search_posts_postgresql(query, limit=limit, creator_filter=creator_filter)
+        results, total_count = search_posts_postgresql(query, creator_filter=creator_filter)
 
         return jsonify({
             'query': query,

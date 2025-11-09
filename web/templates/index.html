@@ -972,38 +972,6 @@
             color: #666666;
         }
 
-        /* Creator breakdown stats */
-        .creator-breakdown {
-            margin-top: 0;
-            padding-top: 0;
-            flex-wrap: wrap !important;
-            overflow-x: visible !important;
-            max-width: 100% !important;
-            margin-left: auto !important;
-            margin-right: auto !important;
-            width: 100% !important;
-        }
-
-        .search-stat.creator-stat {
-            background: #fafafa;
-        }
-
-        .search-stat.creator-stat:hover {
-            background: #f0f0f0;
-        }
-
-        .search-stat.creator-stat.active {
-            background: #ffffff;
-            border-color: #d0d0d0;
-        }
-
-        .search-stat.creator-stat .creator-avatar {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-
         /* Content filters */
         .content-filters {
             display: flex;
@@ -1446,11 +1414,6 @@
                         <span class="label">Video:</span>
                         <span class="count" id="videoCount">0</span>
                     </div>
-                </div>
-
-                <!-- Creator breakdown statistics -->
-                <div class="search-stats creator-breakdown" id="creatorBreakdown" style="display: none;">
-                    <!-- Creator stats will be dynamically populated here -->
                 </div>
             </div>
 
@@ -2161,7 +2124,7 @@
             }
 
             try {
-                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=100`);
+                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
                 if (!response.ok) {
                     console.warn('Advanced search not available, falling back to client-side');
                     useAdvancedSearch = false;
@@ -2213,6 +2176,9 @@
                     const indicatorV2 = card.querySelector('.search-indicator-v2');
                     indicatorV2.classList.add('hidden');
                 });
+
+                // Don't run immediate filter - wait for API results
+                return;
             }
 
             // Immediate filter (without waiting for API)
@@ -2320,18 +2286,6 @@
 
                     indicatorV2.innerHTML = badgesV2.join('');
                     indicatorV2.classList.remove('hidden');
-
-                    // Update statistics
-                    if (matchedIn.includes('title')) searchStats.title++;
-                    if (matchedIn.includes('content')) searchStats.text++;
-                    if (matchedIn.includes('tags')) searchStats.tags++;
-                    if (matchedIn.includes('comments')) searchStats.comments++;
-                    if (matchedIn.includes('subtitles')) searchStats.video++;
-
-                    // Track creator counts
-                    if (creatorId) {
-                        searchStats.creators[creatorId] = (searchStats.creators[creatorId] || 0) + 1;
-                    }
                 } else {
                     indicatorV2.classList.add('hidden');
                 }
@@ -2349,6 +2303,20 @@
 
                 // Creator filter match
                 const creatorMatch = selectedCreators.size === 0 || selectedCreators.has(creatorId);
+
+                // Update statistics ONLY for posts that match creator filter
+                if (searchTerms.length > 0 && searchMatch && matchedIn.length > 0 && creatorMatch) {
+                    if (matchedIn.includes('title')) searchStats.title++;
+                    if (matchedIn.includes('content')) searchStats.text++;
+                    if (matchedIn.includes('tags')) searchStats.tags++;
+                    if (matchedIn.includes('comments')) searchStats.comments++;
+                    if (matchedIn.includes('subtitles')) searchStats.video++;
+
+                    // Track creator counts
+                    if (creatorId) {
+                        searchStats.creators[creatorId] = (searchStats.creators[creatorId] || 0) + 1;
+                    }
+                }
 
                 // Content type filters
                 let contentMatch = true;
@@ -2416,14 +2384,21 @@
                                      contentFilters.images || contentFilters.videos ||
                                      contentFilters.audio || selectedTags.size > 0;
             if (hasActiveFilters) {
-                const filterText = selectedCreators.size > 0
-                    ? ` (${selectedCreators.size} creator${selectedCreators.size !== 1 ? 's' : ''} selected)`
-                    : '';
-                // Use totalSearchResults from API if available, otherwise use visibleCount
-                const count = (searchTerm && useAdvancedSearch && totalSearchResults > 0)
-                    ? totalSearchResults
-                    : visibleCount;
-                resultsCount.textContent = `${count} post${count !== 1 ? 's' : ''} found${filterText}`;
+                // Show filtered count vs total when creator filter is active
+                if (searchTerm && selectedCreators.size > 0 && useAdvancedSearch && totalSearchResults > 0) {
+                    // Show: "49 posts found (of 352 total)"
+                    resultsCount.textContent = `${visibleCount} post${visibleCount !== 1 ? 's' : ''} found (of ${totalSearchResults} total)`;
+                } else if (selectedCreators.size > 0 && !searchTerm) {
+                    // Just creator filter, no search
+                    const filterText = `${selectedCreators.size} creator${selectedCreators.size !== 1 ? 's' : ''} selected`;
+                    resultsCount.textContent = `${visibleCount} post${visibleCount !== 1 ? 's' : ''} found (${filterText})`;
+                } else {
+                    // Use totalSearchResults from API if available, otherwise use visibleCount
+                    const count = (searchTerm && useAdvancedSearch && totalSearchResults > 0)
+                        ? totalSearchResults
+                        : visibleCount;
+                    resultsCount.textContent = `${count} post${count !== 1 ? 's' : ''} found`;
+                }
             } else {
                 resultsCount.textContent = '';
             }
@@ -2441,73 +2416,38 @@
                 document.getElementById('commentsCount').textContent = searchStats.comments;
                 document.getElementById('videoCount').textContent = searchStats.video;
 
-                // Update creator breakdown
-                const creatorBreakdownEl = document.getElementById('creatorBreakdown');
-                if (Object.keys(searchStats.creators).length > 0) {
-                    // Show creator breakdown
-                    creatorBreakdownEl.style.display = 'flex';
+                // Update creator card counts with search results
+                document.querySelectorAll('.creator-card').forEach(card => {
+                    const creatorId = card.dataset.creatorId;
+                    const postCount = card.querySelector('.post-count');
 
-                    // Clear existing creator stats
-                    creatorBreakdownEl.innerHTML = '';
+                    // Save original count on first search
+                    if (!postCount.dataset.originalCount) {
+                        postCount.dataset.originalCount = postCount.textContent;
+                    }
 
-                    // Sort creators by count (descending)
-                    const sortedCreators = Object.entries(searchStats.creators)
-                        .sort((a, b) => b[1] - a[1]);
-
-                    // Create stat elements for each creator
-                    sortedCreators.forEach(([creatorId, count]) => {
-                        const creatorInfo = creatorsData[creatorId];
-                        if (!creatorInfo) return;
-
-                        const creatorStat = document.createElement('div');
-                        creatorStat.className = 'search-stat creator-stat';
-                        creatorStat.dataset.creatorId = creatorId;
-
-                        // Check if this creator is currently selected
-                        if (selectedCreators.has(creatorId)) {
-                            creatorStat.classList.add('active');
-                        }
-
-                        creatorStat.innerHTML = `
-                            ${creatorInfo.avatar ? `<img src="${creatorInfo.avatar}" alt="${creatorInfo.name}" class="creator-avatar" loading="lazy">` : ''}
-                            <span class="label">${creatorInfo.name}:</span>
-                            <span class="count">${count}</span>
-                        `;
-
-                        // Make creator stat clickable to filter by creator
-                        creatorStat.addEventListener('click', function() {
-                            const creatorId = this.dataset.creatorId;
-                            const creatorCard = document.querySelector(`.creator-card[data-creator-id="${creatorId}"]`);
-
-                            if (selectedCreators.has(creatorId)) {
-                                // Deselect
-                                selectedCreators.delete(creatorId);
-                                this.classList.remove('active');
-                                if (creatorCard) creatorCard.classList.remove('selected');
-                            } else {
-                                // Select
-                                selectedCreators.add(creatorId);
-                                this.classList.add('active');
-                                if (creatorCard) creatorCard.classList.add('selected');
-                            }
-
-                            // Re-filter posts
-                            if (collectionsVisible) {
-                                loadAndShowCollections();
-                            } else {
-                                filterPostsImmediate();
-                            }
-                        });
-
-                        creatorBreakdownEl.appendChild(creatorStat);
-                    });
-                } else {
-                    creatorBreakdownEl.style.display = 'none';
-                }
+                    if (searchStats.creators[creatorId]) {
+                        // Show search result count
+                        postCount.textContent = searchStats.creators[creatorId];
+                        postCount.dataset.searchActive = 'true';
+                    } else if (postCount.dataset.searchActive || searchTerms.length > 0) {
+                        // No results for this creator in search - show 0
+                        postCount.textContent = '0';
+                        postCount.dataset.searchActive = 'true';
+                    }
+                });
             } else {
                 // Hide statistics when no search
                 searchStatsEl.style.display = 'none';
-                document.getElementById('creatorBreakdown').style.display = 'none';
+
+                // Restore original creator counts
+                document.querySelectorAll('.creator-card').forEach(card => {
+                    const postCount = card.querySelector('.post-count');
+                    if (postCount.dataset.originalCount) {
+                        postCount.textContent = postCount.dataset.originalCount;
+                        delete postCount.dataset.searchActive;
+                    }
+                });
             }
         }
 
