@@ -236,6 +236,130 @@ def get_database_url() -> str:
     return f"postgresql://{db_user}:{encoded_password}@{db_host}:{db_port}/{db_name}"
 
 
+def search_posts_postgresql(query, limit=50, creator_filter=None):
+    """
+    Search posts using PostgreSQL Full-Text Search (FTS)
+
+    Args:
+        query: Search query string
+        limit: Maximum number of results
+        creator_filter: Optional creator_id to filter by
+
+    Returns:
+        List of search results with scores, matching SQLite FTS5 format
+    """
+    try:
+        engine = create_engine(get_database_url())
+
+        with engine.connect() as conn:
+            # Build tsquery (PostgreSQL full-text query)
+            # Convert space-separated words to OR query (like SQLite with *)
+            search_terms = query.strip().split()
+
+            # Create OR query with prefix matching (term:*)
+            tsquery_parts = [f"{term}:*" for term in search_terms if term]
+            tsquery = ' | '.join(tsquery_parts)  # OR operator
+
+            # Build SQL with optional creator filter
+            creator_condition = "AND p.creator_id = :creator_id" if creator_filter else ""
+
+            sql = text(f"""
+                SELECT
+                    p.post_id,
+                    p.creator_id,
+                    p.creator_name,
+                    p.title,
+                    p.published_at,
+                    p.like_count,
+                    p.comment_count,
+                    p.images,
+                    p.videos,
+                    p.audios,
+                    p.patreon_tags,
+                    p.full_content,
+                    ts_rank(p.search_vector, to_tsquery('english', :tsquery)) as rank,
+                    ts_headline('english', COALESCE(p.title, ''), to_tsquery('english', :tsquery),
+                               'StartSel=<mark>, StopSel=</mark>, MaxWords=20') as title_snippet,
+                    ts_headline('english', COALESCE(p.full_content, ''), to_tsquery('english', :tsquery),
+                               'StartSel=<mark>, StopSel=</mark>, MaxWords=30') as content_snippet
+                FROM posts p
+                WHERE p.search_vector @@ to_tsquery('english', :tsquery)
+                    AND p.deleted_at IS NULL
+                    {creator_condition}
+                ORDER BY rank DESC
+                LIMIT :limit
+            """)
+
+            params = {
+                'tsquery': tsquery,
+                'limit': limit
+            }
+
+            if creator_filter:
+                params['creator_id'] = creator_filter
+
+            result = conn.execute(sql, params)
+
+            results = []
+            for row in result:
+                # Determine which fields matched
+                matched_in = []
+
+                # Check snippets for highlights
+                title_snippet = row.title_snippet or ''
+                content_snippet = row.content_snippet or ''
+
+                if '<mark>' in title_snippet:
+                    matched_in.append('title')
+                if '<mark>' in content_snippet:
+                    matched_in.append('content')
+
+                # Check tags (simple string matching for now)
+                tags_list = row.patreon_tags or []
+                tags_text = ' '.join(tags_list).lower()
+                if any(term.lower() in tags_text for term in search_terms):
+                    matched_in.append('tags')
+
+                # TODO Phase 2: Add comments detection
+                # TODO Phase 2: Add subtitles detection
+
+                # Format result to match SQLite FTS5 structure
+                result_item = {
+                    'post_id': row.post_id,
+                    'creator_id': row.creator_id,
+                    'creator_name': row.creator_name,
+                    'title': row.title,
+                    'rank': float(row.rank),  # PostgreSQL ts_rank (higher = better)
+                    'matched_in': matched_in,
+                    'snippets': {
+                        'title': title_snippet,
+                        'content': content_snippet,
+                        'tags': None,  # TODO: Generate tag snippet
+                        'comments': None,  # TODO Phase 2: Add comments search
+                        'subtitles': None  # TODO Phase 2: Add subtitles search
+                    },
+                    'published_date': row.published_at.strftime('%d %b %Y') if row.published_at else None,
+                    'has_images': bool(row.images and len(row.images) > 0),
+                    'has_videos': bool(row.videos and len(row.videos) > 0),
+                    'has_audio': bool(row.audios and len(row.audios) > 0),
+                    'counts': {
+                        'images': len(row.images) if row.images else 0,
+                        'videos': len(row.videos) if row.videos else 0,
+                        'audio': len(row.audios) if row.audios else 0,
+                        'comments': row.comment_count or 0,
+                        'likes': row.like_count or 0
+                    }
+                }
+
+                results.append(result_item)
+
+            return results
+
+    except Exception as e:
+        print(f"⚠️  PostgreSQL search failed: {e}")
+        raise
+
+
 @cache.memoize(timeout=900)  # Cache for 15 minutes (optimized)
 def load_posts_from_postgres():
     """Load all posts from PostgreSQL database with collections"""
@@ -1602,27 +1726,14 @@ def api_post(post_id):
 @app.route('/api/search')
 def api_search():
     """
-    Advanced search endpoint using FTS5 index
+    Advanced search endpoint using PostgreSQL Full-Text Search
+    Falls back to SQLite FTS5 if PostgreSQL fails
+
     Query params:
         q: search query (required)
         creator: filter by creator_id (optional)
         limit: max results (default 50)
     """
-    from pathlib import Path
-    import sys
-
-    # Import search indexer
-    search_module_path = Path(__file__).parent
-    if str(search_module_path) not in sys.path:
-        sys.path.insert(0, str(search_module_path))
-
-    try:
-        from search_indexer import SearchIndexer
-    except ImportError:
-        return jsonify({
-            'error': 'Search index not available. Run: python web/search_indexer.py'
-        }), 503
-
     # Get query parameters
     query = request.args.get('q', '').strip()
     creator_filter = request.args.get('creator')
@@ -1631,28 +1742,66 @@ def api_search():
     if not query:
         return jsonify({'error': 'Query parameter "q" is required'}), 400
 
-    # Check if index exists
-    index_path = Path(__file__).parent / "search_index.db"
-    if not index_path.exists():
-        return jsonify({
-            'error': 'Search index not built. Run: python web/search_indexer.py',
-            'hint': 'Build the search index first before searching'
-        }), 503
-
-    # Perform search
+    # Try PostgreSQL first (modern, automatic)
     try:
-        indexer = SearchIndexer(db_path=index_path)
-        results = indexer.search(query, limit=limit, creator_filter=creator_filter)
-        indexer.close()
+        results = search_posts_postgresql(query, limit=limit, creator_filter=creator_filter)
 
         return jsonify({
             'query': query,
             'total_results': len(results),
-            'results': results
+            'results': results,
+            'source': 'postgresql'  # Debug: show which backend was used
         })
 
-    except Exception as e:
-        return jsonify({'error': f'Search failed: {str(e)}'}), 500
+    except Exception as pg_error:
+        print(f"⚠️  PostgreSQL search failed: {pg_error}")
+        print("   Falling back to SQLite FTS5...")
+
+        # Fallback to SQLite FTS5 (legacy)
+        from pathlib import Path
+        import sys
+
+        search_module_path = Path(__file__).parent
+        if str(search_module_path) not in sys.path:
+            sys.path.insert(0, str(search_module_path))
+
+        try:
+            from search_indexer import SearchIndexer
+        except ImportError:
+            return jsonify({
+                'error': 'Both PostgreSQL and SQLite search failed',
+                'postgresql_error': str(pg_error),
+                'sqlite_error': 'Search indexer not available'
+            }), 503
+
+        # Check if SQLite index exists
+        index_path = Path(__file__).parent / "search_index.db"
+        if not index_path.exists():
+            return jsonify({
+                'error': 'Both PostgreSQL and SQLite search failed',
+                'postgresql_error': str(pg_error),
+                'sqlite_error': 'Search index not built. Run: python web/search_indexer.py'
+            }), 503
+
+        # Perform SQLite search
+        try:
+            indexer = SearchIndexer(db_path=index_path)
+            results = indexer.search(query, limit=limit, creator_filter=creator_filter)
+            indexer.close()
+
+            return jsonify({
+                'query': query,
+                'total_results': len(results),
+                'results': results,
+                'source': 'sqlite'  # Debug: show fallback was used
+            })
+
+        except Exception as sqlite_error:
+            return jsonify({
+                'error': 'Both PostgreSQL and SQLite search failed',
+                'postgresql_error': str(pg_error),
+                'sqlite_error': str(sqlite_error)
+            }), 500
 
 
 @app.route('/api/search/stats')
