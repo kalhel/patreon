@@ -87,16 +87,19 @@ def update_post_details_in_postgres(post_data: Dict):
             source_id = row[0]
 
             # UPSERT post with full details (INSERT or UPDATE if exists)
+            # Include denormalized fields from post_metadata for performance
             upsert_sql = text("""
                 INSERT INTO posts (
                     post_id, creator_id, source_id, post_url, title, full_content,
                     content_blocks, post_metadata, published_at,
+                    creator_name, like_count, comment_count, videos,
                     video_streams, video_subtitles, video_local_paths,
                     audios, audio_local_paths, images, image_local_paths,
                     attachments, attachment_local_paths, patreon_tags, created_at, updated_at
                 ) VALUES (
                     :post_id, :creator_id, :source_id, :post_url, :title, :full_content,
                     CAST(:content_blocks AS jsonb), CAST(:post_metadata AS jsonb), :published_at,
+                    :creator_name, :like_count, :comment_count, :videos,
                     CAST(:video_streams AS jsonb), CAST(:video_subtitles AS jsonb), :video_local_paths,
                     :audios, :audio_local_paths, :images, :image_local_paths,
                     CAST(:attachments AS jsonb), :attachment_local_paths, :patreon_tags, NOW(), NOW()
@@ -107,6 +110,10 @@ def update_post_details_in_postgres(post_data: Dict):
                     content_blocks = EXCLUDED.content_blocks,
                     post_metadata = EXCLUDED.post_metadata,
                     published_at = EXCLUDED.published_at,
+                    creator_name = EXCLUDED.creator_name,
+                    like_count = EXCLUDED.like_count,
+                    comment_count = EXCLUDED.comment_count,
+                    videos = EXCLUDED.videos,
                     video_streams = EXCLUDED.video_streams,
                     video_subtitles = EXCLUDED.video_subtitles,
                     video_local_paths = EXCLUDED.video_local_paths,
@@ -129,6 +136,9 @@ def update_post_details_in_postgres(post_data: Dict):
                               if block.get('type') == 'text' and block.get('text')]
                 full_content = '\n\n'.join(text_blocks)
 
+            # Extract denormalized fields from post_metadata
+            post_metadata = post_data.get('post_metadata', {})
+
             upsert_params = {
                 'post_id': post_data.get('post_id'),
                 'creator_id': creator_id,
@@ -137,8 +147,13 @@ def update_post_details_in_postgres(post_data: Dict):
                 'title': post_data.get('title'),
                 'full_content': full_content,
                 'content_blocks': json.dumps(post_data.get('content_blocks', [])),
-                'post_metadata': json.dumps(post_data.get('post_metadata', {})),
+                'post_metadata': json.dumps(post_metadata),
                 'published_at': post_data.get('published_at'),
+                # Denormalized fields from post_metadata for performance
+                'creator_name': post_metadata.get('creator_name'),
+                'like_count': post_metadata.get('likes_count', 0),
+                'comment_count': post_metadata.get('comments_count', 0),
+                'videos': post_data.get('videos'),
                 'video_streams': json.dumps(post_data.get('video_streams', [])),
                 'video_subtitles': json.dumps(post_data.get('video_subtitles', [])),
                 'video_local_paths': post_data.get('video_local_paths'),
