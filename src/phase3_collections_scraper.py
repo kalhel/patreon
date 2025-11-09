@@ -81,23 +81,43 @@ def save_collections_to_postgres(creator_id: str, collections_data: Dict):
         Session = sessionmaker(bind=engine)
         session = Session()
 
+        # Convert creator name/slug to numeric ID (Schema V2)
+        # Case-insensitive search
+        creator_query = text("""
+            SELECT id, name FROM creators
+            WHERE LOWER(name) = LOWER(:creator_name)
+            LIMIT 1
+        """)
+        result = session.execute(creator_query, {'creator_name': creator_id})
+        creator_row = result.fetchone()
+
+        if not creator_row:
+            logger.error(f"  ❌ Creator not found in database: {creator_id}")
+            logger.info("     Run this SQL to check: SELECT * FROM creators WHERE LOWER(name) = LOWER('%s')", creator_id)
+            session.close()
+            return
+
+        creator_numeric_id = creator_row[0]
+        creator_db_name = creator_row[1]
+        logger.info(f"  ℹ️  Found creator: {creator_id} → '{creator_db_name}' (ID={creator_numeric_id})")
+
         # Get source_id for this creator (Schema V2 requirement)
         source_query = text("""
             SELECT id FROM creator_sources
             WHERE creator_id = :creator_id AND platform = 'patreon' AND is_active = true
             LIMIT 1
         """)
-        result = session.execute(source_query, {'creator_id': creator_id})
+        result = session.execute(source_query, {'creator_id': creator_numeric_id})
         source_row = result.fetchone()
 
         if not source_row:
-            logger.error(f"  ❌ No active Patreon source found for creator_id={creator_id}")
-            logger.info("     Run this SQL to check: SELECT * FROM creator_sources WHERE creator_id = %s", creator_id)
+            logger.error(f"  ❌ No active Patreon source found for creator_id={creator_numeric_id}")
+            logger.info("     Run this SQL to check: SELECT * FROM creator_sources WHERE creator_id = %s", creator_numeric_id)
             session.close()
             return
 
         source_id = source_row[0]
-        logger.info(f"  ℹ️  Using source_id={source_id} for creator_id={creator_id}")
+        logger.info(f"  ℹ️  Using source_id={source_id} for creator_id={creator_numeric_id}")
 
         stats = {
             'collections_inserted': 0,
@@ -143,7 +163,7 @@ def save_collections_to_postgres(creator_id: str, collections_data: Dict):
 
                 result = session.execute(insert_sql, {
                     'source_id': source_id,
-                    'creator_id': creator_id,
+                    'creator_id': creator_numeric_id,
                     'collection_id': collection_id,
                     'title': collection['collection_name'],
                     'description': collection.get('description'),
@@ -167,6 +187,25 @@ def save_collections_to_postgres(creator_id: str, collections_data: Dict):
                     try:
                         # Note: post_collections uses internal IDs from posts and collections tables
                         # Schema V2: (post_id, collection_id, position) - no timestamps
+                        # post_id needs to be integer (lookup from platform_post_id)
+                        post_lookup = text("""
+                            SELECT id FROM posts
+                            WHERE platform_post_id = :platform_post_id AND source_id = :source_id
+                            LIMIT 1
+                        """)
+                        post_result = session.execute(post_lookup, {
+                            'platform_post_id': str(post_id),
+                            'source_id': source_id
+                        })
+                        post_row = post_result.fetchone()
+
+                        if not post_row:
+                            logger.warning(f"    ⚠️  Post {post_id} not found in posts table, skipping...")
+                            stats['relationships_skipped'] += 1
+                            continue
+
+                        internal_post_id = post_row[0]
+
                         rel_sql = text("""
                             INSERT INTO post_collections (
                                 post_id,
@@ -182,7 +221,7 @@ def save_collections_to_postgres(creator_id: str, collections_data: Dict):
                         """)
 
                         session.execute(rel_sql, {
-                            'post_id': post_id,
+                            'post_id': internal_post_id,
                             'collection_id': internal_collection_id,
                             'position': position
                         })
