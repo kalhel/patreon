@@ -78,15 +78,17 @@ git commit -m "Remove debug_post.py - issue resolved"
 - `check_*.py` - Verificaciones puntuales
 - `analyze_*.py` - Análisis específicos
 
-### One-Time Fixes (23 archivos)
+### One-Time Fixes (31 archivos)
 - `fix_*.py` - Correcciones ya aplicadas
 - `cleanup_*.py` - Limpiezas ejecutadas
 - `diagnose_*.py` - Diagnósticos completados
 - `validate_*.py` - Validaciones ya hechas
+- `*.sql` - Queries de debugging/diagnóstico específicas
+- `docker-compose.yml` - Docker Compose (no usado aún)
 - `*.sh` - Scripts bash temporales
 - `*.sql` - Scripts SQL one-time
 
-**Total**: ~38 archivos para revisar
+**Total**: ~46 archivos para revisar (15 debug + 31 one-time-fixes)
 
 ---
 
