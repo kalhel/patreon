@@ -905,6 +905,14 @@
             transform: translateY(0);
         }
 
+        .search-advanced-btn.active {
+            background: #2563eb;
+        }
+
+        .search-advanced-btn.active:hover {
+            background: #1d4ed8;
+        }
+
         .search-advanced-btn.visible {
             display: block;
         }
@@ -1690,7 +1698,6 @@
             <!-- Advanced Search Results View (hidden by default) -->
             <div class="advanced-search-view" id="advancedSearchView" style="display: none;">
                 <div class="advanced-search-header">
-                    <button class="back-to-cards-btn" id="backToCardsBtn">← Back to cards</button>
                     <div class="advanced-results-count" id="advancedResultsCount"></div>
                 </div>
                 <div class="advanced-search-results" id="advancedSearchResults">
@@ -2700,7 +2707,15 @@
 
         // Advanced search button click - switch to advanced view
         advancedSearchBtn.addEventListener('click', () => {
-            showAdvancedSearchView();
+            // Toggle between advanced and cards view
+            const advancedView = document.getElementById('advancedSearchView');
+            if (advancedView.style.display === 'block') {
+                // Currently in advanced view, go back to cards
+                backToCardsView();
+            } else {
+                // Currently in cards view, go to advanced
+                showAdvancedSearchView();
+            }
         });
 
         // Match type filters (click on statistics to filter)
@@ -2768,11 +2783,18 @@
             advancedSearchOffset = 0;
             advancedSearchTotalResults = 0;
 
-            // Hide card view, show advanced view
+            // Hide card view elements
             document.querySelector('.posts-grid').style.display = 'none';
             document.querySelector('.content-filters').style.display = 'none';
             document.getElementById('tagsFilter').style.display = 'none';
+            document.getElementById('searchStats').style.display = 'none';  // Hide badges in advanced view
+
+            // Show advanced view
             document.getElementById('advancedSearchView').style.display = 'block';
+
+            // Update button text
+            advancedSearchBtn.innerHTML = '← Cards';
+            advancedSearchBtn.classList.add('active');
 
             // Clear previous results
             document.getElementById('advancedSearchResults').innerHTML = '';
@@ -2946,12 +2968,24 @@
         }
 
         // Back to cards button
-        document.getElementById('backToCardsBtn').addEventListener('click', () => {
-            // Hide advanced view, show card view
+        function backToCardsView() {
+            // Hide advanced view
             document.getElementById('advancedSearchView').style.display = 'none';
+
+            // Show card view elements
             document.querySelector('.posts-grid').style.display = '';
             document.querySelector('.content-filters').style.display = '';
-        });
+
+            // Restore search stats visibility if there's an active search
+            const query = searchInput.value.trim();
+            if (query) {
+                document.getElementById('searchStats').style.display = '';
+            }
+
+            // Update button text back to "Advanced"
+            advancedSearchBtn.innerHTML = 'Advanced →';
+            advancedSearchBtn.classList.remove('active');
+        }
 
         // Infinite scroll for advanced search results
         window.addEventListener('scroll', () => {
