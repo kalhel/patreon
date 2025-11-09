@@ -451,11 +451,12 @@ def search_posts_postgresql_advanced(query, limit=50, offset=0, creator_filter=N
             total_count = count_result.scalar()
 
             # Then, get paginated results WITH ts_headline for snippets
+            # JOIN with creators table to ensure we always have creator name
             sql = text(f"""
                 SELECT
                     p.post_id,
                     p.creator_id,
-                    p.creator_name,
+                    COALESCE(p.creator_name, c.name, 'Unknown') as creator_name,
                     p.title,
                     p.post_url,
                     p.published_at,
@@ -479,6 +480,7 @@ def search_posts_postgresql_advanced(query, limit=50, offset=0, creator_filter=N
                     ts_headline('english', COALESCE(p.subtitles_text, ''), to_tsquery('english', :tsquery),
                                'StartSel=<mark>, StopSel=</mark>, MaxWords=40, MinWords=20') as subtitles_snippet
                 FROM posts p
+                LEFT JOIN creators c ON p.creator_id = c.creator_id
                 WHERE p.search_vector @@ to_tsquery('english', :tsquery)
                     AND p.deleted_at IS NULL
                     {creator_condition}
