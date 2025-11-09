@@ -871,6 +871,73 @@ if expected_creator_id in response.url or expected_creator_name in response.text
 
 ---
 
+## 📋 Tareas Pendientes
+
+### 🐛 Bugs a Resolver
+
+#### BUG: Phase 2 no descarga imágenes full-size correctamente
+**Fecha**: 2025-11-09
+**Severidad**: Media
+**Post de referencia**: 121884886
+**Descripción**:
+- El scraper de phase2 solo descarga thumbnails (709x256, 711x196, etc) en lugar de imágenes full-size
+- Los thumbnails son rechazados por ser muy pequeños (min_width/min_height)
+- Causa raíz: Selector `data-media-id` no encuentra imágenes, usa fallback que solo descarga thumbnails
+- Impacto: Posts con imágenes no descargadas localmente dependen de URLs remotas de Patreon
+
+**Fix temporal aplicado**: ✅ Web viewer modificado para funcionar con URLs remotas cuando `image_local_paths` está vacío
+
+**Solución permanente necesaria**:
+1. Actualizar selectores en `src/patreon_scraper_v2.py` para encontrar URLs de imágenes full-size
+2. Investigar cambios en la estructura HTML de Patreon
+3. Implementar descarga de imágenes directamente desde `images` array (URLs remotas) cuando `data-media-id` falla
+
+**Archivos involucrados**:
+- `src/patreon_scraper_v2.py` - Selectores de imágenes
+- `src/media_downloader.py` - Lógica de descarga
+- `web/templates/index.html` - Fix temporal ya implementado (líneas 3370-3443)
+
+### ✨ Features a Implementar
+
+#### FEATURE: Mejorar preview de videos con subtítulos en búsqueda avanzada
+**Fecha**: 2025-11-09
+**Prioridad**: Media
+**Descripción**:
+- Actualmente los videos con subtítulos tardan en cargar en el preview inline
+- Algunos videos con subtítulos se vuelven muy lentos
+- Necesita optimización del proceso de búsqueda de timestamps en archivos VTT
+
+**Mejoras propuestas**:
+1. Reducir timeout de búsqueda VTT de 2s a 1s por archivo
+2. Cachear resultados de búsqueda VTT en sessionStorage
+3. Mostrar video inmediatamente sin esperar timestamp
+4. Indicador visual cuando está buscando timestamp
+5. Fallback más rápido cuando VTT no se encuentra
+
+**Archivos involucrados**:
+- `web/templates/index.html` - Función `openInlineVideo()` (líneas ~3490-3580)
+
+#### FEATURE: Añadir preview de audio en búsqueda avanzada
+**Fecha**: 2025-11-09
+**Prioridad**: Media
+**Descripción**:
+- Actualmente solo hay preview para imágenes y videos
+- Los posts con audio solo muestran un badge pero no permiten reproducirlos inline
+- Funcionalidad similar al preview de video pero con reproductor de audio
+
+**Implementación propuesta**:
+1. Añadir badge clickeable para audio (similar a `gallery-badge` y `video-timestamp-link`)
+2. Crear función `openInlineAudio()` similar a `openInlineVideo()`
+3. Reproductor de audio HTML5 con controles básicos
+4. Soporte para transcripciones si están disponibles (mostrar texto mientras reproduce)
+5. Mismo estilo inline (60% width, float left, fondo blanco)
+
+**Archivos involucrados**:
+- `web/templates/index.html` - Añadir badge para audio y función de preview
+- CSS para `.inline-audio` (similar a `.inline-expansion video`)
+
+---
+
 **Última edición por**: Claude
-**Última actualización**: 2025-11-08 (Post recovery procedure + Repository cleanup)
+**Última actualización**: 2025-11-09 (Añadidas tareas pendientes: Phase2 image download bug + Audio/Video preview improvements)
 **Contacto en caso de problemas**: [Definir canal de comunicación]
