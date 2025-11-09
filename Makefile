@@ -3,8 +3,18 @@
 
 .PHONY: help scrape scrape-daily scrape-full test test-phase2 test-phase3 test-web test-connections setup setup-infra backup restore web web-dev clean-vtt reset-creator analyze-media install
 
+# Detectar entorno virtual
+VENV_PATH := venv
+VENV_PYTHON := $(VENV_PATH)/bin/python3
+VENV_ACTIVATE := $(VENV_PATH)/bin/activate
+
+# Usar Python del venv si existe, sino python3 del sistema
+PYTHON := $(shell if [ -f $(VENV_PYTHON) ]; then echo $(VENV_PYTHON); else echo python3; fi)
+
 # Colores para output
 BLUE := \033[36m
+YELLOW := \033[33m
+RED := \033[31m
 RESET := \033[0m
 
 help:  ## Muestra esta ayuda
@@ -43,23 +53,23 @@ test: test-phase2 test-phase3 test-web  ## Ejecuta todos los tests
 
 test-phase2:  ## Test de Phase 2 (detail extractor)
 	@echo "$(BLUE)Testing Phase 2...$(RESET)"
-	@python3 tools/testing/test_phase2_postgres.py
+	@$(PYTHON) tools/testing/test_phase2_postgres.py
 
 test-phase3:  ## Test de Phase 3 (collections)
 	@echo "$(BLUE)Testing Phase 3...$(RESET)"
-	@python3 tools/testing/test_phase3_postgres.py
+	@$(PYTHON) tools/testing/test_phase3_postgres.py
 
 test-web:  ## Test de Web Viewer
 	@echo "$(BLUE)Testing Web Viewer...$(RESET)"
-	@python3 tools/testing/test_web_viewer_postgres.py
+	@$(PYTHON) tools/testing/test_web_viewer_postgres.py
 
 test-connections:  ## Test de conexiones (PostgreSQL, Redis)
 	@echo "$(BLUE)Testing conexiones a servicios...$(RESET)"
-	@python3 tools/testing/test_connections.py
+	@$(PYTHON) tools/testing/test_connections.py
 
 test-media:  ## Test de media downloader
 	@echo "$(BLUE)Testing media downloader...$(RESET)"
-	@python3 tools/testing/test_media_downloader.py
+	@$(PYTHON) tools/testing/test_media_downloader.py
 
 # ═══════════════════════════════════════════════════════════════
 # SETUP & INFRASTRUCTURE
@@ -99,7 +109,7 @@ web:  ## Inicia web viewer (Gunicorn - producción)
 
 web-dev:  ## Inicia web viewer en modo desarrollo
 	@echo "$(BLUE)Iniciando web viewer en modo desarrollo...$(RESET)"
-	@cd web && python3 viewer.py
+	@cd web && $(PYTHON) viewer.py
 
 # ═══════════════════════════════════════════════════════════════
 # MAINTENANCE
@@ -107,23 +117,23 @@ web-dev:  ## Inicia web viewer en modo desarrollo
 
 clean-vtt:  ## Limpia parámetros de archivos VTT
 	@echo "$(BLUE)Limpiando archivos VTT...$(RESET)"
-	@python3 tools/maintenance/clean_vtt_files.py
+	@$(PYTHON) tools/maintenance/clean_vtt_files.py
 
 cleanup-mux:  ## Limpia thumbnails de Mux del campo videos
 	@echo "$(BLUE)Limpiando thumbnails de Mux...$(RESET)"
-	@python3 tools/maintenance/cleanup_mux_thumbnails.py
+	@$(PYTHON) tools/maintenance/cleanup_mux_thumbnails.py
 
 reset-creator:  ## Reset de un creator específico
 	@echo "$(BLUE)Reset de creator (interactivo)...$(RESET)"
-	@cd src && python3 reset_creator.py
+	@cd src && $(PYTHON) reset_creator.py
 
 reset-missing:  ## Reset posts faltantes a estado pending
 	@echo "$(BLUE)Reseteando posts faltantes...$(RESET)"
-	@python3 tools/maintenance/reset_missing_posts_to_pending.py
+	@$(PYTHON) tools/maintenance/reset_missing_posts_to_pending.py
 
 reset-processed:  ## Reset posts procesados a pending
 	@echo "$(BLUE)Reseteando posts procesados...$(RESET)"
-	@python3 tools/maintenance/reset_processed_posts.py
+	@$(PYTHON) tools/maintenance/reset_processed_posts.py
 
 # ═══════════════════════════════════════════════════════════════
 # DIAGNOSTICS
@@ -131,10 +141,23 @@ reset-processed:  ## Reset posts procesados a pending
 
 analyze-media:  ## Analiza estructura de media (tamaños, duplicados)
 	@echo "$(BLUE)Analizando estructura de media...$(RESET)"
-	@python3 tools/diagnostics/analyze_media_structure.py
+	@$(PYTHON) tools/diagnostics/analyze_media_structure.py
 
 # ═══════════════════════════════════════════════════════════════
 # DEFAULT
 # ═══════════════════════════════════════════════════════════════
 
 .DEFAULT_GOAL := help
+
+# ═══════════════════════════════════════════════════════════════
+# INFO
+# ═══════════════════════════════════════════════════════════════
+
+check-venv:  ## Verifica si el venv está activo
+	@if [ -f $(VENV_PYTHON) ]; then \
+		echo "$(BLUE)✓ Virtual environment encontrado en: $(VENV_PATH)$(RESET)"; \
+		echo "$(BLUE)  Python usado: $(PYTHON)$(RESET)"; \
+	else \
+		echo "$(YELLOW)⚠ Virtual environment no encontrado$(RESET)"; \
+		echo "$(YELLOW)  Ejecuta: make setup$(RESET)"; \
+	fi
