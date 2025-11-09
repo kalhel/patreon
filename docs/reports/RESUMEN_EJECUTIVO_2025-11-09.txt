@@ -1,0 +1,230 @@
+================================================================================
+RESUMEN EJECUTIVO PROYECTO ASTROLOGÍA/PATREON
+================================================================================
+
+NOMBRE: Alejandría - Multi-Source Content Aggregator
+TIPO: Sistema escalable de scraping y organización de contenido
+STATUS: Migración PostgreSQL en progreso (Phase 1.5 completada)
+FECHA: 2025-11-09
+
+================================================================================
+EN 60 SEGUNDOS
+================================================================================
+
+Proyecto de Python que scraping de 4 creadores de Patreon (astrobymax, 
+horoiproject, headonhistory, skyscript). 
+
+Tiene 982 posts migrados de Firebase a PostgreSQL. Usa 3 fases de scraping:
+1. Recolecta URLs, 2. Extrae contenido, 3. Organiza en colecciones.
+
+Stack: Python + PostgreSQL + Redis + Celery + Flask. Documentación completa
+en docs/. Web viewer funcional en /web/viewer.py.
+
+================================================================================
+QUICK FACTS
+================================================================================
+
+CÓDIGO: 12,416 líneas Python en src/
+SCRIPTS: 120+ (Python + Bash)
+DOCUMENTACIÓN: 256 archivos (.md, .txt)
+BASE DE DATOS: 14 tablas, 2 vistas, 44 índices
+POSTS: 982 migrados
+CREADORES: 4
+TAMAÑO: ~8.9 GB
+ESTADO GIT: Clean (main branch)
+
+================================================================================
+STACK EN 10 LÍNEAS
+================================================================================
+
+Python 3.10+ | PostgreSQL 16 | Redis 7 | Celery 5.3.4+ | Flask 3.0+
+Selenium | BeautifulSoup4 | SQLAlchemy | Gunicorn | pgvector | Whoosh
+Docker Compose | yt-dlp | moviepy | Pillow | google-generativeai
+
+================================================================================
+ESTRUCTURA
+================================================================================
+
+src/           -> Scrapers (3 fases) + procesamiento
+web/           -> Flask viewer + búsqueda
+database/      -> PostgreSQL schema (14 tablas)
+docs/          -> 22 archivos técnicos
+scripts/       -> 12 scripts utilidad
+tools/         -> 40+ scripts debug
+config/        -> settings.json, creators.json, .env
+data/          -> Media descargado (gitignored)
+archive/       -> Código obsoleto + docs antiguas
+
+================================================================================
+DOCUMENTACIÓN CLAVE
+================================================================================
+
+INICIO:
+  README.md - Entrada principal
+
+TRACKING:
+  PROGRESS.md - Estado detallado de migración
+
+ARQUITECTURA:
+  docs/ARCHITECTURE.md (53 KB) - Diseño técnico completo
+
+INSTALACIÓN:
+  docs/PHASE0_INSTALLATION.md - Guía setup
+
+BASE DE DATOS:
+  database/schema.sql - 14 tablas (creators, posts, collections, media_files, etc.)
+
+CONFIGURACIÓN:
+  config/settings.json - Parámetros scraping
+  config/creators.json - 4 creadores configurados
+
+================================================================================
+FLUJO DE DATOS
+================================================================================
+
+Patreon Website
+  ↓ Selenium autenticación
+Phase 1: URL Collection
+  ↓ Recolecta URLs posts
+Phase 2: Detail Extraction
+  ├─ Content Parser
+  └─ Media Downloader
+  ↓ Extrae contenido completo
+PostgreSQL (alejandria)
+  ├─ posts table
+  ├─ media_files table
+  └─ scraping_status table
+  ↓
+Phase 3: Collections
+  ↓ Organiza en colecciones
+Web Viewer (Flask)
+  ├─ Search Indexer (Whoosh)
+  └─ Visualización
+  ↓
+Frontend Web
+
+================================================================================
+CREADORES
+================================================================================
+
+1. astrobymax (AstroByMax)
+   https://www.patreon.com/cw/astrobymax/posts
+
+2. horoiproject (HOROI Project)
+   https://www.patreon.com/horoiproject/posts
+
+3. headonhistory (Ali A Olomi)
+   https://www.patreon.com/headonhistory/posts
+
+4. skyscript (Skyscript)
+   https://www.patreon.com/c/skyscript/posts
+
+TOTAL: 982 posts en PostgreSQL
+
+================================================================================
+FASES
+================================================================================
+
+Phase 0: Infrastructure ✅ (2025-11-07)
+  - PostgreSQL 16 + pgvector
+  - Redis 7 + Celery
+  - Schema base
+
+Phase 1: Data Migration ✅ (2025-11-07)
+  - 982 posts Firebase → PostgreSQL
+  - Schema V1 → V2
+
+Phase 1.5: Schema Refactor ✅ (2025-11-07)
+  - Multi-source architecture
+  - Normalización
+
+Phase 2: Core Backend 🔄 (EN CURSO)
+  - Migración scripts a PostgreSQL
+  - PostgresTracker
+  - Search improvements
+
+Phase 3+: Advanced Features 📅 (PENDIENTE)
+  - Búsqueda semántica
+  - Transcripciones
+  - Web app mejorada
+  - Otras plataformas
+
+================================================================================
+BASE DE DATOS
+================================================================================
+
+NOMBRE: alejandria (PostgreSQL 16)
+
+TABLAS (14):
+  Core:      creators, posts, collections, post_collections
+  Media:     media_files, post_media
+  Search:    transcriptions
+  Sistema:   scraping_status, jobs, users, user_lists, user_post_data,
+             system_config, audit_log
+
+VISTAS (2):
+  posts_with_media
+  collection_posts_view
+
+CARACTERÍSTICAS:
+  - Full-text search
+  - pgvector para embeddings
+  - Deduplicación SHA256
+  - 44 índices optimizados
+
+================================================================================
+ARCHIVOS DE EXPLORACIÓN GENERADOS
+================================================================================
+
+1. INDICE_EXPLORACION_2025-11-09.md
+   -> Índice master con todas las referencias
+
+2. PROYECTO_ESTRUCTURA_COMPLETA_2025-11-09.md
+   -> Informe técnico detallado (641 líneas)
+
+3. RESUMEN_RAPIDO_2025-11-09.txt
+   -> Resumen ejecutivo en tablas (366 líneas)
+
+4. ESTRUCTURA_VISUAL_2025-11-09.txt
+   -> Mind map visual del proyecto (460 líneas)
+
+Todos guardados en: /home/javif/proyectos/astrologia/patreon/
+
+================================================================================
+PRÓXIMOS PASOS
+================================================================================
+
+Phase 2:
+  [ ] Completar migración scripts a PostgreSQL
+  [ ] PostgresTracker implementation
+  [ ] Mejoras búsqueda avanzada
+  [ ] Setup Celery workers
+
+Phase 3+:
+  [ ] Búsqueda semántica con pgvector
+  [ ] Transcripciones con Whisper
+  [ ] Web app mejorada
+  [ ] Expansión a YouTube, Substack
+
+================================================================================
+PARA EMPEZAR
+================================================================================
+
+1. Lee:        README.md
+2. Luego:      RESUMEN_RAPIDO_2025-11-09.txt
+3. Técnico:    PROYECTO_ESTRUCTURA_COMPLETA_2025-11-09.md
+4. Visual:     ESTRUCTURA_VISUAL_2025-11-09.txt
+5. Tracking:   PROGRESS.md
+6. Detallado:  docs/ARCHITECTURE.md
+
+================================================================================
+CONTACTO/INFO
+================================================================================
+
+Rama: main
+Estado: Clean
+Último commit: FEAT: Advanced search improvements
+Desarrollador: Javier + Claude
+Última actualización: 2025-11-09
+
+================================================================================

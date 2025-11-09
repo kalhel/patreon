@@ -1,0 +1,339 @@
+================================================================================
+PROYECTO ASTROLOGÍA/PATREON - ESTRUCTURA VISUAL (Mind Map)
+================================================================================
+
+PROYECTO ALEJANDRÍA
+    │
+    ├─── DOCUMENTACIÓN (256 archivos)
+    │    ├── Activa (docs/)
+    │    │   ├── ARCHITECTURE.md (diseño técnico - 53KB)
+    │    │   ├── PHASE0_INSTALLATION.md
+    │    │   ├── PHASE2_CORE_BACKEND.md
+    │    │   ├── DATABASE_DESIGN_REVIEW.md
+    │    │   ├── MEDIA_ARCHITECTURE.md
+    │    │   ├── SEARCH_IMPROVEMENTS_PLAN.md
+    │    │   └── 16 más...
+    │    ├── Raíz
+    │    │   ├── README.md (entrada principal)
+    │    │   ├── PROGRESS.md (tracking detallado)
+    │    │   ├── CHANGELOG_2025.md
+    │    │   └── 4 más...
+    │    └── Archivada (archive/docs/)
+    │        └── 15 archivos históricos
+    │
+    ├─── CÓDIGO FUENTE (src/ - 12,416 líneas)
+    │    ├── Scrapers (3 fases)
+    │    │   ├── Phase 1: phase1_url_collector.py
+    │    │   ├── Phase 2: phase2_detail_extractor.py
+    │    │   └── Phase 3: phase3_collections_scraper.py
+    │    ├── Scrapers Incrementales
+    │    │   ├── daily_incremental_scrape.py
+    │    │   ├── incremental_scraper.py
+    │    │   └── incremental_collections_scraper.py
+    │    ├── Autenticación
+    │    │   ├── patreon_auth.py
+    │    │   └── patreon_auth_selenium.py
+    │    ├── Procesamiento
+    │    │   ├── content_parser.py (52 KB)
+    │    │   ├── media_downloader.py (86 KB)
+    │    │   └── tag_generator.py
+    │    ├── Migraciones
+    │    │   ├── migrate_json_to_postgres.py
+    │    │   └── migrate_collections_to_postgres.py
+    │    └── Utilidades
+    │        ├── postgres_tracker.py
+    │        ├── orchestrator.py
+    │        └── add_creator.py
+    │
+    ├─── WEB VIEWER (web/)
+    │    ├── viewer.py (87 KB - Flask app)
+    │    ├── search_indexer.py (18 KB)
+    │    ├── search_index.db (23 MB)
+    │    ├── static/ (CSS, JS, imágenes)
+    │    └── templates/ (HTML)
+    │
+    ├─── BASE DE DATOS (database/)
+    │    ├── schema.sql (schema principal - 14 tablas)
+    │    │   ├── Entidades Core
+    │    │   │   ├── creators
+    │    │   │   ├── posts
+    │    │   │   ├── collections
+    │    │   │   └── post_collections
+    │    │   ├── Media
+    │    │   │   ├── media_files (con dedup SHA256)
+    │    │   │   └── post_media
+    │    │   ├── Búsqueda & IA
+    │    │   │   └── transcriptions
+    │    │   ├── Sistema
+    │    │   │   ├── scraping_status
+    │    │   │   ├── jobs
+    │    │   │   ├── users
+    │    │   │   ├── user_lists
+    │    │   │   ├── user_post_data
+    │    │   │   ├── system_config
+    │    │   │   └── audit_log
+    │    │   ├── Vistas (2)
+    │    │   │   ├── posts_with_media
+    │    │   │   └── collection_posts_view
+    │    │   └── Índices (44) + Triggers
+    │    ├── schema_v2.sql (multi-source)
+    │    ├── schema_posts.sql
+    │    └── migrations/
+    │
+    ├─── SCRIPTS UTILIDAD (scripts/)
+    │    ├── Setup & Infraestructura
+    │    │   ├── setup_phase0.sh
+    │    │   └── test_connections.py
+    │    ├── Respaldo
+    │    │   ├── backup_database.sh
+    │    │   ├── restore_backup.sh
+    │    │   └── restore_oldest_backup.sh
+    │    ├── Migraciones
+    │    │   ├── migrate_firebase_to_postgres.py
+    │    │   └── migrate_to_schema_v2.py
+    │    └── Sistema
+    │        ├── start_web_viewer.sh
+    │        ├── verify_schema_v2.sh
+    │        └── audit_codebase.sh
+    │
+    ├─── HERRAMIENTAS DEBUG (tools/)
+    │    ├── Testing
+    │    │   ├── test_login.py
+    │    │   ├── test_single_post.py
+    │    │   └── test_media_downloader.py
+    │    ├── Validación
+    │    │   ├── validate_phase2_upsert.py
+    │    │   ├── diagnose_phase2_data.py
+    │    │   └── verify_post_ownership.py
+    │    ├── Fixes
+    │    │   ├── fix_post_creator.py
+    │    │   ├── fix_creator_mismatch.py
+    │    │   └── reset_creator_postgresql.py
+    │    └── Análisis
+    │        ├── analyze_media_structure.py
+    │        ├── find_youtube_posts.py
+    │        └── (30+ scripts más)
+    │
+    ├─── CONFIGURACIÓN (config/)
+    │    ├── .env (variables de entorno)
+    │    ├── settings.json (media & scraping config)
+    │    ├── creators.json (4 creadores)
+    │    ├── credentials.json
+    │    ├── patreon_cookies.json
+    │    └── gunicorn.conf.py
+    │
+    ├─── DATOS (data/ - gitignored)
+    │    ├── media/
+    │    │   ├── images/
+    │    │   │   ├── astrobymax/
+    │    │   │   ├── headonhistory/
+    │    │   │   ├── horoiproject/
+    │    │   │   └── skyscript/
+    │    │   ├── videos/
+    │    │   ├── audio/
+    │    │   ├── attachments/
+    │    │   └── collections/
+    │    ├── backups/
+    │    ├── raw/
+    │    └── processed/
+    │
+    ├─── ARCHIVO (archive/)
+    │    ├── docs/ (15 docs antiguas)
+    │    ├── phase1-firebase/
+    │    ├── phase2-firebase-tracker/
+    │    ├── phase3-notion-upload/
+    │    ├── scripts-old/
+    │    └── debug-scripts/
+    │
+    ├─── CONTROL DE VERSIONES (.git)
+    │    ├── Rama activa: main
+    │    ├── Estado: Clean
+    │    └── Últimos commits: FEAT features recientes
+    │
+    └─── STACK TECNOLÓGICO
+         ├── Lenguaje
+         │   ├── Python 3.10+ (backend)
+         │   └── Bash (scripts)
+         ├── Bases de Datos
+         │   ├── PostgreSQL 16+
+         │   │   ├── pgvector (embeddings)
+         │   │   ├── Full-text search
+         │   │   └── JSON/Arrays
+         │   └── Firebase (legacy - deprecado)
+         ├── Cache & Queue
+         │   ├── Redis 7+
+         │   ├── Celery 5.3.4+
+         │   └── Flower (monitoreo)
+         ├── Web Framework
+         │   ├── Flask 3.0.0+
+         │   ├── Gunicorn 21.2.0+
+         │   ├── Flask-Security-Too
+         │   └── Flask-Caching
+         ├── ORM & Migraciones
+         │   ├── SQLAlchemy 2.0.23+
+         │   ├── Alembic 1.13.0+
+         │   └── psycopg2-binary
+         ├── Web Scraping
+         │   ├── Selenium 4.15.0+
+         │   ├── BeautifulSoup4 4.12.0+
+         │   ├── lxml 4.9.0+
+         │   └── Requests 2.31.0+
+         ├── Multimedia
+         │   ├── yt-dlp 2023.7.6+
+         │   ├── moviepy 1.0.3+
+         │   ├── pydub 0.25.1+
+         │   └── Pillow 10.0.0+
+         ├── IA & NLP
+         │   ├── google-generativeai 0.3.0+
+         │   ├── Whoosh 2.7.4
+         │   └── WebVTT-py 0.5.0
+         └── Infraestructura
+             ├── Docker Compose
+             └── Git
+
+================================================================================
+FLUJO DE DATOS
+================================================================================
+
+Patreon Website
+    ↓ (Selenium autenticación)
+Phase 1: URL Collector
+    ↓ (Recolecta URLs posts)
+Phase 2: Detail Extractor
+    ├─→ Content Parser
+    └─→ Media Downloader
+    ↓ (Extrae contenido completo)
+PostgreSQL Database (alejandria)
+    ├─→ posts table
+    ├─→ media_files table
+    └─→ scraping_status table
+    ↓
+Phase 3: Collections Scraper
+    ↓ (Organiza en colecciones)
+Web Viewer (Flask)
+    ├─→ Search Indexer (Whoosh)
+    └─→ Visualización
+    ↓
+Frontend Web
+    ├─→ Búsqueda de posts
+    ├─→ Visualización de media
+    └─→ Exploración de colecciones
+
+================================================================================
+PROGRESO DEL PROYECTO
+================================================================================
+
+Phase 0: Infrastructure ✅ COMPLETADA
+├─ PostgreSQL 16 setup
+├─ pgvector extension
+├─ Redis 7 setup
+├─ Celery 5.3.4 setup
+└─ Schema base creation
+
+Phase 1: Data Migration ✅ COMPLETADA
+├─ 982 posts Firebase → PostgreSQL
+├─ Schema V1 → V2 migration
+└─ Verificación de integridad
+
+Phase 1.5: Schema Refactor ✅ COMPLETADA
+├─ Multi-source architecture
+├─ Normalización de datos
+└─ Índices optimizados
+
+Phase 2: Core Backend 🔄 EN CURSO
+├─ Migración scripts → PostgreSQL
+├─ PostgresTracker implementation
+├─ Search improvements
+└─ Celery workers setup
+
+Phase 3+: Advanced Features 📅 PENDIENTE
+├─ Búsqueda semántica (pgvector)
+├─ Transcripciones (Whisper)
+├─ Web app completa
+└─ Otras plataformas
+
+================================================================================
+CREADORES CONFIGURADOS
+================================================================================
+
+1. astrobymax (AstroByMax)
+   - URL: https://www.patreon.com/cw/astrobymax/posts
+   - Color: #52bca3
+   - Posts: ~ (en base de datos)
+   
+2. horoiproject (HOROI Project)
+   - URL: https://www.patreon.com/horoiproject/posts
+   - Color: #9f7766
+   - Posts: ~ (en base de datos)
+
+3. headonhistory (Ali A Olomi)
+   - URL: https://www.patreon.com/headonhistory/posts
+   - Color: #4ba3e8
+   - Posts: ~ (en base de datos)
+
+4. skyscript (Skyscript)
+   - URL: https://www.patreon.com/c/skyscript/posts
+   - Color: #0c0a61
+   - Posts: ~ (en base de datos)
+
+TOTAL: 982 posts migrados a PostgreSQL
+
+================================================================================
+ARCHIVOS CLAVE PARA EXPLORAR
+================================================================================
+
+INICIO:
+  README.md - Entrada principal del proyecto
+
+DOCUMENTACIÓN TÉCNICA:
+  docs/ARCHITECTURE.md - Diseño completo del sistema
+
+TRACKING:
+  PROGRESS.md - Estado detallado de migración
+
+INSTALACIÓN:
+  docs/PHASE0_INSTALLATION.md - Guía de setup
+
+DATABASE:
+  database/schema.sql - Estructura completa DB
+
+CONFIGURACIÓN:
+  config/settings.json - Parámetros scraping
+  config/creators.json - Creadores configurados
+
+SCRAPERS:
+  src/phase2_detail_extractor.py - Scraper principal
+
+WEB:
+  web/viewer.py - Interfaz web Flask
+
+SCRIPTS:
+  scripts/test_connections.py - Verifica conectividad
+
+================================================================================
+ESTADÍSTICAS CLAVE
+================================================================================
+
+Código:
+  - 12,416 líneas Python en src/
+  - 100+ scripts totales
+  - 256 archivos documentación
+
+Base de Datos:
+  - 14 tablas
+  - 2 vistas
+  - 44 índices
+  - 982 posts migrados
+
+Infraestructura:
+  - PostgreSQL 16
+  - Redis 7
+  - Flask 3.0.0
+  - 40+ dependencias Python
+
+Proyecto:
+  - 5 fases principales
+  - 4 creadores activos
+  - ~8.9 GB total
+  - Actualización continua
+

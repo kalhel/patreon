@@ -1,0 +1,359 @@
+================================================================================
+EXPLORACIÓN COMPLETA: PROYECTO ASTROLOGÍA/PATREON
+================================================================================
+Fecha: 2025-11-09
+Directorio: /home/javif/proyectos/astrologia/patreon/
+Status: Proyecto activo - Migración PostgreSQL en progreso
+
+================================================================================
+1. DOCUMENTACIÓN ENCONTRADA (256 archivos total)
+================================================================================
+
+DOCUMENTACIÓN ACTIVA (en docs/):
+  - 22 archivos markdown de documentación técnica completa
+  - Total: ~350 KB de documentación
+
+DOCUMENTACIÓN RAÍZ:
+  - README.md (entrada principal)
+  - PROGRESS.md (tracking detallado)
+  - CHANGELOG_2025.md (historial 2025)
+  - FIXES_DOCUMENTATION.md
+  - TEST_PHASE2_README.md
+  - PERFORMANCE_OPTIMIZATION_PROPOSAL.md
+  - LESSONS_LEARNED.md
+
+DOCUMENTACIÓN ARCHIVADA (archive/docs/):
+  - 15 archivos de fases anteriores
+  - Referencia histórica de Firebase, Notion, etc.
+
+ARCHIVOS DE CONFIGURACIÓN:
+  - .env (variables de entorno)
+  - config/settings.json (configuración media/scraping)
+  - config/creators.json (4 creadores configurados)
+  - config/credentials.json
+  - config/gunicorn.conf.py
+
+ARCHIVOS SQL:
+  - database/schema.sql (schema principal - 14 tablas)
+  - database/schema_v2.sql (schema multi-source)
+  - database/schema_posts.sql (posts específico)
+  - Varios scripts SQL de utilidad
+
+================================================================================
+2. ESTRUCTURA DE DIRECTORIOS PRINCIPAL
+================================================================================
+
+RAÍZ: /home/javif/proyectos/astrologia/patreon/
+
+Subdirectorios principales:
+  src/          - Código fuente Python (~12,416 líneas)
+  web/          - Web viewer Flask (~88KB viewer.py)
+  database/     - Schema PostgreSQL y migraciones
+  docs/         - Documentación técnica activa
+  scripts/      - Scripts utilidad y migración (12 scripts)
+  config/       - Configuración y credenciales
+  tools/        - Herramientas debugging (40+ scripts)
+  data/         - Media descargado (gitignored)
+    ├── media/   - Archivos multimedia
+    ├── backups/ - Backups de DB
+    └── raw/     - Datos sin procesar
+  archive/      - Código obsoleto + docs antiguas
+  backups/      - Backups adicionales
+  logs/         - Archivos de log
+  venv/         - Entorno virtual Python
+
+================================================================================
+3. SCRIPTS Y HERRAMIENTAS (120+ archivos)
+================================================================================
+
+SCRAPERS PRINCIPALES (src/):
+  Phase 1: phase1_url_collector.py
+  Phase 2: phase2_detail_extractor.py
+  Phase 3: phase3_collections_scraper.py
+
+SCRAPERS INCREMENTALES:
+  daily_incremental_scrape.py
+  incremental_scraper.py
+  incremental_collections_scraper.py
+
+PROCESAMIENTO:
+  content_parser.py (52 KB)
+  media_downloader.py (86 KB)
+  tag_generator.py
+  migrate_json_to_postgres.py
+  migrate_collections_to_postgres.py
+
+SCRIPTS DE SISTEMA (scripts/):
+  setup_phase0.sh
+  backup_database.sh
+  restore_backup.sh
+  start_web_viewer.sh
+  test_connections.py
+  migrate_firebase_to_postgres.py
+  migrate_to_schema_v2.py
+  (+ 5 más)
+
+HERRAMIENTAS DE DEBUG (tools/):
+  40+ scripts para análisis y debugging
+  test_login.py, test_single_post.py, etc.
+
+QUERIES SQL SUELTAS:
+  8 archivos .sql para verificaciones y fixes
+
+================================================================================
+4. STACK TECNOLÓGICO COMPLETO
+================================================================================
+
+FRONTEND/WEB:
+  Flask 3.0.0+
+  Gunicorn 21.2.0+
+  Flask-Login, Flask-Security-Too, Flask-Caching
+
+BACKEND/PROCESAMIENTO:
+  Python 3.10+
+  SQLAlchemy 2.0.23+ (ORM)
+  Alembic 1.13.0+ (migraciones)
+
+BASES DE DATOS:
+  PostgreSQL 16+ (principal)
+  pgvector 0.2.3+ (embeddings)
+  Firebase (legacy, siendo migrado)
+
+CACHE/QUEUE:
+  Redis 7+
+  Celery 5.3.4+
+  Flower (monitoreo)
+
+WEB SCRAPING:
+  Selenium 4.15.0+
+  BeautifulSoup4 4.12.0+
+  lxml 4.9.0+
+  Requests 2.31.0+
+
+MULTIMEDIA:
+  yt-dlp 2023.7.6+
+  moviepy 1.0.3+
+  pydub 0.25.1+
+  Pillow 10.0.0+
+
+IA/NLP:
+  google-generativeai 0.3.0+ (Gemini)
+  Whoosh 2.7.4 (full-text search)
+  WebVTT-py 0.5.0 (subtítulos)
+
+SEGURIDAD:
+  bcrypt 4.1.2+
+  pyotp 2.9.0+
+
+UTILIDADES:
+  python-dotenv, tqdm, python-dateutil, etc.
+
+INFRAESTRUCTURA:
+  Docker Compose
+  Git
+
+================================================================================
+5. CONFIGURACIÓN BASE DE DATOS
+================================================================================
+
+BASE DE DATOS: alejandria (PostgreSQL 16)
+
+TABLAS (14 total):
+  Core:     creators, posts, collections, post_collections
+  Media:    media_files, post_media
+  Search:   transcriptions
+  Sistema:  scraping_status, jobs, users, user_lists
+           user_post_data, system_config, audit_log
+
+VISTAS (2):
+  posts_with_media
+  collection_posts_view
+
+ÍNDICES (44):
+  Full-text search, búsqueda vectorial, foreign keys, etc.
+
+TRIGGERS:
+  Actualización automática updated_at
+  Full-text search automático
+
+EXTENSIONES:
+  pgvector (búsqueda semántica)
+
+================================================================================
+6. CREADORES CONFIGURADOS
+================================================================================
+
+1. astrobymax
+   - Nombre: AstroByMax
+   - URL: https://www.patreon.com/cw/astrobymax/posts
+   - Color: #52bca3
+
+2. horoiproject
+   - Nombre: HOROI Project
+   - URL: https://www.patreon.com/horoiproject/posts
+   - Color: #9f7766
+
+3. headonhistory
+   - Nombre: Ali A Olomi
+   - URL: https://www.patreon.com/headonhistory/posts
+   - Color: #4ba3e8
+
+4. skyscript
+   - Nombre: Skyscript
+   - URL: https://www.patreon.com/c/skyscript/posts
+   - Color: #0c0a61
+
+================================================================================
+7. FASES DEL PROYECTO
+================================================================================
+
+Phase 0: Infrastructure ✅ COMPLETADA (2025-11-07)
+  - PostgreSQL 16 + pgvector
+  - Redis 7
+  - Celery 5.3.4
+  - Schema base creado
+
+Phase 1: Data Migration ✅ COMPLETADA (2025-11-07)
+  - 982 posts migrados de Firebase → PostgreSQL
+  - Schema V1 → Schema V2
+
+Phase 1.5: Schema Refactor ✅ COMPLETADA (2025-11-07)
+  - Multi-source architecture
+  - Normalización de datos
+
+Phase 2: Core Backend 🔄 EN CURSO
+  - Migración scripts a PostgreSQL
+  - PostgresTracker implementation
+  - Mejoras búsqueda avanzada
+
+Phase 3+: Advanced Features 📅 PENDIENTE
+  - Búsqueda semántica
+  - Transcripciones
+  - Web app completa
+  - Otras plataformas
+
+================================================================================
+8. ESTADÍSTICAS PROYECTO
+================================================================================
+
+Líneas de código (src/)          ~12,416 líneas Python
+Archivos documentación            256 archivos
+Scripts Python                    ~100+
+Scripts Bash                      ~20+
+Tablas base de datos             14
+Vistas                           2
+Índices                          44
+Creadores activos               4
+Posts migrados                  982
+Dependencias Python             40+
+Tamaño del proyecto             ~8.9 GB
+Commits recientes               5+ por día
+
+================================================================================
+9. ESTADO ACTUAL (2025-11-09)
+================================================================================
+
+Rama activa:           main
+Estado Git:            Clean (sin cambios pendientes)
+Último commit:         FEAT: Advanced search improvements
+                      image zoom, inline preview optimization
+                      remote URLs support (3297688)
+
+Servidor de desarrollo:
+  - PostgreSQL 16: ACTIVO
+  - Redis 7: ACTIVO
+  - Flask web viewer: Disponible (web/viewer.py)
+  - Search index: Disponible (23 MB)
+
+Datos:
+  - 982 posts en base de datos
+  - Media descargada organizada por tipo y creador
+  - Backups de BD disponibles
+
+================================================================================
+10. PATRONES ORGANIZACIONALES
+================================================================================
+
+SEPARACIÓN POR FASES:
+  - Cada fase tiene documentación, scripts y tracking específicos
+  - Versionado claro: V1 (Firebase) → V2 (PostgreSQL)
+
+SEPARACIÓN POR RESPONSABILIDAD:
+  - src/: Scraping y procesamiento
+  - web/: Visualización y búsqueda
+  - database/: Schema y migraciones
+  - tools/: Debugging
+  - scripts/: Utilidad y setup
+
+DOCUMENTACIÓN ESTRATÉGICA:
+  - Docs activas en /docs/
+  - Docs archivadas en /archive/docs/
+  - PROGRESS.md para tracking detallado
+  - README.md como entrada principal
+
+MANEJO DE MEDIA:
+  - Organización por tipo (images, videos, audio, etc.)
+  - Organización por creador
+  - Deduplicación SHA256
+  - Backups automáticos
+
+TESTING Y DEBUGGING:
+  - Scripts de test por fase
+  - Scripts de debug por creador/post
+  - Herramientas de análisis de datos
+  - Verificación de integridad
+
+================================================================================
+11. ARCHIVOS CLAVE A CONOCER
+================================================================================
+
+PUNTO DE ENTRADA:
+  /home/javif/proyectos/astrologia/patreon/README.md
+
+TRACKING DETALLADO:
+  /home/javif/proyectos/astrologia/patreon/PROGRESS.md
+
+ARQUITECTURA TÉCNICA:
+  /home/javif/proyectos/astrologia/patreon/docs/ARCHITECTURE.md
+
+PLAN INSTALACIÓN:
+  /home/javif/proyectos/astrologia/patreon/docs/PHASE0_INSTALLATION.md
+
+SCHEMA BASE DE DATOS:
+  /home/javif/proyectos/astrologia/patreon/database/schema.sql
+
+CONFIGURACIÓN:
+  /home/javif/proyectos/astrologia/patreon/config/settings.json
+  /home/javif/proyectos/astrologia/patreon/config/creators.json
+
+SCRAPER PRINCIPAL:
+  /home/javif/proyectos/astrologia/patreon/src/phase2_detail_extractor.py
+
+WEB VIEWER:
+  /home/javif/proyectos/astrologia/patreon/web/viewer.py
+
+================================================================================
+12. PRÓXIMOS PASOS RECOMENDADOS
+================================================================================
+
+CORTO PLAZO (Phase 2):
+  [ ] Completar migración de scripts a PostgreSQL
+  [ ] Implementar PostgresTracker
+  [ ] Mejorar búsqueda avanzada
+  [ ] Setup Celery workers
+
+MEDIANO PLAZO (Phase 3):
+  [ ] Búsqueda semántica con pgvector
+  [ ] Transcripciones con Whisper
+  [ ] Interfaz web mejorada
+
+LARGO PLAZO (Phase 4+):
+  [ ] Expansión a YouTube, Substack
+  [ ] Sistema de usuarios
+  [ ] Listas personalizadas
+  [ ] Deployment en producción
+
+================================================================================
+INFORME COMPLETO GUARDADO EN:
+/home/javif/proyectos/astrologia/patreon/PROYECTO_ESTRUCTURA_COMPLETA_2025-11-09.md
+================================================================================
