@@ -451,12 +451,11 @@ def search_posts_postgresql_advanced(query, limit=50, offset=0, creator_filter=N
             total_count = count_result.scalar()
 
             # Then, get paginated results WITH ts_headline for snippets
-            # JOIN with creators table to ensure we always have creator name
             sql = text(f"""
                 SELECT
                     p.post_id,
                     p.creator_id,
-                    COALESCE(p.creator_name, c.name, 'Unknown') as creator_name,
+                    COALESCE(p.creator_name, 'Unknown') as creator_name,
                     p.title,
                     p.post_url,
                     p.published_at,
@@ -472,15 +471,14 @@ def search_posts_postgresql_advanced(query, limit=50, offset=0, creator_filter=N
                     p.subtitles_text,
                     ts_rank(p.search_vector, to_tsquery('english', :tsquery)) as rank,
                     ts_headline('english', COALESCE(p.title, ''), to_tsquery('english', :tsquery),
-                               'StartSel=<mark>, StopSel=</mark>, MaxWords=20, MinWords=10') as title_snippet,
+                               'StartSel=<mark>, StopSel=</mark>, MaxWords=15, MinWords=5, MaxFragments=1') as title_snippet,
                     ts_headline('english', COALESCE(p.content_text, ''), to_tsquery('english', :tsquery),
-                               'StartSel=<mark>, StopSel=</mark>, MaxWords=50, MinWords=30') as content_snippet,
+                               'StartSel=<mark>, StopSel=</mark>, MaxWords=30, MinWords=15, MaxFragments=1') as content_snippet,
                     ts_headline('english', COALESCE(p.comments_text, ''), to_tsquery('english', :tsquery),
-                               'StartSel=<mark>, StopSel=</mark>, MaxWords=40, MinWords=20') as comments_snippet,
+                               'StartSel=<mark>, StopSel=</mark>, MaxWords=25, MinWords=10, MaxFragments=1') as comments_snippet,
                     ts_headline('english', COALESCE(p.subtitles_text, ''), to_tsquery('english', :tsquery),
-                               'StartSel=<mark>, StopSel=</mark>, MaxWords=40, MinWords=20') as subtitles_snippet
+                               'StartSel=<mark>, StopSel=</mark>, MaxWords=25, MinWords=10, MaxFragments=1') as subtitles_snippet
                 FROM posts p
-                LEFT JOIN creators c ON p.creator_id = c.creator_id
                 WHERE p.search_vector @@ to_tsquery('english', :tsquery)
                     AND p.deleted_at IS NULL
                     {creator_condition}
@@ -526,10 +524,13 @@ def search_posts_postgresql_advanced(query, limit=50, offset=0, creator_filter=N
                 if match_function(term.lower() in tags_text for term in search_terms):
                     matched_in.append('tags')
 
+                # Use fallback for creator_name (same logic as normal view)
+                creator_display_name = row.creator_name or get_creator_display_name(row.creator_id)
+
                 result_item = {
                     'post_id': row.post_id,
                     'creator_id': row.creator_id,
-                    'creator_name': row.creator_name,
+                    'creator_name': creator_display_name,
                     'title': row.title,
                     'post_url': row.post_url,
                     'rank': float(row.rank),
