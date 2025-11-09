@@ -67,10 +67,10 @@ def get_database_url() -> str:
 
 def save_collections_to_postgres(creator_id: str, collections_data: Dict):
     """
-    Save collections data to PostgreSQL database
+    Save collections data to PostgreSQL database (Schema V2)
 
     Args:
-        creator_id: Creator identifier
+        creator_id: Creator identifier (integer ID from creators table)
         collections_data: Collections data dictionary from scraping
     """
     try:
@@ -80,6 +80,24 @@ def save_collections_to_postgres(creator_id: str, collections_data: Dict):
         engine = create_engine(get_database_url())
         Session = sessionmaker(bind=engine)
         session = Session()
+
+        # Get source_id for this creator (Schema V2 requirement)
+        source_query = text("""
+            SELECT id FROM creator_sources
+            WHERE creator_id = :creator_id AND platform = 'patreon' AND is_active = true
+            LIMIT 1
+        """)
+        result = session.execute(source_query, {'creator_id': creator_id})
+        source_row = result.fetchone()
+
+        if not source_row:
+            logger.error(f"  ❌ No active Patreon source found for creator_id={creator_id}")
+            logger.info("     Run this SQL to check: SELECT * FROM creator_sources WHERE creator_id = %s", creator_id)
+            session.close()
+            return
+
+        source_id = source_row[0]
+        logger.info(f"  ℹ️  Using source_id={source_id} for creator_id={creator_id}")
 
         stats = {
             'collections_inserted': 0,
@@ -92,86 +110,81 @@ def save_collections_to_postgres(creator_id: str, collections_data: Dict):
             collection_id = collection['collection_id']
 
             try:
-                # Insert or update collection
+                # Insert or update collection (Schema V2: uses source_id + creator_id)
                 insert_sql = text("""
                     INSERT INTO collections (
-                        collection_id,
+                        source_id,
                         creator_id,
+                        collection_id,
                         title,
                         description,
-                        collection_url,
                         post_count,
                         collection_image,
-                        collection_image_local,
-                        scraped_at,
-                        created_at
+                        collection_image_local
                     ) VALUES (
-                        :collection_id,
+                        :source_id,
                         :creator_id,
+                        :collection_id,
                         :title,
                         :description,
-                        :collection_url,
                         :post_count,
                         :collection_image,
-                        :collection_image_local,
-                        :scraped_at,
-                        NOW()
+                        :collection_image_local
                     )
                     ON CONFLICT (collection_id) DO UPDATE SET
                         title = EXCLUDED.title,
                         description = EXCLUDED.description,
-                        collection_url = EXCLUDED.collection_url,
                         post_count = EXCLUDED.post_count,
                         collection_image = EXCLUDED.collection_image,
                         collection_image_local = EXCLUDED.collection_image_local,
-                        scraped_at = EXCLUDED.scraped_at,
                         updated_at = NOW()
                     RETURNING id
                 """)
 
                 result = session.execute(insert_sql, {
-                    'collection_id': collection_id,
+                    'source_id': source_id,
                     'creator_id': creator_id,
+                    'collection_id': collection_id,
                     'title': collection['collection_name'],
                     'description': collection.get('description'),
-                    'collection_url': collection.get('collection_url'),
                     'post_count': collection.get('post_count', 0),
                     'collection_image': collection.get('collection_image'),
-                    'collection_image_local': collection.get('collection_image_local'),
-                    'scraped_at': collection.get('scraped_at')
+                    'collection_image_local': collection.get('collection_image_local')
                 })
                 session.commit()
 
-                if result.rowcount > 0:
+                # Get the internal ID of the collection (for post_collections table)
+                internal_collection_id = result.scalar()
+
+                if internal_collection_id:
                     stats['collections_inserted'] += 1
-                    logger.info(f"    ✓ Collection saved: {collection['collection_name']}")
+                    logger.info(f"    ✓ Collection saved: {collection['collection_name']} (ID: {internal_collection_id})")
                 else:
                     stats['collections_skipped'] += 1
 
-                # Insert post-collection relationships
-                for order, post_id in enumerate(collection.get('post_ids', []), start=1):
+                # Insert post-collection relationships (using internal collection ID)
+                for position, post_id in enumerate(collection.get('post_ids', []), start=1):
                     try:
+                        # Note: post_collections uses internal IDs from posts and collections tables
+                        # Schema V2: (post_id, collection_id, position) - no timestamps
                         rel_sql = text("""
                             INSERT INTO post_collections (
                                 post_id,
                                 collection_id,
-                                order_in_collection,
-                                added_at
+                                position
                             ) VALUES (
                                 :post_id,
                                 :collection_id,
-                                :order_in_collection,
-                                NOW()
+                                :position
                             )
                             ON CONFLICT (post_id, collection_id) DO UPDATE SET
-                                order_in_collection = EXCLUDED.order_in_collection,
-                                added_at = NOW()
+                                position = EXCLUDED.position
                         """)
 
                         session.execute(rel_sql, {
                             'post_id': post_id,
-                            'collection_id': collection_id,
-                            'order_in_collection': order
+                            'collection_id': internal_collection_id,
+                            'position': position
                         })
                         session.commit()
                         stats['relationships_inserted'] += 1
