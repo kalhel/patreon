@@ -253,12 +253,12 @@ def search_posts_postgresql(query, limit=50, creator_filter=None):
 
         with engine.connect() as conn:
             # Build tsquery (PostgreSQL full-text query)
-            # Convert space-separated words to OR query (like SQLite with *)
+            # Convert space-separated words to AND query (more precise search)
             search_terms = query.strip().split()
 
-            # Create OR query with prefix matching (term:*)
+            # Create AND query with prefix matching (term:*)
             tsquery_parts = [f"{term}:*" for term in search_terms if term]
-            tsquery = ' | '.join(tsquery_parts)  # OR operator
+            tsquery = ' & '.join(tsquery_parts)  # AND operator
 
             # Build SQL with optional creator filter
             creator_condition = "AND p.creator_id = :creator_id" if creator_filter else ""
@@ -277,11 +277,17 @@ def search_posts_postgresql(query, limit=50, creator_filter=None):
                     p.audios,
                     p.patreon_tags,
                     p.full_content,
+                    p.comments_text,
+                    p.subtitles_text,
                     ts_rank(p.search_vector, to_tsquery('english', :tsquery)) as rank,
                     ts_headline('english', COALESCE(p.title, ''), to_tsquery('english', :tsquery),
                                'StartSel=<mark>, StopSel=</mark>, MaxWords=20') as title_snippet,
                     ts_headline('english', COALESCE(p.full_content, ''), to_tsquery('english', :tsquery),
-                               'StartSel=<mark>, StopSel=</mark>, MaxWords=30') as content_snippet
+                               'StartSel=<mark>, StopSel=</mark>, MaxWords=30') as content_snippet,
+                    ts_headline('english', COALESCE(p.comments_text, ''), to_tsquery('english', :tsquery),
+                               'StartSel=<mark>, StopSel=</mark>, MaxWords=30') as comments_snippet,
+                    ts_headline('english', COALESCE(p.subtitles_text, ''), to_tsquery('english', :tsquery),
+                               'StartSel=<mark>, StopSel=</mark>, MaxWords=30') as subtitles_snippet
                 FROM posts p
                 WHERE p.search_vector @@ to_tsquery('english', :tsquery)
                     AND p.deleted_at IS NULL
@@ -308,20 +314,23 @@ def search_posts_postgresql(query, limit=50, creator_filter=None):
                 # Check snippets for highlights
                 title_snippet = row.title_snippet or ''
                 content_snippet = row.content_snippet or ''
+                comments_snippet = row.comments_snippet or ''
+                subtitles_snippet = row.subtitles_snippet or ''
 
                 if '<mark>' in title_snippet:
                     matched_in.append('title')
                 if '<mark>' in content_snippet:
                     matched_in.append('content')
+                if '<mark>' in comments_snippet:
+                    matched_in.append('comments')
+                if '<mark>' in subtitles_snippet:
+                    matched_in.append('subtitles')
 
                 # Check tags (simple string matching for now)
                 tags_list = row.patreon_tags or []
                 tags_text = ' '.join(tags_list).lower()
                 if any(term.lower() in tags_text for term in search_terms):
                     matched_in.append('tags')
-
-                # TODO Phase 2: Add comments detection
-                # TODO Phase 2: Add subtitles detection
 
                 # Format result to match SQLite FTS5 structure
                 result_item = {
@@ -335,8 +344,8 @@ def search_posts_postgresql(query, limit=50, creator_filter=None):
                         'title': title_snippet,
                         'content': content_snippet,
                         'tags': None,  # TODO: Generate tag snippet
-                        'comments': None,  # TODO Phase 2: Add comments search
-                        'subtitles': None  # TODO Phase 2: Add subtitles search
+                        'comments': comments_snippet if comments_snippet else None,
+                        'subtitles': subtitles_snippet if subtitles_snippet else None
                     },
                     'published_date': row.published_at.strftime('%d %b %Y') if row.published_at else None,
                     'has_images': bool(row.images and len(row.images) > 0),
