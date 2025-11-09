@@ -397,6 +397,172 @@ def search_posts_postgresql(query, creator_filter=None):
         raise
 
 
+def search_posts_postgresql_advanced(query, limit=50, offset=0, creator_filter=None):
+    """
+    Advanced search with ts_headline for snippet generation (paginated results)
+
+    This function generates highlighted snippets for detailed search results view.
+    Use this for the advanced search results page, not for card view filtering.
+
+    Args:
+        query: Search query string
+        limit: Number of results to return (default 50)
+        offset: Offset for pagination (default 0)
+        creator_filter: Optional creator_id to filter by
+
+    Returns:
+        Tuple of (results list, total_count int)
+        - results: Paginated results with ts_headline snippets
+        - total_count: Total matching posts (for pagination)
+    """
+    try:
+        engine = create_engine(get_database_url())
+
+        with engine.connect() as conn:
+            # Build tsquery (PostgreSQL full-text query)
+            use_or_operator = ',' in query
+
+            if use_or_operator:
+                search_terms = [term.strip() for term in query.split(',') if term.strip()]
+                tsquery_parts = [f"{term}" for term in search_terms if term]
+                tsquery = ' | '.join(tsquery_parts)
+            else:
+                search_terms = query.strip().split()
+                tsquery_parts = [f"{term}" for term in search_terms if term]
+                tsquery = ' & '.join(tsquery_parts)
+
+            # Build SQL with optional creator filter
+            creator_condition = "AND p.creator_id = :creator_id" if creator_filter else ""
+
+            # First, get total count
+            count_sql = text(f"""
+                SELECT COUNT(*) as total
+                FROM posts p
+                WHERE p.search_vector @@ to_tsquery('english', :tsquery)
+                    AND p.deleted_at IS NULL
+                    {creator_condition}
+            """)
+
+            count_params = {'tsquery': tsquery}
+            if creator_filter:
+                count_params['creator_id'] = creator_filter
+
+            count_result = conn.execute(count_sql, count_params)
+            total_count = count_result.scalar()
+
+            # Then, get paginated results WITH ts_headline for snippets
+            sql = text(f"""
+                SELECT
+                    p.post_id,
+                    p.creator_id,
+                    p.creator_name,
+                    p.title,
+                    p.post_url,
+                    p.published_at,
+                    p.like_count,
+                    p.comment_count,
+                    p.images,
+                    p.videos,
+                    p.audios,
+                    p.attachments,
+                    p.patreon_tags,
+                    p.content_text,
+                    p.comments_text,
+                    p.subtitles_text,
+                    ts_rank(p.search_vector, to_tsquery('english', :tsquery)) as rank,
+                    ts_headline('english', COALESCE(p.title, ''), to_tsquery('english', :tsquery),
+                               'StartSel=<mark>, StopSel=</mark>, MaxWords=20, MinWords=10') as title_snippet,
+                    ts_headline('english', COALESCE(p.content_text, ''), to_tsquery('english', :tsquery),
+                               'StartSel=<mark>, StopSel=</mark>, MaxWords=50, MinWords=30') as content_snippet,
+                    ts_headline('english', COALESCE(p.comments_text, ''), to_tsquery('english', :tsquery),
+                               'StartSel=<mark>, StopSel=</mark>, MaxWords=40, MinWords=20') as comments_snippet,
+                    ts_headline('english', COALESCE(p.subtitles_text, ''), to_tsquery('english', :tsquery),
+                               'StartSel=<mark>, StopSel=</mark>, MaxWords=40, MinWords=20') as subtitles_snippet
+                FROM posts p
+                WHERE p.search_vector @@ to_tsquery('english', :tsquery)
+                    AND p.deleted_at IS NULL
+                    {creator_condition}
+                ORDER BY rank DESC
+                LIMIT :limit OFFSET :offset
+            """)
+
+            params = {
+                'tsquery': tsquery,
+                'limit': limit,
+                'offset': offset
+            }
+
+            if creator_filter:
+                params['creator_id'] = creator_filter
+
+            result = conn.execute(sql, params)
+
+            results = []
+            for row in result:
+                # Determine which fields matched using snippets
+                matched_in = []
+                match_function = any if use_or_operator else all
+
+                title_snippet = row.title_snippet or ''
+                content_snippet = row.content_snippet or ''
+                comments_snippet = row.comments_snippet or ''
+                subtitles_snippet = row.subtitles_snippet or ''
+
+                # Check for highlights in snippets
+                if '<mark>' in title_snippet:
+                    matched_in.append('title')
+                if '<mark>' in content_snippet:
+                    matched_in.append('content')
+                if '<mark>' in comments_snippet:
+                    matched_in.append('comments')
+                if '<mark>' in subtitles_snippet:
+                    matched_in.append('subtitles')
+
+                # Check tags
+                tags_list = row.patreon_tags or []
+                tags_text = ' '.join(tags_list).lower()
+                if match_function(term.lower() in tags_text for term in search_terms):
+                    matched_in.append('tags')
+
+                result_item = {
+                    'post_id': row.post_id,
+                    'creator_id': row.creator_id,
+                    'creator_name': row.creator_name,
+                    'title': row.title,
+                    'post_url': row.post_url,
+                    'rank': float(row.rank),
+                    'matched_in': matched_in,
+                    'snippets': {
+                        'title': title_snippet if title_snippet else row.title,
+                        'content': content_snippet,
+                        'tags': None,
+                        'comments': comments_snippet if comments_snippet else None,
+                        'subtitles': subtitles_snippet if subtitles_snippet else None
+                    },
+                    'published_date': row.published_at.strftime('%d %b %Y') if row.published_at else None,
+                    'has_images': bool(row.images and len(row.images) > 0),
+                    'has_videos': bool(row.videos and len(row.videos) > 0),
+                    'has_audio': bool(row.audios and len(row.audios) > 0),
+                    'has_attachments': bool(row.attachments and len(row.attachments) > 0),
+                    'counts': {
+                        'images': len(row.images) if row.images else 0,
+                        'videos': len(row.videos) if row.videos else 0,
+                        'audio': len(row.audios) if row.audios else 0,
+                        'attachments': len(row.attachments) if row.attachments else 0,
+                        'comments': row.comment_count or 0,
+                        'likes': row.like_count or 0
+                    }
+                }
+
+                results.append(result_item)
+
+            return results, total_count
+
+    except Exception as e:
+        print(f"⚠️  PostgreSQL advanced search failed: {e}")
+        raise
+
+
 @cache.memoize(timeout=900)  # Cache for 15 minutes (optimized)
 def load_posts_from_postgres():
     """Load all posts from PostgreSQL database with collections"""
@@ -1839,6 +2005,62 @@ def api_search():
             'postgresql_error': str(pg_error),
             'sqlite_error': str(sqlite_error)
         }), 500
+
+
+@app.route('/api/search/advanced')
+def api_search_advanced():
+    """
+    Advanced search endpoint with ts_headline snippets (paginated)
+
+    This endpoint generates highlighted snippets for the detailed search results view.
+    Use this when displaying Google-style search results, not for card filtering.
+
+    Query params:
+        q: search query (required)
+        limit: results per page (default 50, max 100)
+        offset: pagination offset (default 0)
+        creator: filter by creator_id (optional)
+
+    Returns:
+        {
+            'query': str,
+            'total_results': int,
+            'limit': int,
+            'offset': int,
+            'has_more': bool,
+            'results': [... with snippets ...],
+            'source': 'postgresql'
+        }
+    """
+    query = request.args.get('q', '').strip()
+    limit = min(int(request.args.get('limit', 50)), 100)  # Cap at 100
+    offset = int(request.args.get('offset', 0))
+    creator_filter = request.args.get('creator')
+
+    if not query:
+        return jsonify({'error': 'Query parameter "q" is required'}), 400
+
+    try:
+        results, total_count = search_posts_postgresql_advanced(
+            query,
+            limit=limit,
+            offset=offset,
+            creator_filter=creator_filter
+        )
+
+        return jsonify({
+            'query': query,
+            'total_results': total_count,
+            'limit': limit,
+            'offset': offset,
+            'has_more': (offset + limit) < total_count,
+            'results': results,
+            'source': 'postgresql'
+        })
+
+    except Exception as e:
+        print(f"⚠️  Advanced search failed: {e}")
+        return jsonify({'error': 'Search failed', 'details': str(e)}), 500
 
 
 @app.route('/api/search/stats')

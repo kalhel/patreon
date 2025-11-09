@@ -854,10 +854,13 @@
 
         .search-box {
             position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
         }
 
         .search-input {
-            width: 100%;
+            flex: 1;
             padding: 1rem 1.5rem;
             font-size: 1rem;
             border: 2px solid #e0e0e0;
@@ -876,6 +879,34 @@
         .search-input::placeholder {
             color: #999999;
             font-weight: 300;
+        }
+
+        .search-advanced-btn {
+            padding: 0.875rem 1.5rem;
+            background: #1a1a1a;
+            color: #ffffff;
+            border: none;
+            border-radius: 999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            letter-spacing: 0.5px;
+            display: none; /* Hidden by default, shown when search has text */
+        }
+
+        .search-advanced-btn:hover {
+            background: #333333;
+            transform: translateY(-1px);
+        }
+
+        .search-advanced-btn:active {
+            transform: translateY(0);
+        }
+
+        .search-advanced-btn.visible {
+            display: block;
         }
 
         .search-results-count {
@@ -992,6 +1023,157 @@
             flex-wrap: wrap;
             justify-content: center;
             max-width: 1000px;
+        }
+
+        /* Advanced Search Results View */
+        .advanced-search-view {
+            max-width: 800px;
+            margin: 0 auto 4rem auto;
+            padding: 0 1rem;
+        }
+
+        .advanced-search-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .back-to-cards-btn {
+            padding: 0.75rem 1.25rem;
+            background: #fafafa;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #1a1a1a;
+        }
+
+        .back-to-cards-btn:hover {
+            background: #f0f0f0;
+            border-color: #d0d0d0;
+        }
+
+        .advanced-results-count {
+            font-size: 0.875rem;
+            color: #666666;
+        }
+
+        .advanced-search-results {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .advanced-result-item {
+            padding-bottom: 2rem;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .advanced-result-item:last-child {
+            border-bottom: none;
+        }
+
+        .advanced-result-title {
+            font-size: 1.25rem;
+            font-weight: 400;
+            margin-bottom: 0.5rem;
+        }
+
+        .advanced-result-title a {
+            color: #1a66cc;
+            text-decoration: none;
+        }
+
+        .advanced-result-title a:hover {
+            text-decoration: underline;
+        }
+
+        .advanced-result-title a:visited {
+            color: #609;
+        }
+
+        .advanced-result-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8125rem;
+            color: #666666;
+            margin-bottom: 0.75rem;
+        }
+
+        .advanced-result-meta .separator {
+            color: #999999;
+        }
+
+        .advanced-result-snippet {
+            font-size: 0.875rem;
+            line-height: 1.6;
+            color: #333333;
+            margin-bottom: 0.75rem;
+        }
+
+        .advanced-result-snippet mark {
+            background: #ffeb3b;
+            font-weight: 600;
+            padding: 0 2px;
+        }
+
+        .advanced-result-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+            font-size: 0.8125rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .advanced-result-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.25rem 0.625rem;
+            background: #f5f5f5;
+            border-radius: 4px;
+            color: #555555;
+            font-size: 0.75rem;
+        }
+
+        .advanced-result-badge svg {
+            width: 12px;
+            height: 12px;
+            fill: currentColor;
+        }
+
+        .advanced-result-matched {
+            font-size: 0.75rem;
+            color: #666666;
+            font-style: italic;
+        }
+
+        .advanced-search-loader {
+            text-align: center;
+            padding: 2rem;
+            color: #666666;
+        }
+
+        .loader-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #1a1a1a;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         .content-filter-btn {
@@ -1391,6 +1573,7 @@
             <div class="search-container">
                 <div class="search-box">
                     <input type="text" class="search-input" id="searchInput" placeholder="Search posts by title, creator, or tags...">
+                    <button class="search-advanced-btn" id="advancedSearchBtn">Avanzada →</button>
                 </div>
                 <div class="search-results-count" id="resultsCount"></div>
 
@@ -1502,6 +1685,21 @@
                     <!-- Tags will be dynamically populated here -->
                 </div>
                 <button class="load-more-tags hidden" id="loadMoreTags">Load More Tags</button>
+            </div>
+
+            <!-- Advanced Search Results View (hidden by default) -->
+            <div class="advanced-search-view" id="advancedSearchView" style="display: none;">
+                <div class="advanced-search-header">
+                    <button class="back-to-cards-btn" id="backToCardsBtn">← Volver a tarjetas</button>
+                    <div class="advanced-results-count" id="advancedResultsCount"></div>
+                </div>
+                <div class="advanced-search-results" id="advancedSearchResults">
+                    <!-- Results will be populated here dynamically -->
+                </div>
+                <div class="advanced-search-loader hidden" id="advancedLoader">
+                    <div class="loader-spinner"></div>
+                    <p>Cargando más resultados...</p>
+                </div>
             </div>
 
             <!-- All posts in single grid -->
@@ -2489,6 +2687,22 @@
         // Add event listener for real-time search
         searchInput.addEventListener('input', filterPosts);
 
+        // Advanced search button - show/hide based on search input
+        const advancedSearchBtn = document.getElementById('advancedSearchBtn');
+        searchInput.addEventListener('input', () => {
+            const hasText = searchInput.value.trim().length > 0;
+            if (hasText) {
+                advancedSearchBtn.classList.add('visible');
+            } else {
+                advancedSearchBtn.classList.remove('visible');
+            }
+        });
+
+        // Advanced search button click - switch to advanced view
+        advancedSearchBtn.addEventListener('click', () => {
+            showAdvancedSearchView();
+        });
+
         // Match type filters (click on statistics to filter)
         document.querySelectorAll('.search-stat').forEach(stat => {
             stat.addEventListener('click', function() {
@@ -2537,6 +2751,223 @@
                 });
             }
         });
+
+        // ============================================================================
+        // Advanced Search View Functions
+        // ============================================================================
+
+        let advancedSearchOffset = 0;
+        let advancedSearchTotalResults = 0;
+        let advancedSearchLoading = false;
+
+        async function showAdvancedSearchView() {
+            const query = searchInput.value.trim();
+            if (!query) return;
+
+            // Reset state
+            advancedSearchOffset = 0;
+            advancedSearchTotalResults = 0;
+
+            // Hide card view, show advanced view
+            document.querySelector('.posts-grid').style.display = 'none';
+            document.querySelector('.content-filters').style.display = 'none';
+            document.getElementById('tagsFilter').style.display = 'none';
+            document.getElementById('advancedSearchView').style.display = 'block';
+
+            // Clear previous results
+            document.getElementById('advancedSearchResults').innerHTML = '';
+
+            // Load first page
+            await loadAdvancedSearchResults(query, 0);
+        }
+
+        async function loadAdvancedSearchResults(query, offset) {
+            if (advancedSearchLoading) return;
+
+            advancedSearchLoading = true;
+            const loader = document.getElementById('advancedLoader');
+            loader.classList.remove('hidden');
+
+            try {
+                // Get selected creators if any
+                const creatorFilter = selectedCreators.size === 1 ? Array.from(selectedCreators)[0] : null;
+
+                const url = new URL('/api/search/advanced', window.location.origin);
+                url.searchParams.set('q', query);
+                url.searchParams.set('limit', '50');
+                url.searchParams.set('offset', offset);
+                if (creatorFilter) {
+                    url.searchParams.set('creator', creatorFilter);
+                }
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Search failed');
+                }
+
+                advancedSearchTotalResults = data.total_results;
+                advancedSearchOffset = offset + data.results.length;
+
+                // Update results count
+                document.getElementById('advancedResultsCount').textContent =
+                    `${data.total_results.toLocaleString()} resultado${data.total_results !== 1 ? 's' : ''}`;
+
+                // Render results
+                const resultsContainer = document.getElementById('advancedSearchResults');
+                data.results.forEach(result => {
+                    resultsContainer.appendChild(createAdvancedResultItem(result));
+                });
+
+                // Hide loader
+                loader.classList.add('hidden');
+
+            } catch (error) {
+                console.error('Advanced search failed:', error);
+                loader.classList.add('hidden');
+                alert('Error loading search results. Please try again.');
+            } finally {
+                advancedSearchLoading = false;
+            }
+        }
+
+        function createAdvancedResultItem(result) {
+            const item = document.createElement('div');
+            item.className = 'advanced-result-item';
+
+            // Title
+            const title = document.createElement('div');
+            title.className = 'advanced-result-title';
+            title.innerHTML = `<a href="/post/${result.post_id}">${result.snippets.title || result.title}</a>`;
+
+            // Meta (creator + date)
+            const meta = document.createElement('div');
+            meta.className = 'advanced-result-meta';
+            meta.innerHTML = `
+                <span>${result.creator_name}</span>
+                <span class="separator">•</span>
+                <span>${result.published_date}</span>
+            `;
+
+            // Snippet - show best available snippet
+            let snippet = '';
+            if (result.snippets.content) {
+                snippet = result.snippets.content;
+            } else if (result.snippets.comments) {
+                snippet = result.snippets.comments;
+            } else if (result.snippets.subtitles) {
+                snippet = result.snippets.subtitles;
+            }
+
+            const snippetDiv = document.createElement('div');
+            snippetDiv.className = 'advanced-result-snippet';
+            snippetDiv.innerHTML = snippet || '<em>No hay extracto disponible</em>';
+
+            // Badges (content type indicators)
+            const badges = document.createElement('div');
+            badges.className = 'advanced-result-badges';
+
+            if (result.has_images) {
+                badges.innerHTML += `
+                    <span class="advanced-result-badge">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        ${result.counts.images} Image${result.counts.images !== 1 ? 's' : ''}
+                    </span>
+                `;
+            }
+
+            if (result.has_videos) {
+                badges.innerHTML += `
+                    <span class="advanced-result-badge">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        ${result.counts.videos} Video${result.counts.videos !== 1 ? 's' : ''}
+                    </span>
+                `;
+            }
+
+            if (result.has_audio) {
+                badges.innerHTML += `
+                    <span class="advanced-result-badge">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                        </svg>
+                        ${result.counts.audio} Audio
+                    </span>
+                `;
+            }
+
+            if (result.has_attachments) {
+                badges.innerHTML += `
+                    <span class="advanced-result-badge">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                        </svg>
+                        ${result.counts.attachments} Archivo${result.counts.attachments !== 1 ? 's' : ''}
+                    </span>
+                `;
+            }
+
+            // Matched in
+            const matched = document.createElement('div');
+            matched.className = 'advanced-result-matched';
+            if (result.matched_in && result.matched_in.length > 0) {
+                const matchLabels = {
+                    'title': 'Título',
+                    'content': 'Contenido',
+                    'tags': 'Tags',
+                    'comments': 'Comentarios',
+                    'subtitles': 'Subtítulos'
+                };
+                const matchedText = result.matched_in.map(m => matchLabels[m] || m).join(', ');
+                matched.textContent = `Coincide en: ${matchedText}`;
+            }
+
+            // Assemble item
+            item.appendChild(title);
+            item.appendChild(meta);
+            item.appendChild(snippetDiv);
+            if (badges.children.length > 0) {
+                item.appendChild(badges);
+            }
+            if (matched.textContent) {
+                item.appendChild(matched);
+            }
+
+            return item;
+        }
+
+        // Back to cards button
+        document.getElementById('backToCardsBtn').addEventListener('click', () => {
+            // Hide advanced view, show card view
+            document.getElementById('advancedSearchView').style.display = 'none';
+            document.querySelector('.posts-grid').style.display = '';
+            document.querySelector('.content-filters').style.display = '';
+        });
+
+        // Infinite scroll for advanced search results
+        window.addEventListener('scroll', () => {
+            const advancedView = document.getElementById('advancedSearchView');
+            if (advancedView.style.display === 'none') return;
+            if (advancedSearchLoading) return;
+            if (advancedSearchOffset >= advancedSearchTotalResults) return;
+
+            // Check if near bottom (within 500px)
+            const scrollPosition = window.scrollY + window.innerHeight;
+            const pageHeight = document.documentElement.scrollHeight;
+
+            if (pageHeight - scrollPosition < 500) {
+                const query = searchInput.value.trim();
+                if (query) {
+                    loadAdvancedSearchResults(query, advancedSearchOffset);
+                }
+            }
+        });
+
     </script>
 
     <!-- Simple audio player for previews -->
