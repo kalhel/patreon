@@ -256,8 +256,10 @@ def search_posts_postgresql(query, limit=50, creator_filter=None):
             # Convert space-separated words to AND query (more precise search)
             search_terms = query.strip().split()
 
-            # Create AND query with prefix matching (term:*)
-            tsquery_parts = [f"{term}:*" for term in search_terms if term]
+            # Create AND query using exact word matching with stemming
+            # No prefix matching to avoid false positives (e.g., 'mars' matching 'marine', 'market')
+            # PostgreSQL's to_tsquery handles stemming automatically
+            tsquery_parts = [f"{term}" for term in search_terms if term]
             tsquery = ' & '.join(tsquery_parts)  # AND operator
 
             # Build SQL with optional creator filter
