@@ -10,8 +10,8 @@ from urllib.parse import quote_plus
 from sqlalchemy import create_engine, text
 from datetime import datetime
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent / 'src'))
+# Add src to path (go up two levels: tools/testing/ -> tools/ -> root/)
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'src'))
 
 load_dotenv()
 
@@ -99,7 +99,7 @@ def test_collections_table():
 
 
 def test_insert_dummy_collection():
-    """Test 4: Insert a test collection"""
+    """Test 4: Insert a test collection (Schema V2)"""
     print("\n" + "="*60)
     print("TEST 4: Insert Test Collection")
     print("="*60)
@@ -107,28 +107,39 @@ def test_insert_dummy_collection():
     try:
         engine = create_engine(get_database_url())
         with engine.connect() as conn:
-            # Try to insert a test collection
+            # First, get a valid source_id and creator_id from creator_sources
+            source_query = text("SELECT id, creator_id FROM creator_sources WHERE is_active = true LIMIT 1")
+            result = conn.execute(source_query)
+            row = result.fetchone()
+
+            if not row:
+                print("⚠️  No active sources found. Skipping collection insert test.")
+                return True  # Not a failure, just no data to test with
+
+            source_id = row[0]
+            creator_id = row[1]
+            print(f"   Using source_id: {source_id}, creator_id: {creator_id}")
+
+            # Try to insert a test collection (Schema V2)
             test_id = "test_collection_99999"
 
+            # Note: DB has both creator_id (Schema V1) and source_id (Schema V2)
+            # Using both to ensure compatibility with hybrid schema
             insert_sql = text("""
                 INSERT INTO collections (
-                    collection_id,
+                    source_id,
                     creator_id,
+                    collection_id,
                     title,
                     description,
-                    collection_url,
-                    post_count,
-                    scraped_at,
-                    created_at
+                    post_count
                 ) VALUES (
-                    :collection_id,
+                    :source_id,
                     :creator_id,
+                    :collection_id,
                     :title,
                     :description,
-                    :collection_url,
-                    :post_count,
-                    :scraped_at,
-                    NOW()
+                    :post_count
                 )
                 ON CONFLICT (collection_id) DO UPDATE SET
                     title = EXCLUDED.title,
@@ -137,27 +148,26 @@ def test_insert_dummy_collection():
             """)
 
             result = conn.execute(insert_sql, {
+                'source_id': source_id,
+                'creator_id': creator_id,
                 'collection_id': test_id,
-                'creator_id': 'test_creator',
-                'title': 'Test Collection - Phase 3 Dual Mode',
+                'title': 'Test Collection - Phase 3 (Hybrid Schema)',
                 'description': 'This is a test collection to verify PostgreSQL integration',
-                'collection_url': 'https://www.patreon.com/collection/99999',
-                'post_count': 0,
-                'scraped_at': datetime.now().isoformat()
+                'post_count': 0
             })
             conn.commit()
 
             print("✅ Test collection inserted successfully")
 
             # Verify it was inserted
-            verify_sql = text("SELECT title FROM collections WHERE collection_id = :id")
-            result = conn.execute(verify_sql, {'id': test_id})
+            verify_sql = text("SELECT title FROM collections WHERE source_id = :source_id AND collection_id = :collection_id")
+            result = conn.execute(verify_sql, {'source_id': source_id, 'collection_id': test_id})
             title = result.scalar()
             print(f"   Title: {title}")
 
             # Clean up - delete test collection
-            delete_sql = text("DELETE FROM collections WHERE collection_id = :id")
-            conn.execute(delete_sql, {'id': test_id})
+            delete_sql = text("DELETE FROM collections WHERE source_id = :source_id AND collection_id = :collection_id")
+            conn.execute(delete_sql, {'source_id': source_id, 'collection_id': test_id})
             conn.commit()
             print("✅ Test collection cleaned up")
 

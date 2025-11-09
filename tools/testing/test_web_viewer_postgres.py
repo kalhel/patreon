@@ -9,8 +9,8 @@ from dotenv import load_dotenv
 from urllib.parse import quote_plus
 from sqlalchemy import create_engine, text
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent / 'src'))
+# Add src to path (go up two levels: tools/testing/ -> tools/ -> root/)
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'src'))
 
 load_dotenv()
 
@@ -118,8 +118,8 @@ def test_web_viewer_import():
     print("="*60)
 
     try:
-        # Add web directory to path
-        sys.path.insert(0, str(Path(__file__).parent / 'web'))
+        # Add web directory to path (go up two levels to root, then into web/)
+        sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'web'))
 
         # Try to import the viewer module
         import viewer

@@ -11,8 +11,8 @@ from sqlalchemy import create_engine, text
 from datetime import datetime
 import json
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent / 'src'))
+# Add src to path (go up two levels: tools/testing/ -> tools/ -> root/)
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'src'))
 
 load_dotenv()
 
