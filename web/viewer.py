@@ -253,14 +253,22 @@ def search_posts_postgresql(query, limit=50, creator_filter=None):
 
         with engine.connect() as conn:
             # Build tsquery (PostgreSQL full-text query)
-            # Convert space-separated words to AND query (more precise search)
-            search_terms = query.strip().split()
+            # Logic: commas = OR, spaces = AND
+            # Example: "mars venus" → mars AND venus
+            # Example: "mars, venus" → mars OR venus
 
-            # Create AND query using exact word matching with stemming
-            # No prefix matching to avoid false positives (e.g., 'mars' matching 'marine', 'market')
-            # PostgreSQL's to_tsquery handles stemming automatically
-            tsquery_parts = [f"{term}" for term in search_terms if term]
-            tsquery = ' & '.join(tsquery_parts)  # AND operator
+            use_or_operator = ',' in query
+
+            if use_or_operator:
+                # Split by comma for OR search
+                search_terms = [term.strip() for term in query.split(',') if term.strip()]
+                tsquery_parts = [f"{term}" for term in search_terms if term]
+                tsquery = ' | '.join(tsquery_parts)  # OR operator
+            else:
+                # Split by space for AND search
+                search_terms = query.strip().split()
+                tsquery_parts = [f"{term}" for term in search_terms if term]
+                tsquery = ' & '.join(tsquery_parts)  # AND operator
 
             # Build SQL with optional creator filter
             creator_condition = "AND p.creator_id = :creator_id" if creator_filter else ""
@@ -336,19 +344,24 @@ def search_posts_postgresql(query, limit=50, creator_filter=None):
                 comments_snippet = row.comments_snippet or ''
                 subtitles_snippet = row.subtitles_snippet or ''
 
-                if '<mark>' in title_snippet:
+                # Check matched fields based on AND/OR operator
+                # AND logic: ALL terms must be present in the field
+                # OR logic: AT LEAST ONE term must be present in the field
+                match_function = any if use_or_operator else all
+
+                if '<mark>' in title_snippet and match_function(term.lower() in title_snippet.lower() for term in search_terms):
                     matched_in.append('title')
-                if '<mark>' in content_snippet:
+                if '<mark>' in content_snippet and match_function(term.lower() in content_snippet.lower() for term in search_terms):
                     matched_in.append('content')
-                if '<mark>' in comments_snippet:
+                if '<mark>' in comments_snippet and match_function(term.lower() in comments_snippet.lower() for term in search_terms):
                     matched_in.append('comments')
-                if '<mark>' in subtitles_snippet:
+                if '<mark>' in subtitles_snippet and match_function(term.lower() in subtitles_snippet.lower() for term in search_terms):
                     matched_in.append('subtitles')
 
-                # Check tags (AND matching - all terms must be present)
+                # Check tags with same logic
                 tags_list = row.patreon_tags or []
                 tags_text = ' '.join(tags_list).lower()
-                if all(term.lower() in tags_text for term in search_terms):
+                if match_function(term.lower() in tags_text for term in search_terms):
                     matched_in.append('tags')
 
                 # Format result to match SQLite FTS5 structure
